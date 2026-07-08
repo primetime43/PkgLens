@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia;
@@ -134,6 +135,32 @@ public partial class MainWindow : Window
     {
         if (Vm.Package?.SelectedItem is { IsDirectory: true } folder)
             Vm.Package.OpenFolder(folder);
+        else
+            ViewSelected();
+    }
+
+    private void OnViewClick(object? sender, RoutedEventArgs e) => ViewSelected();
+
+    private async void ViewSelected()
+    {
+        if (Vm.Package is not { SelectedItem: { IsDirectory: false, Entry: not null } node } package)
+            return;
+
+        if (node.Size > PackageViewModel.MaxPreviewBytes)
+        {
+            Vm.Status = $"{node.Name} is too large to preview ({EntryNode.FormatSize(node.Size)}). Use Extract instead.";
+            return;
+        }
+
+        try
+        {
+            byte[] data = await Task.Run(package.ReadSelectedBytes);
+            await new FileViewerDialog(node.Name, data).ShowDialog(this);
+        }
+        catch (Exception ex)
+        {
+            Vm.Status = $"Could not read {node.Name}: {ex.Message}";
+        }
     }
 
     private void OnInfoClick(object? sender, RoutedEventArgs e)
@@ -144,6 +171,66 @@ public partial class MainWindow : Window
 
     private void OnAboutClick(object? sender, RoutedEventArgs e) =>
         new AboutDialog().ShowDialog(this);
+
+    private async void OnReplaceClick(object? sender, RoutedEventArgs e)
+    {
+        if (Vm.Package is not { SelectedItem: { IsDirectory: false, Entry: not null } node } package)
+            return;
+
+        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = $"Replace {node.Name} with…",
+            AllowMultiple = false,
+        });
+        if (files.FirstOrDefault()?.TryGetLocalPath() is not { } path)
+            return;
+
+        try
+        {
+            byte[] content = await File.ReadAllBytesAsync(path);
+            package.ReplaceSelected(content);
+            Vm.Status = $"Replaced {node.Name} ({EntryNode.FormatSize(node.Size)} → " +
+                        $"{EntryNode.FormatSize((ulong)content.Length)}). {package.PendingChangeCount} pending change(s) — " +
+                        "use File → Save As to write a new .pkg.";
+        }
+        catch (Exception ex)
+        {
+            Vm.Status = $"Replace failed: {ex.Message}";
+        }
+    }
+
+    private async void OnSaveAsClick(object? sender, RoutedEventArgs e)
+    {
+        if (Vm.Package is not { } package)
+            return;
+
+        string suggested = System.IO.Path.GetFileNameWithoutExtension(package.FilePath) + "-modified.pkg";
+        var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "Save repacked .pkg as…",
+            SuggestedFileName = suggested,
+            DefaultExtension = "pkg",
+            FileTypeChoices = new[]
+            {
+                new FilePickerFileType("PS3 package") { Patterns = new[] { "*.pkg" } },
+            },
+        });
+        if (file?.TryGetLocalPath() is not { } dest)
+            return;
+
+        try
+        {
+            Vm.Status = "Repacking…";
+            await Task.Run(() => package.SaveAs(dest));
+            Vm.Status = package.IsRetail
+                ? $"Saved {System.IO.Path.GetFileName(dest)} — UNSIGNED (retail: invalid CMAC/signature; won't install on a real console)."
+                : $"Saved {System.IO.Path.GetFileName(dest)}.";
+        }
+        catch (Exception ex)
+        {
+            Vm.Status = $"Save failed: {ex.Message}";
+        }
+    }
 
     private void OnCloseClick(object? sender, RoutedEventArgs e) => Vm.CloseFile();
 

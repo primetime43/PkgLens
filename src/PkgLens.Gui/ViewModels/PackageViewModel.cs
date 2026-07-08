@@ -80,6 +80,47 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
 
     public bool HasSelectedFile => SelectedItem is { IsDirectory: false, Entry: not null };
 
+    /// <summary>Files larger than this are not loaded into memory for preview (use Extract instead).</summary>
+    public const long MaxPreviewBytes = 32L * 1024 * 1024;
+
+    public bool CanPreviewSelected =>
+        SelectedItem is { IsDirectory: false, Entry: not null } n && n.Size <= MaxPreviewBytes;
+
+    /// <summary>Reads the selected file's decrypted bytes into memory (for the viewer).</summary>
+    public byte[] ReadSelectedBytes()
+    {
+        if (SelectedItem is not { IsDirectory: false, Entry: { } entry })
+            throw new InvalidOperationException("No file is selected.");
+        return PkgReader.ExtractEntryBytes(_stream, _header, entry, _keys);
+    }
+
+    // --- Modify / repack ----------------------------------------------------------------------
+
+    private readonly Dictionary<PkgEntry, byte[]> _replacements = new();
+
+    public bool HasPendingChanges => _replacements.Count > 0;
+    public int PendingChangeCount => _replacements.Count;
+
+    /// <summary>Queues new content to replace the selected file when the package is next saved.</summary>
+    public void ReplaceSelected(byte[] content)
+    {
+        if (SelectedItem is not { IsDirectory: false, Entry: { } entry })
+            throw new InvalidOperationException("Select a file to replace.");
+        _replacements[entry] = content;
+        OnPropertyChanged(nameof(HasPendingChanges));
+        OnPropertyChanged(nameof(PendingChangeCount));
+    }
+
+    /// <summary>
+    /// Writes a repacked copy of the package to <paramref name="destinationPath"/>, applying any
+    /// queued replacements. The signature is not recomputed (retail output is unsigned).
+    /// </summary>
+    public void SaveAs(string destinationPath)
+    {
+        using var dest = File.Create(destinationPath);
+        PkgWriter.Repack(_stream, _info, _replacements, _keys, dest);
+    }
+
     private PackageViewModel(string path, Stream stream, PkgInfo info, IKeyProvider keys)
     {
         FilePath = path;

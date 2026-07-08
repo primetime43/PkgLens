@@ -1,0 +1,39 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="PkgLens.Gui.Views.FileViewerDialog"
+        Width="720" Height="560"
+        WindowStartupLocation="CenterOwner"
+        Title="View file">
+
+  <DockPanel Margin="10">
+
+    <!-- Header -->
+    <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,8">
+      <TextBlock x:Name="HeaderText" Grid.Column="0" VerticalAlignment="Center"
+                 FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+      <ToggleButton x:Name="TextToggle" Grid.Column="1" Content="Show as text"
+                    Click="OnToggleText" IsVisible="False" />
+    </Grid>
+
+    <!-- Footer -->
+    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right"
+                Spacing="8" Margin="0,8,0,0">
+      <Button Content="Extract…" Click="OnExtract" />
+      <Button Content="Close" Click="OnClose" />
+    </StackPanel>
+
+    <!-- Body: image OR monospace hex/text -->
+    <Grid>
+      <ScrollViewer x:Name="ImageScroll" IsVisible="False"
+                    HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+        <Image x:Name="Preview" Stretch="None" HorizontalAlignment="Center" VerticalAlignment="Center" />
+      </ScrollViewer>
+
+      <TextBox x:Name="TextArea" IsVisible="False" IsReadOnly="True"
+               FontFamily="Consolas, Menlo, monospace" FontSize="12"
+               AcceptsReturn="True" TextWrapping="NoWrap"
+               ScrollViewer.HorizontalScrollBarVisibility="Auto"
+               ScrollViewer.VerticalScrollBarVisibility="Auto" />
+    </Grid>
+  </DockPanel>
+</Window>

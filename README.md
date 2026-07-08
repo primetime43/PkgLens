@@ -17,8 +17,13 @@ Core, CLI, and a first GUI are implemented and tested (spec §11 steps 1–5, pl
 - **Item table** listing (names, sizes, dir/file, encrypted flag).
 - **PARAM.SFO** parser → title / title-id / version / category.
 - **Entry extraction** (streamed) for content you own.
-- **CLI**: `pkglens info | list | sfo`, with `--json` and `--keys`.
-- **GUI** (Avalonia): ICON0 header strip, file tree, Details / Metadata / SFO tabs, extract-selected.
+- **File viewing** — render images (ICON0/PIC1), show text, or a hex dump.
+- **Modify / repack** — replace a file and save a new `.pkg` (re-encrypted). Signatures are **not**
+  forged, so repacked *retail* packages are unsigned (won't install on a real console); *debug*
+  packages repack cleanly. The original file is never modified in place.
+- **CLI**: `pkglens info | list | sfo | keys`, with `--json` and `--keys`.
+- **GUI** (Avalonia): classic menu/toolbar, folder tree + Name/Size list, viewer, Package-info dialog,
+  drag-and-drop, light/dark theme, replace + Save-As (repack).
 
 Verified against synthetic in-test fixtures **and** a real retail package.
 
@@ -83,7 +88,10 @@ PkgLens **parses and inspects** package structure and extracts content the user 
 
 - **No keys are bundled.** The repository ships derivation *logic* only; users supply their own
   key files at runtime. `.gitignore` blocks `*.key`, `keys/`, and `*.pkg` from ever being committed.
-- **Out of scope, permanently:** re-signing, signature forgery, package creation for install, and
-  any private-key or per-console (IDPS/EID) operation.
+- **Repacking is unsigned.** You can rebuild a package you own with modified files, but PkgLens
+  never recomputes the header CMAC or forges the ECDSA signature — a repacked retail package is
+  unsigned and will not install on a retail console.
+- **Out of scope, permanently:** signature forgery / re-signing, and any private-key or per-console
+  (IDPS/EID) operation.
 
 Licensing: keep it permissive (the original is ISC; MIT/ISC pairs well).

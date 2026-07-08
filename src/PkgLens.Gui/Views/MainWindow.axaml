@@ -16,8 +16,15 @@
         <MenuItem Header="_Open .pkg…" Click="OnOpenClick" />
         <MenuItem Header="_Close" Click="OnCloseClick" IsEnabled="{Binding HasPackage}" />
         <Separator />
-        <MenuItem Header="_Extract selected…" Click="OnExtractClick"
+        <MenuItem Header="_View selected…" Click="OnViewClick"
                   IsEnabled="{Binding Package.HasSelectedFile, FallbackValue=False}" />
+        <MenuItem Header="E_xtract selected…" Click="OnExtractClick"
+                  IsEnabled="{Binding Package.HasSelectedFile, FallbackValue=False}" />
+        <Separator />
+        <MenuItem Header="_Replace selected…" Click="OnReplaceClick"
+                  IsEnabled="{Binding Package.HasSelectedFile, FallbackValue=False}" />
+        <MenuItem Header="Save _As… (repack)" Click="OnSaveAsClick"
+                  IsEnabled="{Binding Package.IsDecrypted, FallbackValue=False}" />
         <Separator />
         <MenuItem Header="E_xit" Click="OnExitClick" />
       </MenuItem>
@@ -45,8 +52,15 @@
             BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="0,0,0,1">
       <StackPanel Orientation="Horizontal" Spacing="3">
         <Button Classes="tool" Click="OnOpenClick" ToolTip.Tip="Open a .pkg file">Open</Button>
+        <Button Classes="tool" Click="OnViewClick" ToolTip.Tip="View the selected file"
+                IsEnabled="{Binding Package.HasSelectedFile, FallbackValue=False}">View</Button>
         <Button Classes="tool" Click="OnExtractClick" ToolTip.Tip="Extract the selected file"
                 IsEnabled="{Binding Package.HasSelectedFile, FallbackValue=False}">Extract</Button>
+        <Border Width="1" Margin="3,2" Background="{DynamicResource SystemControlForegroundBaseLowBrush}" />
+        <Button Classes="tool" Click="OnReplaceClick" ToolTip.Tip="Replace the selected file's contents"
+                IsEnabled="{Binding Package.HasSelectedFile, FallbackValue=False}">Replace</Button>
+        <Button Classes="tool" Click="OnSaveAsClick" ToolTip.Tip="Save a repacked copy (unsigned)"
+                IsEnabled="{Binding Package.IsDecrypted, FallbackValue=False}">Save As</Button>
         <Border Width="1" Margin="3,2" Background="{DynamicResource SystemControlForegroundBaseLowBrush}" />
         <Button Classes="tool" Click="OnInfoClick" ToolTip.Tip="Package header, metadata and PARAM.SFO"
                 IsEnabled="{Binding HasPackage}">Info</Button>
