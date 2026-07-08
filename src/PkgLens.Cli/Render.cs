@@ -1,4 +1,5 @@
 using System.Text.Json;
+using PkgLens.Core;
 using PkgLens.Core.Models;
 
 namespace PkgLens.Cli;
@@ -118,6 +119,35 @@ internal static class Render
             Console.WriteLine($"{type,-4} {size,14}  {e.Name}");
         }
         Console.WriteLine($"\n{info.FileCount} files, {info.DirectoryCount} directories.");
+    }
+
+    public static void Verify(PkgVerificationReport report, Options o)
+    {
+        if (o.Json)
+        {
+            WriteJson(new
+            {
+                passed = report.Passed,
+                failures = report.Failures,
+                checks = report.Checks.Select(c => new { name = c.Name, status = c.Status.ToString(), detail = c.Detail }),
+            });
+            return;
+        }
+
+        foreach (var c in report.Checks)
+        {
+            string mark = c.Status switch
+            {
+                PkgCheckStatus.Pass => "ok  ",
+                PkgCheckStatus.Fail => "FAIL",
+                _ => "skip",
+            };
+            Console.WriteLine($"[{mark}] {c.Name,-16} {c.Detail}");
+        }
+        Console.WriteLine();
+        Console.WriteLine(report.Passed
+            ? "Integrity: OK"
+            : $"Integrity: FAILED — {report.Failures} check(s) failed");
     }
 
     public static void Sfo(PkgInfo info, Options o)

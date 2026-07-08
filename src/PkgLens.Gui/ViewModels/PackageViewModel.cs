@@ -86,6 +86,9 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
     public bool CanPreviewSelected =>
         SelectedItem is { IsDirectory: false, Entry: not null } n && n.Size <= MaxPreviewBytes;
 
+    /// <summary>Runs the integrity checks against this package.</summary>
+    public PkgVerificationReport Verify() => PkgVerifier.Verify(_stream, _keys);
+
     /// <summary>Reads the selected file's decrypted bytes into memory (for the viewer).</summary>
     public byte[] ReadSelectedBytes()
     {

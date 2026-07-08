@@ -64,6 +64,7 @@ internal static class CliHelp
               pkglens info    <pkg> [--keys DIR] [--json]   header + content-id + SFO summary
               pkglens list    <pkg> [--keys DIR] [--json]   entry table
               pkglens sfo     <pkg> [--keys DIR] [--json]   dump PARAM.SFO key/values
+              pkglens verify  <pkg> [--keys DIR] [--json]   check header CMAC/SHA-1 + structure
               pkglens keys    import|status|where           manage the runtime retail key
 
             Options:

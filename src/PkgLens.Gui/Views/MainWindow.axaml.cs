@@ -170,6 +170,21 @@ public partial class MainWindow : Window
             new PackageInfoDialog { DataContext = package }.ShowDialog(this);
     }
 
+    private async void OnVerifyClick(object? sender, RoutedEventArgs e)
+    {
+        if (Vm.Package is not { } package)
+            return;
+        try
+        {
+            var report = await Task.Run(package.Verify);
+            await new VerifyDialog(report).ShowDialog(this);
+        }
+        catch (Exception ex)
+        {
+            Vm.Status = $"Verify failed: {ex.Message}";
+        }
+    }
+
     private void OnAboutClick(object? sender, RoutedEventArgs e) =>
         new AboutDialog().ShowDialog(this);
 

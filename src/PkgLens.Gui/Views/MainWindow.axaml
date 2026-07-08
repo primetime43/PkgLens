@@ -32,6 +32,7 @@
         <MenuItem Header="Set _retail key…" Click="OnSetKeyClick" />
         <MenuItem Header="Keys _folder…" Click="OnKeysClick" />
         <Separator />
+        <MenuItem Header="_Verify integrity…" Click="OnVerifyClick" IsEnabled="{Binding HasPackage}" />
         <MenuItem Header="Package _info…" Click="OnInfoClick" IsEnabled="{Binding HasPackage}" />
       </MenuItem>
       <MenuItem Header="_View">

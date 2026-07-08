@@ -45,6 +45,19 @@ if (!File.Exists(parsed.Path))
 
 IKeyProvider keys = new FileKeyProvider(parsed.KeysDir);
 
+if (command == "verify")
+{
+    try
+    {
+        using var stream = File.OpenRead(parsed.Path);
+        var report = PkgVerifier.Verify(stream, keys);
+        Render.Verify(report, parsed);
+        return report.Failures > 0 ? ExitCode.IntegrityFailure : ExitCode.Ok;
+    }
+    catch (PkgKeyException ex) { Console.Error.WriteLine($"key error: {ex.Message}"); return ExitCode.KeyOrDecryptError; }
+    catch (PkgFormatException ex) { Console.Error.WriteLine($"parse error: {ex.Message}"); return ExitCode.ParseError; }
+}
+
 try
 {
     PkgInfo info = PkgReader.Open(parsed.Path, keys);

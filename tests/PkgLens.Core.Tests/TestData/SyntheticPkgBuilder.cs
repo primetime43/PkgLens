@@ -148,6 +148,13 @@ public sealed class SyntheticPkgBuilder
         QaDigest.AsSpan(0, 16).CopyTo(header[0x60..]);
         DataRiv.AsSpan(0, 16).CopyTo(header[0x70..]);
 
+        // Header digest area: SHA-1 (last 8 bytes) at 0xB8, and — for retail — the AES-CMAC at 0x80,
+        // both over header[0x00:0x80], matching the confirmed real-package algorithm.
+        var sha = System.Security.Cryptography.SHA1.HashData(header[0x00..0x80].ToArray());
+        sha.AsSpan(12, 8).CopyTo(header[0xB8..]);
+        if (Finalization == PkgFinalization.Retail)
+            PkgLens.Core.Crypto.AesCmac.Compute(RetailAesKey, header[0x00..0x80]).CopyTo(header[0x80..]);
+
         metaBlock.CopyTo(output.AsSpan(metadataOffset));
         data.CopyTo(output.AsSpan(dataOffset));
         return output;
