@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -181,6 +182,7 @@ public partial class MainWindow : Window
         {
             Title = $"Replace {node.Name} with…",
             AllowMultiple = false,
+            FileTypeFilter = ReplaceFilters(node.Name),
         });
         if (files.FirstOrDefault()?.TryGetLocalPath() is not { } path)
             return;
@@ -197,6 +199,35 @@ public partial class MainWindow : Window
         {
             Vm.Status = $"Replace failed: {ex.Message}";
         }
+    }
+
+    private static readonly string[] ImageExtensions =
+        { ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".tif", ".tiff" };
+
+    /// <summary>
+    /// Builds Open-picker filters so Replace defaults to the selected entry's type — e.g. an image
+    /// entry offers image formats first — while still allowing "All files" as a deliberate override.
+    /// </summary>
+    private static IReadOnlyList<FilePickerFileType> ReplaceFilters(string name)
+    {
+        string ext = Path.GetExtension(name).ToLowerInvariant();
+        var filters = new List<FilePickerFileType>();
+
+        if (ImageExtensions.Contains(ext))
+        {
+            filters.Add(new FilePickerFileType($"{ext.TrimStart('.').ToUpperInvariant()} image")
+            { Patterns = new[] { "*" + ext } });
+            filters.Add(new FilePickerFileType("Images")
+            { Patterns = ImageExtensions.Select(e => "*" + e).ToArray() });
+        }
+        else if (!string.IsNullOrEmpty(ext))
+        {
+            filters.Add(new FilePickerFileType($"{ext.TrimStart('.').ToUpperInvariant()} files")
+            { Patterns = new[] { "*" + ext } });
+        }
+
+        filters.Add(FilePickerFileTypes.All);
+        return filters;
     }
 
     private async void OnSaveAsClick(object? sender, RoutedEventArgs e)
