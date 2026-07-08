@@ -114,6 +114,14 @@
           </Grid>
         </Panel>
       </Border>
+
+      <!-- Drag-and-drop feedback overlay (shown only while a file is dragged over the window) -->
+      <Border x:Name="DropOverlay" IsVisible="False" IsHitTestVisible="False" Background="#99000000">
+        <Border Margin="24" BorderBrush="White" BorderThickness="2" CornerRadius="4">
+          <TextBlock Text="Drop a .pkg file to open it" FontSize="18" Foreground="White"
+                     HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Border>
+      </Border>
     </Grid>
   </DockPanel>
 </Window>

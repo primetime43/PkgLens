@@ -16,11 +16,17 @@ namespace PkgLens.Gui.Views;
 
 public partial class MainWindow : Window
 {
+    private Border? _dropOverlay;
+
     public MainWindow()
     {
         InitializeComponent();
-        AddHandler(DragDrop.DragOverEvent, OnDragOver);
-        AddHandler(DragDrop.DropEvent, OnDrop);
+        // handledEventsToo: true so the drop still reaches the window even when a child control
+        // (e.g. the file list) marks the drag event handled.
+        AddHandler(DragDrop.DragOverEvent, OnDragOver, handledEventsToo: true);
+        AddHandler(DragDrop.DragLeaveEvent, OnDragLeave, handledEventsToo: true);
+        AddHandler(DragDrop.DropEvent, OnDrop, handledEventsToo: true);
+        _dropOverlay = this.FindControl<Border>("DropOverlay");
         UpdateThemeChecks(Application.Current?.RequestedThemeVariant ?? ThemeVariant.Default);
     }
 
@@ -141,11 +147,19 @@ public partial class MainWindow : Window
 
     private void OnExitClick(object? sender, RoutedEventArgs e) => Close();
 
-    private static void OnDragOver(object? sender, DragEventArgs e) =>
-        e.DragEffects = e.Data.Contains(DataFormats.Files) ? DragDropEffects.Copy : DragDropEffects.None;
+    private void OnDragOver(object? sender, DragEventArgs e)
+    {
+        bool hasFiles = e.Data.Contains(DataFormats.Files);
+        e.DragEffects = hasFiles ? DragDropEffects.Copy : DragDropEffects.None;
+        ShowDropOverlay(hasFiles);
+    }
+
+    private void OnDragLeave(object? sender, DragEventArgs e) => ShowDropOverlay(false);
 
     private async void OnDrop(object? sender, DragEventArgs e)
     {
+        ShowDropOverlay(false);
+
         var files = e.Data.GetFiles();
         if (files is null)
             return;
@@ -160,5 +174,13 @@ public partial class MainWindow : Window
                 return;
             }
         }
+
+        Vm.Status = "Drop a .pkg file to open it.";
+    }
+
+    private void ShowDropOverlay(bool show)
+    {
+        if (_dropOverlay is not null)
+            _dropOverlay.IsVisible = show;
     }
 }
