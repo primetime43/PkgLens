@@ -63,7 +63,9 @@
     <!-- Content -->
     <Grid>
 
-      <TextBlock IsVisible="{Binding !HasPackage}" Text="Open a .pkg file to begin."
+      <TextBlock IsVisible="{Binding !HasPackage}"
+                 Text="Open a .pkg file (File → Open), or drag one onto the window."
+                 TextAlignment="Center" TextWrapping="Wrap" MaxWidth="420"
                  HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.45" />
 
       <Border IsVisible="{Binding HasPackage}">

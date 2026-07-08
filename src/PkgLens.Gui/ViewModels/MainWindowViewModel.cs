@@ -12,7 +12,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private PackageViewModel? _package;
 
     [ObservableProperty]
-    private string _status = "Open a .pkg file to begin.";
+    private string _status = "Open or drag a .pkg file to begin.";
 
     [ObservableProperty]
     private string? _keysDirectory;
@@ -47,7 +47,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         if (Package is null)
             return;
         Package = null; // OnPackageChanged disposes it and resets the window title
-        Status = "Open a .pkg file to begin.";
+        Status = "Open or drag a .pkg file to begin.";
     }
 
     /// <summary>Loads a package off the UI thread and swaps it in (disposing any prior one).</summary>
