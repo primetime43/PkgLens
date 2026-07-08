@@ -1,0 +1,20 @@
+# Build output
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+dist/
+*.user
+
+# Never commit key material — keys are supplied at runtime, not stored in the repo.
+*.key
+keys/
+*.gpkg_key
+gpkg_key
+
+# Never commit copyrighted package dumps.
+*.pkg
+
+# IDE
+.vs/
+.idea/

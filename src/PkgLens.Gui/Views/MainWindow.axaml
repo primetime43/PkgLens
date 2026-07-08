@@ -1,0 +1,119 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:PkgLens.Gui.ViewModels"
+        x:Class="PkgLens.Gui.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Width="820" Height="560"
+        MinWidth="560" MinHeight="360"
+        DragDrop.AllowDrop="True"
+        Title="{Binding WindowTitle}">
+
+  <DockPanel>
+
+    <!-- Menu -->
+    <Menu DockPanel.Dock="Top">
+      <MenuItem Header="_File">
+        <MenuItem Header="_Open .pkg…" Click="OnOpenClick" />
+        <MenuItem Header="_Extract selected…" Click="OnExtractClick"
+                  IsEnabled="{Binding Package.HasSelectedFile, FallbackValue=False}" />
+        <Separator />
+        <MenuItem Header="E_xit" Click="OnExitClick" />
+      </MenuItem>
+      <MenuItem Header="_Tools">
+        <MenuItem Header="Set _retail key…" Click="OnSetKeyClick" />
+        <MenuItem Header="Keys _folder…" Click="OnKeysClick" />
+        <Separator />
+        <MenuItem Header="Package _info…" Click="OnInfoClick" IsEnabled="{Binding HasPackage}" />
+      </MenuItem>
+      <MenuItem Header="_View">
+        <MenuItem Header="_Theme">
+          <MenuItem x:Name="ThemeSystemItem" Header="_System" ToggleType="Radio" Click="OnThemeSystem" />
+          <MenuItem x:Name="ThemeLightItem" Header="_Light" ToggleType="Radio" Click="OnThemeLight" />
+          <MenuItem x:Name="ThemeDarkItem" Header="_Dark" ToggleType="Radio" Click="OnThemeDark" />
+        </MenuItem>
+      </MenuItem>
+      <MenuItem Header="_Help">
+        <MenuItem Header="_About PkgLens" Click="OnAboutClick" />
+      </MenuItem>
+    </Menu>
+
+    <!-- Toolbar -->
+    <Border DockPanel.Dock="Top" Padding="4,3"
+            Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+            BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="0,0,0,1">
+      <StackPanel Orientation="Horizontal" Spacing="3">
+        <Button Classes="tool" Click="OnOpenClick" ToolTip.Tip="Open a .pkg file">Open</Button>
+        <Button Classes="tool" Click="OnExtractClick" ToolTip.Tip="Extract the selected file"
+                IsEnabled="{Binding Package.HasSelectedFile, FallbackValue=False}">Extract</Button>
+        <Border Width="1" Margin="3,2" Background="{DynamicResource SystemControlForegroundBaseLowBrush}" />
+        <Button Classes="tool" Click="OnInfoClick" ToolTip.Tip="Package header, metadata and PARAM.SFO"
+                IsEnabled="{Binding HasPackage}">Info</Button>
+      </StackPanel>
+    </Border>
+
+    <!-- Status bar -->
+    <Border DockPanel.Dock="Bottom" Padding="6,3"
+            Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+            BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="0,1,0,0">
+      <TextBlock Text="{Binding Status}" FontSize="12" TextTrimming="CharacterEllipsis" />
+    </Border>
+
+    <!-- Content -->
+    <Grid>
+
+      <TextBlock IsVisible="{Binding !HasPackage}" Text="Open a .pkg file to begin."
+                 HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.45" />
+
+      <Border IsVisible="{Binding HasPackage}">
+        <Panel DataContext="{Binding Package}">
+          <Grid x:DataType="vm:PackageViewModel" ColumnDefinitions="220,4,*">
+
+            <!-- Folder tree -->
+            <TreeView Grid.Column="0" ItemsSource="{Binding FolderRoots}"
+                      SelectedItem="{Binding SelectedFolder, Mode=TwoWay}"
+                      BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="0,0,1,0">
+              <TreeView.Styles>
+                <Style Selector="TreeViewItem">
+                  <Setter Property="IsExpanded" Value="{ReflectionBinding IsExpanded, Mode=TwoWay}" />
+                </Style>
+              </TreeView.Styles>
+              <TreeView.ItemTemplate>
+                <TreeDataTemplate ItemsSource="{Binding DirectoryChildren}" x:DataType="vm:EntryNode">
+                  <StackPanel Orientation="Horizontal" Spacing="5">
+                    <TextBlock Text="{Binding Icon}" />
+                    <TextBlock Text="{Binding Name}" />
+                  </StackPanel>
+                </TreeDataTemplate>
+              </TreeView.ItemTemplate>
+            </TreeView>
+
+            <GridSplitter Grid.Column="1" ResizeDirection="Columns"
+                          Background="{DynamicResource SystemControlForegroundBaseLowBrush}" />
+
+            <!-- File list -->
+            <DataGrid Grid.Column="2" ItemsSource="{Binding CurrentItems}"
+                      SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
+                      DoubleTapped="OnGridDoubleTapped"
+                      IsReadOnly="True" CanUserSortColumns="False" CanUserReorderColumns="False"
+                      GridLinesVisibility="None" HeadersVisibility="Column">
+              <DataGrid.Columns>
+                <DataGridTemplateColumn Header="Name" Width="*">
+                  <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate x:DataType="vm:EntryNode">
+                      <StackPanel Orientation="Horizontal" Spacing="6" Margin="6,0">
+                        <TextBlock Text="{Binding Icon}" />
+                        <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                      </StackPanel>
+                    </DataTemplate>
+                  </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn Header="Size" Binding="{Binding SizeDisplay}" Width="130" />
+              </DataGrid.Columns>
+            </DataGrid>
+
+          </Grid>
+        </Panel>
+      </Border>
+    </Grid>
+  </DockPanel>
+</Window>

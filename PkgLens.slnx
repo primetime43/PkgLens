@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/PkgLens.Cli/PkgLens.Cli.csproj" />
+    <Project Path="src/PkgLens.Core/PkgLens.Core.csproj" />
+    <Project Path="src/PkgLens.Gui/PkgLens.Gui.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/PkgLens.Core.Tests/PkgLens.Core.Tests.csproj" />
+  </Folder>
+</Solution>

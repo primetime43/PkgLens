@@ -1,0 +1,59 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:PkgLens.Gui.ViewModels"
+        x:Class="PkgLens.Gui.Views.PackageInfoDialog"
+        x:DataType="vm:PackageViewModel"
+        Width="560" Height="480"
+        WindowStartupLocation="CenterOwner"
+        Title="Package info">
+
+  <DockPanel Margin="12">
+
+    <!-- Summary -->
+    <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,*" Margin="0,0,0,10">
+      <Border Grid.Column="0" Width="64" Height="64" Margin="0,0,12,0"
+              Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}" ClipToBounds="True">
+        <Image Source="{Binding Icon}" Stretch="UniformToFill" />
+      </Border>
+      <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+        <TextBlock Text="{Binding Title}" FontSize="16" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+        <TextBlock Text="{Binding TitleId}" Opacity="0.7" />
+        <TextBlock Text="{Binding ContentIdRaw}" Classes="mono" FontSize="11" Opacity="0.6" />
+        <TextBlock Text="{Binding SummaryLine}" FontSize="12" Opacity="0.7" />
+      </StackPanel>
+    </Grid>
+
+    <Button DockPanel.Dock="Bottom" Content="Close" Click="OnClose" HorizontalAlignment="Right" Margin="0,10,0,0" />
+
+    <TabControl>
+      <TabItem Header="Metadata">
+        <ScrollViewer>
+          <ItemsControl ItemsSource="{Binding MetadataRows}" Margin="2,6">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:MetadataRow">
+                <Grid ColumnDefinitions="200,*" Margin="0,3">
+                  <TextBlock Grid.Column="0" Text="{Binding Label}" />
+                  <TextBlock Grid.Column="1" Text="{Binding Value}" Classes="mono" FontSize="12" TextWrapping="Wrap" />
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </TabItem>
+      <TabItem Header="PARAM.SFO" IsEnabled="{Binding HasSfo}">
+        <ScrollViewer>
+          <ItemsControl ItemsSource="{Binding SfoRows}" Margin="2,6">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:SfoRow">
+                <Grid ColumnDefinitions="170,*" Margin="0,3">
+                  <TextBlock Grid.Column="0" Text="{Binding Key}" />
+                  <TextBlock Grid.Column="1" Text="{Binding Value}" TextWrapping="Wrap" />
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </TabItem>
+    </TabControl>
+  </DockPanel>
+</Window>

@@ -1,0 +1,15 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="PkgLens.Gui.Views.AboutDialog"
+        Width="380" SizeToContent="Height" CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        Title="About PkgLens">
+
+  <StackPanel Margin="18" Spacing="8">
+    <TextBlock Text="PkgLens" FontSize="18" FontWeight="SemiBold" />
+    <TextBlock Text="PS3 .pkg inspector and extractor." Opacity="0.8" />
+    <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.7"
+               Text="A cross-platform rewrite of the classic PkgView. Parses package structure and extracts content you own. Not affiliated with Sony; no keys are bundled." />
+    <Button Content="Close" Click="OnClose" HorizontalAlignment="Right" Margin="0,6,0,0" />
+  </StackPanel>
+</Window>

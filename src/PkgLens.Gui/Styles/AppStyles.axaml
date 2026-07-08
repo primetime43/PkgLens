@@ -1,0 +1,24 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!-- A few small utility tweaks. Deliberately plain — this is a desktop utility, not a landing page. -->
+
+  <Style Selector="TextBlock.mono">
+    <Setter Property="FontFamily" Value="Consolas, Menlo, monospace" />
+  </Style>
+
+  <!-- Compact toolbar buttons -->
+  <Style Selector="Button.tool">
+    <Setter Property="Padding" Value="8,4" />
+    <Setter Property="MinWidth" Value="0" />
+  </Style>
+
+  <!-- Tighter DataGrid rows for a file-list feel -->
+  <Style Selector="DataGridRow">
+    <Setter Property="MinHeight" Value="24" />
+  </Style>
+  <Style Selector="DataGridColumnHeader">
+    <Setter Property="FontWeight" Value="Normal" />
+  </Style>
+
+</Styles>

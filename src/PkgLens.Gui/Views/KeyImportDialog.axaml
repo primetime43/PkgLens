@@ -1,0 +1,25 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="PkgLens.Gui.Views.KeyImportDialog"
+        Title="Import retail key"
+        Width="480" SizeToContent="Height" CanResize="False"
+        WindowStartupLocation="CenterOwner">
+
+  <StackPanel Margin="18" Spacing="12">
+    <TextBlock TextWrapping="Wrap"
+               Text="Paste the standard NPDRM PKG PS3 AES key — 32 hex characters. It will be saved to ~/.pkglens so retail packages open automatically next time." />
+
+    <TextBox x:Name="KeyBox" Watermark="2E7B71D7C9C9A14EA3221F188828B8F8"
+             FontFamily="Consolas,monospace" AcceptsReturn="False" />
+
+    <TextBlock x:Name="Feedback" IsVisible="False" TextWrapping="Wrap" FontSize="12" Foreground="#D08A00" />
+
+    <TextBlock TextWrapping="Wrap" FontSize="11" Opacity="0.6"
+               Text="The key is public but never bundled with PkgLens. See docs/keys.md for where to find it." />
+
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+      <Button Content="Cancel" Click="OnCancel" IsCancel="True" />
+      <Button Content="Import" Click="OnImport" IsDefault="True" />
+    </StackPanel>
+  </StackPanel>
+</Window>
