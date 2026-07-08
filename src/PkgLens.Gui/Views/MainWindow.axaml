@@ -112,10 +112,11 @@
             <DataGrid Grid.Column="2" ItemsSource="{Binding CurrentItems}"
                       SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
                       DoubleTapped="OnGridDoubleTapped"
-                      IsReadOnly="True" CanUserSortColumns="False" CanUserReorderColumns="False"
+                      IsReadOnly="True" CanUserSortColumns="True" CanUserResizeColumns="True"
+                      CanUserReorderColumns="False"
                       GridLinesVisibility="None" HeadersVisibility="Column">
               <DataGrid.Columns>
-                <DataGridTemplateColumn Header="Name" Width="*">
+                <DataGridTemplateColumn Header="Name" Width="*" SortMemberPath="Name">
                   <DataGridTemplateColumn.CellTemplate>
                     <DataTemplate x:DataType="vm:EntryNode">
                       <StackPanel Orientation="Horizontal" Spacing="6" Margin="6,0">
@@ -125,7 +126,9 @@
                     </DataTemplate>
                   </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
-                <DataGridTextColumn Header="Size" Binding="{Binding SizeDisplay}" Width="130" />
+                <!-- Displays a friendly size but sorts by the numeric byte count. -->
+                <DataGridTextColumn Header="Size" Binding="{Binding SizeDisplay}"
+                                    SortMemberPath="Size" Width="130" MinWidth="80" />
               </DataGrid.Columns>
             </DataGrid>
 
