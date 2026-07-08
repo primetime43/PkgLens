@@ -14,6 +14,8 @@
     <Menu DockPanel.Dock="Top">
       <MenuItem Header="_File">
         <MenuItem Header="_Open .pkg…" Click="OnOpenClick" />
+        <MenuItem Header="_Close" Click="OnCloseClick" IsEnabled="{Binding HasPackage}" />
+        <Separator />
         <MenuItem Header="_Extract selected…" Click="OnExtractClick"
                   IsEnabled="{Binding Package.HasSelectedFile, FallbackValue=False}" />
         <Separator />

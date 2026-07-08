@@ -41,6 +41,15 @@ public sealed partial class MainWindowViewModel : ObservableObject
             : $"Keys directory set: {value}";
     }
 
+    /// <summary>Closes the current package (disposing it) and returns to the empty state.</summary>
+    public void CloseFile()
+    {
+        if (Package is null)
+            return;
+        Package = null; // OnPackageChanged disposes it and resets the window title
+        Status = "Open a .pkg file to begin.";
+    }
+
     /// <summary>Loads a package off the UI thread and swaps it in (disposing any prior one).</summary>
     public async Task LoadAsync(string path)
     {

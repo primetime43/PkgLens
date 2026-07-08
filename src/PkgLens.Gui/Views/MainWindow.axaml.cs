@@ -145,6 +145,8 @@ public partial class MainWindow : Window
     private void OnAboutClick(object? sender, RoutedEventArgs e) =>
         new AboutDialog().ShowDialog(this);
 
+    private void OnCloseClick(object? sender, RoutedEventArgs e) => Vm.CloseFile();
+
     private void OnExitClick(object? sender, RoutedEventArgs e) => Close();
 
     private void OnDragOver(object? sender, DragEventArgs e)
