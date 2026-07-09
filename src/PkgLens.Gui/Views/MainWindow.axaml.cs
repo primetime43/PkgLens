@@ -170,6 +170,26 @@ public partial class MainWindow : Window
             new PackageInfoDialog { DataContext = package }.ShowDialog(this);
     }
 
+    private async void OnEditSfoClick(object? sender, RoutedEventArgs e)
+    {
+        if (Vm.Package is not { Sfo: { } sfo } package)
+            return;
+
+        var edited = await new SfoEditorDialog(sfo.Entries).ShowDialog<List<PkgLens.Core.Sfo.SfoEntry>?>(this);
+        if (edited is null)
+            return;
+
+        try
+        {
+            package.ApplySfoEdits(edited);
+            Vm.Status = $"PARAM.SFO edited — {package.PendingChangeCount} pending change(s). Use File → Save As to write a new .pkg.";
+        }
+        catch (Exception ex)
+        {
+            Vm.Status = $"SFO edit failed: {ex.Message}";
+        }
+    }
+
     private async void OnVerifyClick(object? sender, RoutedEventArgs e)
     {
         if (Vm.Package is not { } package)

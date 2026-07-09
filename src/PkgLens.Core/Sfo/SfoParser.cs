@@ -58,6 +58,7 @@ public static class SfoParser
             ushort keyOffset = BinaryPrimitives.ReadUInt16LittleEndian(e[0x00..]);
             ushort dataFmt = BinaryPrimitives.ReadUInt16LittleEndian(e[0x02..]);
             uint dataLen = BinaryPrimitives.ReadUInt32LittleEndian(e[0x04..]);
+            uint dataMaxLen = BinaryPrimitives.ReadUInt32LittleEndian(e[0x08..]);
             uint dataOffset = BinaryPrimitives.ReadUInt32LittleEndian(e[0x0C..]);
 
             string key = ReadNullTerminated(data, (int)keyTableStart + keyOffset);
@@ -83,7 +84,7 @@ public static class SfoParser
                 value = Encoding.UTF8.GetString(valueBytes).TrimEnd('\0');
             }
 
-            entries.Add(new SfoEntry { Key = key, Format = format, Value = value, IntValue = intValue });
+            entries.Add(new SfoEntry { Key = key, Format = format, Value = value, IntValue = intValue, MaxLength = dataMaxLen });
         }
 
         return new SfoTable(entries);

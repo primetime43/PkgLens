@@ -8,6 +8,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using PkgLens.Core;
 using PkgLens.Core.Keys;
 using PkgLens.Core.Models;
+using PkgLens.Core.Sfo;
 
 namespace PkgLens.Gui.ViewModels;
 
@@ -103,6 +104,25 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
 
     public bool HasPendingChanges => _replacements.Count > 0;
     public int PendingChangeCount => _replacements.Count;
+
+    /// <summary>The parsed PARAM.SFO, if present.</summary>
+    public SfoTable? Sfo => _info.Sfo;
+
+    private PkgEntry? SfoEntry => _info.Entries.FirstOrDefault(e =>
+        e.IsFile && (e.Name.Equals("PARAM.SFO", StringComparison.OrdinalIgnoreCase) ||
+                     e.Name.EndsWith("/PARAM.SFO", StringComparison.OrdinalIgnoreCase)));
+
+    public bool CanEditSfo => _info.Sfo is not null && SfoEntry is not null;
+
+    /// <summary>Serializes the edited SFO and queues it as the PARAM.SFO replacement for the next save.</summary>
+    public void ApplySfoEdits(IReadOnlyList<SfoEntry> edited)
+    {
+        if (SfoEntry is not { } entry)
+            throw new InvalidOperationException("This package has no PARAM.SFO to edit.");
+        _replacements[entry] = SfoWriter.Write(edited);
+        OnPropertyChanged(nameof(HasPendingChanges));
+        OnPropertyChanged(nameof(PendingChangeCount));
+    }
 
     /// <summary>Queues new content to replace the selected file when the package is next saved.</summary>
     public void ReplaceSelected(byte[] content)

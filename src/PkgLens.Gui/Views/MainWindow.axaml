@@ -29,6 +29,9 @@
         <MenuItem Header="E_xit" Click="OnExitClick" />
       </MenuItem>
       <MenuItem Header="_Tools">
+        <MenuItem Header="_Edit PARAM.SFO…" Click="OnEditSfoClick"
+                  IsEnabled="{Binding Package.CanEditSfo, FallbackValue=False}" />
+        <Separator />
         <MenuItem Header="Set _retail key…" Click="OnSetKeyClick" />
         <MenuItem Header="Keys _folder…" Click="OnKeysClick" />
         <Separator />

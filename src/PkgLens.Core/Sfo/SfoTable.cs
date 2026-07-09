@@ -24,6 +24,19 @@ public sealed class SfoEntry
 
     /// <summary>Present only for <see cref="SfoFormat.Int32"/> entries.</summary>
     public uint? IntValue { get; init; }
+
+    /// <summary>The allocated field size (<c>data_max_len</c>). Preserved so edits keep the layout.</summary>
+    public uint MaxLength { get; init; }
+
+    public bool IsInt => Format == SfoFormat.Int32;
+
+    /// <summary>Returns a copy with a new value (string entries) — used by the SFO editor.</summary>
+    public SfoEntry WithValue(string value) =>
+        new() { Key = Key, Format = Format, Value = value, IntValue = IntValue, MaxLength = MaxLength };
+
+    /// <summary>Returns a copy with a new integer value (int entries).</summary>
+    public SfoEntry WithInt(uint value) =>
+        new() { Key = Key, Format = Format, Value = value.ToString(), IntValue = value, MaxLength = MaxLength };
 }
 
 /// <summary>A parsed PARAM.SFO: an ordered, case-sensitive key/value table.</summary>

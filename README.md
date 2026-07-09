@@ -15,7 +15,8 @@ Core, CLI, and a first GUI are implemented and tested (spec §11 steps 1–5, pl
 - **Metadata** block → typed model, unknown ids preserved as raw hex.
 - **Decryptors** behind `IKeyProvider`: retail AES-128-CTR and debug SHA-1 keystream.
 - **Item table** listing (names, sizes, dir/file, encrypted flag).
-- **PARAM.SFO** parser → title / title-id / version / category.
+- **PARAM.SFO** parser → title / title-id / version / category, plus an **SFO editor** (edit
+  values, then Save As repacks with the patched PARAM.SFO).
 - **Entry extraction** (streamed) for content you own.
 - **File viewing** — render images (ICON0/PIC1), show text, or a hex dump.
 - **Modify / repack** — replace a file and save a new `.pkg` (re-encrypted). Signatures are **not**
