@@ -87,6 +87,35 @@ if (command == "extract")
     catch (PkgFormatException ex) { Console.Error.WriteLine($"parse error: {ex.Message}"); return ExitCode.ParseError; }
 }
 
+if (command == "decrypt")
+{
+    try
+    {
+        using var src = File.OpenRead(parsed.Path);
+        var npd = PkgLens.Core.Npd.EdatFile.ParseHeader(src);
+        Console.WriteLine($"{npd.ContentId}  (v{npd.Version}, DRM {npd.LicenseText}{(npd.IsSdat ? ", SDAT" : "")})");
+
+        byte[]? klic = null;
+        if (npd.NeedsKlicensee)
+        {
+            if (parsed.RapFile is null)
+            {
+                Console.Error.WriteLine($"error: '{npd.ContentId}' is a licensed EDAT — supply its RAP with --rap FILE.");
+                return ExitCode.KeyOrDecryptError;
+            }
+            klic = PkgLens.Core.Npd.NpdKeys.RapToKlicensee(File.ReadAllBytes(parsed.RapFile));
+        }
+
+        string outPath = parsed.OutDir ?? StripNpdExtension(parsed.Path);
+        using (var dst = File.Create(outPath))
+            PkgLens.Core.Npd.EdatFile.Decrypt(src, dst, klic);
+        Console.WriteLine($"Decrypted {npd.FileSize:n0} bytes → {outPath}");
+        return ExitCode.Ok;
+    }
+    catch (PkgKeyException ex) { Console.Error.WriteLine($"key error: {ex.Message}"); return ExitCode.KeyOrDecryptError; }
+    catch (PkgFormatException ex) { Console.Error.WriteLine($"parse error: {ex.Message}"); return ExitCode.ParseError; }
+}
+
 try
 {
     PkgInfo info = PkgReader.Open(parsed.Path, keys);
@@ -127,6 +156,14 @@ catch (PkgFormatException ex)
 {
     Console.Error.WriteLine($"parse error: {ex.Message}");
     return ExitCode.ParseError;
+}
+
+static string StripNpdExtension(string path)
+{
+    string ext = Path.GetExtension(path);
+    if (ext.Equals(".edat", StringComparison.OrdinalIgnoreCase) || ext.Equals(".sdat", StringComparison.OrdinalIgnoreCase))
+        return path[..^ext.Length];
+    return path + ".dec";
 }
 
 static bool RequireDecryption(PkgInfo info)

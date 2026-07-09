@@ -10,6 +10,7 @@ internal sealed class Options
     public bool Json { get; set; }
     public string? OutDir { get; set; }
     public string? Filter { get; set; }
+    public string? RapFile { get; set; }
     public string? Error { get; set; }
 }
 
@@ -45,6 +46,11 @@ internal static class CommandLine
                 case "--filter":
                     if (i + 1 >= args.Length) { o.Error = "--filter requires a glob pattern."; return o; }
                     o.Filter = args[++i];
+                    break;
+
+                case "--rap":
+                    if (i + 1 >= args.Length) { o.Error = "--rap requires a RAP file path."; return o; }
+                    o.RapFile = args[++i];
                     break;
 
                 default:
@@ -99,6 +105,7 @@ internal static class CliHelp
               pkglens sfo     <pkg> [--keys DIR] [--json]   dump PARAM.SFO key/values
               pkglens verify  <pkg> [--keys DIR] [--json]   check header CMAC/SHA-1 + structure
               pkglens extract <pkg> [--out DIR] [--filter GLOB] [--keys DIR]   unpack files to a folder
+              pkglens decrypt <edat> [--rap FILE] [--out FILE]   decrypt an EDAT/SDAT file
               pkglens keys    import|status|where           manage the runtime retail key
 
             Options:

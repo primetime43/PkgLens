@@ -19,13 +19,15 @@ Core, CLI, and a first GUI are implemented and tested (spec §11 steps 1–5, pl
   values, then Save As repacks with the patched PARAM.SFO).
 - **Extraction** (streamed) — single file, right-click, or **extract-all** to a folder (rebuilds the tree).
 - **File viewing** — render images (ICON0/PIC1), show text, or a hex dump.
+- **EDAT / SDAT decryption** — decrypt NPDRM data files: SDAT with no key, EDAT with its RAP
+  (or the free key). Viewer decrypts EDATs automatically; `pkglens decrypt` on the CLI.
 - **Modify / repack** — replace a file and save a new `.pkg` (re-encrypted). Signatures are **not**
   forged, so repacked *retail* packages are unsigned (won't install on a real console); *debug*
   packages repack cleanly. The original file is never modified in place.
 - **Integrity `verify`** — structural bounds, the header **SHA-1** digest, and the header **CMAC**
   (`AES-CMAC(gpkg_key, header[0x00:0x80])`, algorithm confirmed against real packages). Detects
   truncation, corruption, and modified/repacked headers. ECDSA signature check is not yet included.
-- **CLI**: `pkglens info | list | sfo | verify | extract | keys`, with `--json`, `--keys`, `--out`, `--filter`.
+- **CLI**: `pkglens info | list | sfo | verify | extract | decrypt | keys`, with `--json`, `--keys`, `--out`, `--filter`, `--rap`.
 - **GUI** (Avalonia): classic menu/toolbar, folder tree + Name/Size list, viewer, Package-info dialog,
   drag-and-drop, light/dark theme, replace + Save-As (repack).
 

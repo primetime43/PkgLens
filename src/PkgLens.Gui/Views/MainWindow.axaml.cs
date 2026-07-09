@@ -200,12 +200,73 @@ public partial class MainWindow : Window
         try
         {
             byte[] data = await Task.Run(package.ReadSelectedBytes);
-            await new FileViewerDialog(node.Name, data).ShowDialog(this);
+            string title = node.Name;
+
+            // If it's an EDAT/SDAT, decrypt it so the viewer shows the real contents.
+            if (PkgLens.Core.Npd.EdatFile.IsEdat(data))
+                (data, title) = await DecryptEdatForView(data, node.Name);
+
+            await new FileViewerDialog(title, data).ShowDialog(this);
         }
         catch (Exception ex)
         {
             Vm.Status = $"Could not read {node.Name}: {ex.Message}";
         }
+    }
+
+    /// <summary>Decrypts an EDAT/SDAT for viewing (SDAT/free automatic; licensed resolves a RAP).</summary>
+    private async Task<(byte[] data, string title)> DecryptEdatForView(byte[] data, string name)
+    {
+        var npd = PkgLens.Core.Npd.EdatFile.ParseHeader(new MemoryStream(data));
+
+        byte[]? klic = null;
+        if (npd.NeedsKlicensee)
+        {
+            byte[]? rap = PkgLens.Core.Npd.RapStore.Find(npd.ContentId) ?? await PromptForRap(npd.ContentId);
+            if (rap is null)
+            {
+                Vm.Status = $"{npd.ContentId}: licensed EDAT — no RAP provided, showing the raw encrypted file.";
+                return (data, name);
+            }
+            klic = PkgLens.Core.Npd.NpdKeys.RapToKlicensee(rap);
+        }
+
+        try
+        {
+            byte[] plain = PkgLens.Core.Npd.EdatFile.DecryptToArray(new MemoryStream(data), klic);
+            Vm.Status = $"Decrypted EDAT: {npd.ContentId} (DRM {npd.LicenseText})";
+            return (plain, $"{name}  ·  decrypted EDAT");
+        }
+        catch (Exception ex)
+        {
+            Vm.Status = $"EDAT decrypt failed: {ex.Message}";
+            return (data, name);
+        }
+    }
+
+    private async Task<byte[]?> PromptForRap(string contentId)
+    {
+        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = $"Select the RAP for {contentId}",
+            AllowMultiple = false,
+            FileTypeFilter = new[]
+            {
+                new FilePickerFileType("RAP license") { Patterns = new[] { "*.rap" } },
+                FilePickerFileTypes.All,
+            },
+        });
+        if (files.FirstOrDefault()?.TryGetLocalPath() is not { } path)
+            return null;
+
+        var rap = await File.ReadAllBytesAsync(path);
+        if (rap.Length != 16)
+        {
+            Vm.Status = "That file is not a 16-byte RAP.";
+            return null;
+        }
+        try { PkgLens.Core.Npd.RapStore.Install(contentId, rap); } catch { /* best-effort caching */ }
+        return rap;
     }
 
     private void OnInfoClick(object? sender, RoutedEventArgs e)
