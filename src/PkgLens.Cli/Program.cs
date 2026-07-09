@@ -58,6 +58,35 @@ if (command == "verify")
     catch (PkgFormatException ex) { Console.Error.WriteLine($"parse error: {ex.Message}"); return ExitCode.ParseError; }
 }
 
+if (command == "extract")
+{
+    try
+    {
+        using var stream = File.OpenRead(parsed.Path);
+        var info = PkgReader.Read(stream, keys);
+        if (!info.IsDecrypted)
+        {
+            Console.Error.WriteLine($"decryption unavailable: {info.DecryptionNote ?? "a key is required."}");
+            return ExitCode.KeyOrDecryptError;
+        }
+
+        string outDir = parsed.OutDir ?? Path.GetFileNameWithoutExtension(parsed.Path);
+        Func<PkgLens.Core.Models.PkgEntry, bool>? filter = null;
+        if (parsed.Filter is not null)
+        {
+            var match = Glob.Matcher(parsed.Filter);
+            filter = e => match(e.Name);
+        }
+
+        int n = PkgReader.ExtractAll(stream, info, outDir, keys, filter,
+            e => Console.WriteLine($"  {e.Name}"));
+        Console.WriteLine($"Extracted {n} file(s) to {Path.GetFullPath(outDir)}");
+        return ExitCode.Ok;
+    }
+    catch (PkgKeyException ex) { Console.Error.WriteLine($"key error: {ex.Message}"); return ExitCode.KeyOrDecryptError; }
+    catch (PkgFormatException ex) { Console.Error.WriteLine($"parse error: {ex.Message}"); return ExitCode.ParseError; }
+}
+
 try
 {
     PkgInfo info = PkgReader.Open(parsed.Path, keys);

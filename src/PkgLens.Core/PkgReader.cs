@@ -58,6 +58,64 @@ public static class PkgReader
         }
     }
 
+    /// <summary>
+    /// Extracts every file to <paramref name="outputDir"/>, rebuilding the package's directory tree.
+    /// An optional <paramref name="filter"/> selects which entries to write; <paramref name="onExtracted"/>
+    /// is called per file (for progress). Returns the number of files written. Entry names that would
+    /// escape the output directory are rejected.
+    /// </summary>
+    public static int ExtractAll(Stream stream, PkgInfo info, string outputDir, IKeyProvider keys,
+        Func<PkgEntry, bool>? filter = null, Action<PkgEntry>? onExtracted = null)
+    {
+        ArgumentNullException.ThrowIfNull(stream);
+        ArgumentNullException.ThrowIfNull(info);
+        ArgumentException.ThrowIfNullOrEmpty(outputDir);
+        if (!info.IsDecrypted)
+            throw new PkgFormatException("Package contents are not decrypted — a key is required to extract.");
+
+        string root = Path.GetFullPath(outputDir);
+        Directory.CreateDirectory(root);
+        string rootWithSep = root.EndsWith(Path.DirectorySeparatorChar) ? root : root + Path.DirectorySeparatorChar;
+
+        var decryptor = ResolveDecryptor(info.Header, keys);
+        try
+        {
+            int count = 0;
+            foreach (var entry in info.Entries)
+            {
+                if (filter is not null && !filter(entry)) continue;
+
+                string dest = SafeCombine(rootWithSep, entry.Name);
+                if (entry.IsDirectory)
+                {
+                    Directory.CreateDirectory(dest);
+                    continue;
+                }
+
+                Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
+                using (var fs = File.Create(dest))
+                    Ps3PackageReader.CopyEntryTo(stream, info.Header, decryptor, entry, fs);
+                onExtracted?.Invoke(entry);
+                count++;
+            }
+            return count;
+        }
+        finally
+        {
+            (decryptor as IDisposable)?.Dispose();
+        }
+    }
+
+    private static string SafeCombine(string rootWithSep, string relative)
+    {
+        string rel = relative.Replace('/', Path.DirectorySeparatorChar).TrimStart(Path.DirectorySeparatorChar);
+        string full = Path.GetFullPath(Path.Combine(rootWithSep, rel));
+        if (!full.StartsWith(rootWithSep, StringComparison.Ordinal) &&
+            full != rootWithSep.TrimEnd(Path.DirectorySeparatorChar))
+            throw new PkgFormatException($"Entry '{relative}' would escape the output directory.");
+        return full;
+    }
+
     private static Crypto.IPkgDecryptor ResolveDecryptor(PkgHeader header, IKeyProvider keys)
     {
         if (!keys.TryResolve(header, out var ctx, out string? reason))

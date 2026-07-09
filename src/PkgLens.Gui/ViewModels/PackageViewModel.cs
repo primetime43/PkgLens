@@ -210,6 +210,9 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
             SelectedFolder = folder;
     }
 
+    /// <summary>Extracts every file to <paramref name="directory"/>, rebuilding the tree. Returns the file count.</summary>
+    public int ExtractAllTo(string directory) => PkgReader.ExtractAll(_stream, _info, directory, _keys);
+
     /// <summary>Streams the currently selected entry's decrypted data to <paramref name="destinationPath"/>.</summary>
     public void ExtractSelectedTo(string destinationPath)
     {

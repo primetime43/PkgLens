@@ -1,3 +1,5 @@
+using System.Text.RegularExpressions;
+
 namespace PkgLens.Cli;
 
 /// <summary>Parsed CLI options shared by all subcommands.</summary>
@@ -6,6 +8,8 @@ internal sealed class Options
     public string? Path { get; set; }
     public string? KeysDir { get; set; }
     public bool Json { get; set; }
+    public string? OutDir { get; set; }
+    public string? Filter { get; set; }
     public string? Error { get; set; }
 }
 
@@ -33,6 +37,16 @@ internal static class CommandLine
                     o.KeysDir = args[++i];
                     break;
 
+                case "--out":
+                    if (i + 1 >= args.Length) { o.Error = "--out requires a directory argument."; return o; }
+                    o.OutDir = args[++i];
+                    break;
+
+                case "--filter":
+                    if (i + 1 >= args.Length) { o.Error = "--filter requires a glob pattern."; return o; }
+                    o.Filter = args[++i];
+                    break;
+
                 default:
                     if (a.StartsWith("--", StringComparison.Ordinal))
                     {
@@ -52,6 +66,25 @@ internal static class CommandLine
     }
 }
 
+/// <summary>Simple glob (<c>*</c>, <c>?</c>). A pattern with '/' matches the full path, else the leaf name.</summary>
+internal static class Glob
+{
+    public static Func<string, bool> Matcher(string pattern)
+    {
+        bool fullPath = pattern.Contains('/');
+        var regex = new Regex(
+            "^" + Regex.Escape(pattern).Replace("\\*", ".*").Replace("\\?", ".") + "$",
+            RegexOptions.IgnoreCase);
+        return name =>
+        {
+            string target = fullPath ? name
+                : name.Contains('/') ? name[(name.LastIndexOf('/') + 1)..]
+                : name;
+            return regex.IsMatch(target);
+        };
+    }
+}
+
 internal static class CliHelp
 {
     public static void PrintUsage()
@@ -65,12 +98,15 @@ internal static class CliHelp
               pkglens list    <pkg> [--keys DIR] [--json]   entry table
               pkglens sfo     <pkg> [--keys DIR] [--json]   dump PARAM.SFO key/values
               pkglens verify  <pkg> [--keys DIR] [--json]   check header CMAC/SHA-1 + structure
+              pkglens extract <pkg> [--out DIR] [--filter GLOB] [--keys DIR]   unpack files to a folder
               pkglens keys    import|status|where           manage the runtime retail key
 
             Options:
               --keys DIR   directory holding the runtime NPDRM PKG PS3 AES key file
                            (also read from $PKGLENS_KEYS or ~/.pkglens). Retail packages
                            need this; debug packages decrypt without any key.
+              --out DIR    extract destination (default: a folder named after the package)
+              --filter GLOB  only extract matching entries, e.g. "*.SFO" or "USRDIR/*"
               --json       machine-readable output
 
             Exit codes: 0 ok · 1 usage · 2 parse error · 3 key/decryption error · 4 integrity failure

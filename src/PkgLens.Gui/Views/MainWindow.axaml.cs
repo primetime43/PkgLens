@@ -132,6 +132,45 @@ public partial class MainWindow : Window
         }
     }
 
+    // Right-click selects the row under the cursor so the context menu acts on it.
+    private void OnGridPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (e.GetCurrentPoint(sender as Visual).Properties.IsRightButtonPressed &&
+            (e.Source as Control)?.DataContext is EntryNode node &&
+            Vm.Package is { } package)
+        {
+            package.SelectedItem = node;
+        }
+    }
+
+    private async void OnExtractAllClick(object? sender, RoutedEventArgs e)
+    {
+        if (Vm.Package is not { IsDecrypted: true } package)
+            return;
+
+        var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        {
+            Title = "Extract all — choose where to create the package folder",
+            AllowMultiple = false,
+        });
+        if (folders.FirstOrDefault()?.TryGetLocalPath() is not { } dir)
+            return;
+
+        // Extract into a subfolder named after the package, so files don't spill into the chosen dir.
+        string dest = Path.Combine(dir, Path.GetFileNameWithoutExtension(package.FilePath));
+
+        try
+        {
+            Vm.Status = "Extracting all files…";
+            int n = await Task.Run(() => package.ExtractAllTo(dest));
+            Vm.Status = $"Extracted {n} file(s) to {dest}";
+        }
+        catch (Exception ex)
+        {
+            Vm.Status = $"Extract all failed: {ex.Message}";
+        }
+    }
+
     private void OnGridDoubleTapped(object? sender, TappedEventArgs e)
     {
         if (Vm.Package?.SelectedItem is not { } node)

@@ -16,6 +16,8 @@
         <MenuItem Header="_Open .pkg…" Click="OnOpenClick" />
         <MenuItem Header="_Close" Click="OnCloseClick" IsEnabled="{Binding HasPackage}" />
         <Separator />
+        <MenuItem Header="Extract _all…" Click="OnExtractAllClick"
+                  IsEnabled="{Binding Package.IsDecrypted, FallbackValue=False}" />
         <MenuItem Header="Save _As… (repack)" Click="OnSaveAsClick"
                   IsEnabled="{Binding Package.IsDecrypted, FallbackValue=False}" />
         <Separator />
@@ -114,10 +116,17 @@
             <!-- File list -->
             <DataGrid Grid.Column="2" ItemsSource="{Binding CurrentItems}"
                       SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
-                      DoubleTapped="OnGridDoubleTapped"
+                      DoubleTapped="OnGridDoubleTapped" PointerPressed="OnGridPointerPressed"
                       IsReadOnly="True" CanUserSortColumns="True" CanUserResizeColumns="True"
                       CanUserReorderColumns="False"
                       GridLinesVisibility="None" HeadersVisibility="Column">
+              <DataGrid.ContextMenu>
+                <ContextMenu>
+                  <MenuItem Header="View" Click="OnViewClick" />
+                  <MenuItem Header="Extract…" Click="OnExtractClick" />
+                  <MenuItem Header="Replace…" Click="OnReplaceClick" />
+                </ContextMenu>
+              </DataGrid.ContextMenu>
               <DataGrid.Columns>
                 <DataGridTemplateColumn Header="Name" Width="*" SortMemberPath="Name">
                   <DataGridTemplateColumn.CellTemplate>
