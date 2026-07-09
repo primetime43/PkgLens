@@ -16,27 +16,28 @@
         <MenuItem Header="_Open .pkg…" Click="OnOpenClick" />
         <MenuItem Header="_Close" Click="OnCloseClick" IsEnabled="{Binding HasPackage}" />
         <Separator />
-        <MenuItem Header="_View selected…" Click="OnViewClick"
-                  IsEnabled="{Binding Package.HasSelectedFile, FallbackValue=False}" />
-        <MenuItem Header="E_xtract selected…" Click="OnExtractClick"
-                  IsEnabled="{Binding Package.HasSelectedFile, FallbackValue=False}" />
-        <Separator />
-        <MenuItem Header="_Replace selected…" Click="OnReplaceClick"
-                  IsEnabled="{Binding Package.HasSelectedFile, FallbackValue=False}" />
         <MenuItem Header="Save _As… (repack)" Click="OnSaveAsClick"
                   IsEnabled="{Binding Package.IsDecrypted, FallbackValue=False}" />
         <Separator />
         <MenuItem Header="E_xit" Click="OnExitClick" />
       </MenuItem>
-      <MenuItem Header="_Tools">
-        <MenuItem Header="_Edit PARAM.SFO…" Click="OnEditSfoClick"
+      <MenuItem Header="_Edit">
+        <MenuItem Header="Edit _PARAM.SFO…" Click="OnEditSfoClick"
                   IsEnabled="{Binding Package.CanEditSfo, FallbackValue=False}" />
+        <MenuItem Header="_Replace selected file…" Click="OnReplaceClick"
+                  IsEnabled="{Binding Package.HasSelectedFile, FallbackValue=False}" />
+        <Separator />
+        <MenuItem Header="E_xtract selected file…" Click="OnExtractClick"
+                  IsEnabled="{Binding Package.HasSelectedFile, FallbackValue=False}" />
+        <MenuItem Header="_View selected file…" Click="OnViewClick"
+                  IsEnabled="{Binding Package.HasSelectedFile, FallbackValue=False}" />
+      </MenuItem>
+      <MenuItem Header="_Tools">
+        <MenuItem Header="_Verify integrity…" Click="OnVerifyClick" IsEnabled="{Binding HasPackage}" />
+        <MenuItem Header="Package _info…" Click="OnInfoClick" IsEnabled="{Binding HasPackage}" />
         <Separator />
         <MenuItem Header="Set _retail key…" Click="OnSetKeyClick" />
         <MenuItem Header="Keys _folder…" Click="OnKeysClick" />
-        <Separator />
-        <MenuItem Header="_Verify integrity…" Click="OnVerifyClick" IsEnabled="{Binding HasPackage}" />
-        <MenuItem Header="Package _info…" Click="OnInfoClick" IsEnabled="{Binding HasPackage}" />
       </MenuItem>
       <MenuItem Header="_View">
         <MenuItem Header="_Theme">
@@ -56,18 +57,16 @@
             BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="0,0,0,1">
       <StackPanel Orientation="Horizontal" Spacing="3">
         <Button Classes="tool" Click="OnOpenClick" ToolTip.Tip="Open a .pkg file">Open</Button>
-        <Button Classes="tool" Click="OnViewClick" ToolTip.Tip="View the selected file"
-                IsEnabled="{Binding Package.HasSelectedFile, FallbackValue=False}">View</Button>
+        <Border Width="1" Margin="3,2" Background="{DynamicResource SystemControlForegroundBaseLowBrush}" />
         <Button Classes="tool" Click="OnExtractClick" ToolTip.Tip="Extract the selected file"
                 IsEnabled="{Binding Package.HasSelectedFile, FallbackValue=False}">Extract</Button>
-        <Border Width="1" Margin="3,2" Background="{DynamicResource SystemControlForegroundBaseLowBrush}" />
         <Button Classes="tool" Click="OnReplaceClick" ToolTip.Tip="Replace the selected file's contents"
                 IsEnabled="{Binding Package.HasSelectedFile, FallbackValue=False}">Replace</Button>
+        <Button Classes="tool" Click="OnEditSfoClick" ToolTip.Tip="Edit PARAM.SFO"
+                IsEnabled="{Binding Package.CanEditSfo, FallbackValue=False}">Edit SFO</Button>
+        <Border Width="1" Margin="3,2" Background="{DynamicResource SystemControlForegroundBaseLowBrush}" />
         <Button Classes="tool" Click="OnSaveAsClick" ToolTip.Tip="Save a repacked copy (unsigned)"
                 IsEnabled="{Binding Package.IsDecrypted, FallbackValue=False}">Save As</Button>
-        <Border Width="1" Margin="3,2" Background="{DynamicResource SystemControlForegroundBaseLowBrush}" />
-        <Button Classes="tool" Click="OnInfoClick" ToolTip.Tip="Package header, metadata and PARAM.SFO"
-                IsEnabled="{Binding HasPackage}">Info</Button>
       </StackPanel>
     </Border>
 

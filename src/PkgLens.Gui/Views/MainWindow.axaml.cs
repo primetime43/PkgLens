@@ -134,8 +134,13 @@ public partial class MainWindow : Window
 
     private void OnGridDoubleTapped(object? sender, TappedEventArgs e)
     {
-        if (Vm.Package?.SelectedItem is { IsDirectory: true } folder)
-            Vm.Package.OpenFolder(folder);
+        if (Vm.Package?.SelectedItem is not { } node)
+            return;
+
+        if (node.IsDirectory)
+            Vm.Package.OpenFolder(node);
+        else if (node.Name.Equals("PARAM.SFO", StringComparison.OrdinalIgnoreCase) && Vm.Package.CanEditSfo)
+            EditSfo();   // SFO opens in the editor, not the hex viewer
         else
             ViewSelected();
     }
@@ -170,7 +175,9 @@ public partial class MainWindow : Window
             new PackageInfoDialog { DataContext = package }.ShowDialog(this);
     }
 
-    private async void OnEditSfoClick(object? sender, RoutedEventArgs e)
+    private void OnEditSfoClick(object? sender, RoutedEventArgs e) => EditSfo();
+
+    private async void EditSfo()
     {
         if (Vm.Package is not { Sfo: { } sfo } package)
             return;
