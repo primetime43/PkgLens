@@ -25,6 +25,10 @@ if (command == "keys")
 if (command == "pack")
     return PackCommand.Run(args.AsSpan(1));
 
+// The `resign` command builds a fSELF from an <elf> and has its own option set.
+if (command == "resign")
+    return ResignCommand.Run(args.AsSpan(1));
+
 var parsed = CommandLine.Parse(args.AsSpan(1));
 
 if (parsed.Error is not null)
@@ -88,6 +92,18 @@ if (command == "extract")
         return ExitCode.Ok;
     }
     catch (PkgKeyException ex) { Console.Error.WriteLine($"key error: {ex.Message}"); return ExitCode.KeyOrDecryptError; }
+    catch (PkgFormatException ex) { Console.Error.WriteLine($"parse error: {ex.Message}"); return ExitCode.ParseError; }
+}
+
+if (command == "self")
+{
+    try
+    {
+        using var s = File.OpenRead(parsed.Path);
+        var info = PkgLens.Core.Self.SelfReader.ParseInfo(s);
+        Render.Self(info);
+        return ExitCode.Ok;
+    }
     catch (PkgFormatException ex) { Console.Error.WriteLine($"parse error: {ex.Message}"); return ExitCode.ParseError; }
 }
 

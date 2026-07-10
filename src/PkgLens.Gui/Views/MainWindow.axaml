@@ -226,18 +226,43 @@
           </StackPanel>
         </ScrollViewer>
 
-        <!-- ===== Resign page (placeholder) ===== -->
+        <!-- ===== Resign page ===== -->
         <ScrollViewer IsVisible="{Binding IsResignTool}">
           <StackPanel Margin="18" Spacing="10" MaxWidth="560" HorizontalAlignment="Left">
             <TextBlock Text="SELF / EBOOT Resigner" FontSize="16" FontWeight="SemiBold" />
-            <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.8"
-                       Text="Decrypt and fake-sign EBOOT.BIN / SELF / SPRX so a repacked game boots on a jailbroken PS3 without its original license." />
-            <Border BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="1"
+            <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.75"
+                       Text="Inspect a SELF/EBOOT header, or fake-sign a plaintext ELF into a fSELF that boots on a jailbroken (CFW) PS3." />
+
+            <TextBlock Text="Inspect" FontWeight="SemiBold" FontSize="12" Margin="0,4,0,0" />
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Button Content="Browse SELF / EBOOT…" Click="OnSelfBrowse" />
+              <TextBlock x:Name="SelfFileText" VerticalAlignment="Center" FontSize="12" Opacity="0.8"
+                         TextTrimming="CharacterEllipsis" Text="(none)" />
+            </StackPanel>
+
+            <Border x:Name="SelfInfoBox" IsVisible="False"
+                    BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="1"
                     CornerRadius="3" Padding="12">
+              <TextBlock x:Name="SelfInfoText" FontFamily="Consolas,monospace" FontSize="12" TextWrapping="Wrap" />
+            </Border>
+
+            <Border Height="1" Background="{DynamicResource SystemControlForegroundBaseLowBrush}" Margin="0,4" />
+
+            <TextBlock Text="Resign (ELF → fSELF)" FontWeight="SemiBold" FontSize="12" />
+            <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.75"
+                       Text="Pick a decrypted ELF; PkgLens writes a fake-signed NON-DRM SELF (no keys). It runs on CFW — signature checks patched — not on stock retail." />
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Button Content="Fake-sign an ELF…" Click="OnMakeFself" />
+              <CheckBox x:Name="FselfNpdrmCheck" Content="NPDRM (app type 8)" VerticalAlignment="Center" />
+            </StackPanel>
+            <TextBlock x:Name="FselfNotes" TextWrapping="Wrap" FontSize="12" Opacity="0.7" IsVisible="False" />
+
+            <Border BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="1"
+                    CornerRadius="3" Padding="12" Margin="0,4,0,0">
               <StackPanel Spacing="6">
                 <TextBlock Text="Coming next" FontWeight="SemiBold" FontSize="12" />
                 <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.8"
-                           Text="Planned, in order: CEX CFW — decrypt EBOOT, resign to NON-DRM (fSELF), resign to NPDRM. Then DEX/OFW variants. Uses public PS3 keys; nothing per-console." />
+                           Text="Decrypt a retail EBOOT.BIN → ELF (so you can fake-sign one you only have encrypted), then resign-on-pack and DEX/OFW variants." />
               </StackPanel>
             </Border>
           </StackPanel>

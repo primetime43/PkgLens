@@ -504,6 +504,115 @@ public partial class MainWindow : Window
         notes.IsVisible = !string.IsNullOrEmpty(text);
     }
 
+    // ==================== Resign page (inspector for now) ====================
+
+    private async void OnSelfBrowse(object? sender, RoutedEventArgs e)
+    {
+        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "Choose an EBOOT.BIN / SELF / SPRX",
+            AllowMultiple = false,
+            FileTypeFilter = new[]
+            {
+                new FilePickerFileType("SELF / EBOOT") { Patterns = new[] { "EBOOT.BIN", "*.self", "*.sprx", "*.bin" } },
+                FilePickerFileTypes.All,
+            },
+        });
+        if (files.FirstOrDefault()?.TryGetLocalPath() is not { } path)
+            return;
+
+        this.FindControl<TextBlock>("SelfFileText")!.Text = Path.GetFileName(path);
+        var box = this.FindControl<Border>("SelfInfoBox")!;
+        var text = this.FindControl<TextBlock>("SelfInfoText")!;
+
+        try
+        {
+            var info = await Task.Run(() =>
+            {
+                using var s = File.OpenRead(path);
+                return PkgLens.Core.Self.SelfReader.ParseInfo(s);
+            });
+            text.Text = DescribeSelf(info);
+            box.IsVisible = true;
+            Vm.Status = $"Read SELF header: {info.ProgramTypeText}" + (info.IsNpdrm ? " (NPDRM)" : "");
+        }
+        catch (Exception ex)
+        {
+            box.IsVisible = false;
+            Vm.Status = $"Not a readable SELF: {ex.Message}";
+        }
+    }
+
+    private async void OnMakeFself(object? sender, RoutedEventArgs e)
+    {
+        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "Choose a decrypted ELF to fake-sign",
+            AllowMultiple = false,
+            FileTypeFilter = new[]
+            {
+                new FilePickerFileType("ELF") { Patterns = new[] { "*.elf", "*.ELF", "EBOOT.ELF" } },
+                FilePickerFileTypes.All,
+            },
+        });
+        if (files.FirstOrDefault()?.TryGetLocalPath() is not { } input)
+            return;
+
+        bool npdrm = this.FindControl<CheckBox>("FselfNpdrmCheck")!.IsChecked == true;
+
+        var save = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "Save the fake-signed SELF as…",
+            SuggestedFileName = npdrm ? "EBOOT.BIN" : Path.GetFileNameWithoutExtension(input) + ".self",
+            DefaultExtension = npdrm ? "BIN" : "self",
+        });
+        if (save?.TryGetLocalPath() is not { } dest)
+            return;
+
+        try
+        {
+            long size = await Task.Run(() =>
+            {
+                byte[] elf = File.ReadAllBytes(input);
+                byte[] fself = PkgLens.Core.Self.SelfBuilder.MakeFakeSelf(elf, npdrm);
+                File.WriteAllBytes(dest, fself);
+                return (long)fself.Length;
+            });
+            Vm.Status = $"Fake-signed → {Path.GetFileName(dest)} ({size:n0} bytes).";
+            ShowFselfNotes($"Wrote a {(npdrm ? "NPDRM" : "NON-DRM")} fSELF (key rev 0x8000). Runs on CFW; not on stock retail.");
+        }
+        catch (Exception ex)
+        {
+            Vm.Status = $"Fake-sign failed: {ex.Message}";
+            ShowFselfNotes(ex.Message);
+        }
+    }
+
+    private void ShowFselfNotes(string? text)
+    {
+        var notes = this.FindControl<TextBlock>("FselfNotes")!;
+        notes.Text = text ?? string.Empty;
+        notes.IsVisible = !string.IsNullOrEmpty(text);
+    }
+
+    private static string DescribeSelf(PkgLens.Core.Self.SelfInfo s)
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine($"Program    : {s.ProgramTypeText}" + (s.IsNpdrm ? "  (NPDRM)" : ""));
+        sb.AppendLine($"Key rev    : 0x{s.KeyRevision:X4}" + (s.IsLikelyFakeSigned ? "  (fake-signed / fSELF)" : ""));
+        sb.AppendLine($"Auth ID    : 0x{s.AuthId:X16}");
+        sb.AppendLine($"Vendor ID  : 0x{s.VendorId:X8}");
+        sb.AppendLine($"ELF size   : {s.DataLength:n0} bytes (decrypted)");
+        if (s.Elf is { } elf)
+            sb.AppendLine($"ELF        : {(elf.Is64Bit ? "64-bit" : "32-bit")} {(elf.IsBigEndian ? "big-endian" : "little-endian")}, {elf.TypeText}");
+        if (s.Npdrm is { } npd)
+        {
+            sb.AppendLine($"Content ID : {npd.ContentId}");
+            sb.AppendLine($"License    : {npd.LicenseText}");
+        }
+        return sb.ToString().TrimEnd();
+    }
+
     private static string SanitizeFileName(string? name)
     {
         name ??= string.Empty;

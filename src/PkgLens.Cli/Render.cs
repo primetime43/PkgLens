@@ -150,6 +150,30 @@ internal static class Render
             : $"Integrity: FAILED — {report.Failures} check(s) failed");
     }
 
+    public static void Self(PkgLens.Core.Self.SelfInfo self)
+    {
+        Console.WriteLine($"SELF       : {self.FileSize:n0} bytes");
+        Console.WriteLine($"Program    : {self.ProgramTypeText}" + (self.IsNpdrm ? "  (NPDRM)" : ""));
+        Console.WriteLine($"Key rev    : 0x{self.KeyRevision:X4}" + (self.IsLikelyFakeSigned ? "  (fake-signed / fSELF)" : ""));
+        Console.WriteLine($"Version    : {self.VersionText}");
+        Console.WriteLine($"Auth ID    : 0x{self.AuthId:X16}");
+        Console.WriteLine($"Vendor ID  : 0x{self.VendorId:X8}");
+        Console.WriteLine($"Metadata   : offset 0x{self.MetadataOffset:X}");
+        Console.WriteLine($"ELF size   : {self.DataLength:n0} bytes (decrypted)");
+
+        if (self.Elf is { } elf)
+            Console.WriteLine($"ELF        : {(elf.Is64Bit ? "64-bit" : "32-bit")} " +
+                              $"{(elf.IsBigEndian ? "big-endian" : "little-endian")}, {elf.TypeText}, machine 0x{elf.Machine:X}");
+
+        if (self.Npdrm is { } npd)
+        {
+            Console.WriteLine("NPDRM:");
+            Console.WriteLine($"  Content ID : {npd.ContentId}");
+            Console.WriteLine($"  License    : {npd.LicenseText}");
+            Console.WriteLine($"  App type   : 0x{npd.AppType:X}");
+        }
+    }
+
     public static void Sfo(PkgInfo info, Options o)
     {
         var sfo = info.Sfo!;

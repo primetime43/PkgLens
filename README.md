@@ -33,7 +33,13 @@ Core, CLI, and a first GUI are implemented and tested (spec §11 steps 1–5, pl
 - **Integrity `verify`** — structural bounds, the header **SHA-1** digest, and the header **CMAC**
   (`AES-CMAC(gpkg_key, header[0x00:0x80])`, algorithm confirmed against real packages). Detects
   truncation, corruption, and modified/repacked headers. ECDSA signature check is not yet included.
-- **CLI**: `pkglens info | list | sfo | verify | extract | decrypt | pack | keys`, with `--json`, `--keys`, `--out`, `--filter`, `--rap`.
+- **SELF inspector** — read an `EBOOT.BIN` / `.self` / `.sprx` header (`pkglens self <eboot>`): program
+  type, key revision, the embedded ELF header, and NPDRM content id — no keys needed.
+- **Resign (ELF → fSELF)** — fake-sign a plaintext ELF into a SELF (`pkglens resign <elf>`) that boots on
+  a jailbroken (CFW) PS3. No keys; the ELF is stored unencrypted with key revision `0x8000`, so it runs
+  where signature checks are patched (CFW) — never on stock retail. (Decrypting a retail `EBOOT.BIN` back
+  to an ELF, for when you only have the encrypted one, is in progress.)
+- **CLI**: `pkglens info | list | sfo | verify | extract | decrypt | self | resign | pack | keys`, with `--json`, `--keys`, `--out`, `--filter`, `--rap`.
 - **GUI** (Avalonia): classic menu/toolbar, folder tree + Name/Size list, viewer, Package-info dialog,
   drag-and-drop, light/dark theme, replace + Save-As (repack), and **Pack folder → .pkg** (File menu /
   toolbar) to build a package from a content folder.
