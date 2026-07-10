@@ -37,9 +37,14 @@ Core, CLI, and a first GUI are implemented and tested (spec §11 steps 1–5, pl
   type, key revision, the embedded ELF header, and NPDRM content id — no keys needed.
 - **Resign (ELF → fSELF)** — fake-sign a plaintext ELF into a SELF (`pkglens resign <elf>`) that boots on
   a jailbroken (CFW) PS3. No keys; the ELF is stored unencrypted with key revision `0x8000`, so it runs
-  where signature checks are patched (CFW) — never on stock retail. (Decrypting a retail `EBOOT.BIN` back
-  to an ELF, for when you only have the encrypted one, is in progress.)
-- **CLI**: `pkglens info | list | sfo | verify | extract | decrypt | self | resign | pack | keys`, with `--json`, `--keys`, `--out`, `--filter`, `--rap`.
+  where signature checks are patched (CFW) — never on stock retail.
+- **Unself (SELF → ELF)** — decrypt an encrypted `EBOOT.BIN` / `.self` back to its plaintext ELF
+  (`pkglens unself <eboot>`), so you can inspect or fake-sign one you only have encrypted. Uses public
+  decryption keysets (appldr / NPDRM, by key revision); free-license and debug SELFs need no key, a
+  licensed NPDRM SELF needs its RAP (`--rap`). Verified **byte-for-byte** against a real retail
+  `EBOOT.BIN → EBOOT.ELF` pair. No signing keys are involved — the output is a plaintext ELF, not a
+  resigned file.
+- **CLI**: `pkglens info | list | sfo | verify | extract | decrypt | self | unself | resign | pack | keys`, with `--json`, `--keys`, `--out`, `--filter`, `--rap`.
 - **GUI** (Avalonia): classic menu/toolbar, folder tree + Name/Size list, viewer, Package-info dialog,
   drag-and-drop, light/dark theme, replace + Save-As (repack), and **Pack folder → .pkg** (File menu /
   toolbar) to build a package from a content folder.
@@ -88,6 +93,9 @@ dotnet test
 pkglens info  <pkg> [--keys DIR] [--json]   # header + content-id + SFO summary
 pkglens list  <pkg> [--keys DIR] [--json]   # entry table
 pkglens sfo   <pkg> [--keys DIR] [--json]   # dump PARAM.SFO key/values
+pkglens self  <eboot>                       # inspect a SELF/EBOOT.BIN header (no keys)
+pkglens unself <eboot> [--rap FILE] [--out FILE]  # decrypt a SELF → plaintext ELF
+pkglens resign <elf> [--out FILE] [--npdrm] # ELF → fake-signed SELF (fSELF) for CFW
 pkglens pack  <folder> [--out FILE]         # build a .pkg from a content folder
 pkglens keys  import|status|where           # manage the runtime retail key
 ```

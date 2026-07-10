@@ -257,14 +257,21 @@
             </StackPanel>
             <TextBlock x:Name="FselfNotes" TextWrapping="Wrap" FontSize="12" Opacity="0.7" IsVisible="False" />
 
-            <Border BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="1"
-                    CornerRadius="3" Padding="12" Margin="0,4,0,0">
-              <StackPanel Spacing="6">
-                <TextBlock Text="Coming next" FontWeight="SemiBold" FontSize="12" />
-                <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.8"
-                           Text="Decrypt a retail EBOOT.BIN → ELF (so you can fake-sign one you only have encrypted), then resign-on-pack and DEX/OFW variants." />
-              </StackPanel>
-            </Border>
+            <Border Height="1" Background="{DynamicResource SystemControlForegroundBaseLowBrush}" Margin="0,4" />
+
+            <TextBlock Text="Decrypt (SELF → ELF)" FontWeight="SemiBold" FontSize="12" />
+            <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.75"
+                       Text="Decrypt an encrypted EBOOT.BIN / .self back to a plaintext ELF. Free-license and debug SELFs need no key; a licensed SELF needs its RAP." />
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Button Content="Decrypt EBOOT.BIN → ELF…" Click="OnUnself" />
+              <CheckBox x:Name="UnselfThenResignCheck" Content="then fake-sign to fSELF" VerticalAlignment="Center" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Button Content="RAP for licensed SELF…" Click="OnPickRap" />
+              <TextBlock x:Name="UnselfRapText" VerticalAlignment="Center" FontSize="12" Opacity="0.8"
+                         TextTrimming="CharacterEllipsis" Text="(none — free/debug need no RAP)" />
+            </StackPanel>
+            <TextBlock x:Name="UnselfNotes" TextWrapping="Wrap" FontSize="12" Opacity="0.7" IsVisible="False" />
           </StackPanel>
         </ScrollViewer>
 

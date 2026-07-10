@@ -595,6 +595,94 @@ public partial class MainWindow : Window
         notes.IsVisible = !string.IsNullOrEmpty(text);
     }
 
+    private string? _unselfRapPath;
+
+    private async void OnPickRap(object? sender, RoutedEventArgs e)
+    {
+        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "Choose the RAP license file for this content id",
+            AllowMultiple = false,
+            FileTypeFilter = new[]
+            {
+                new FilePickerFileType("RAP") { Patterns = new[] { "*.rap", "*.RAP" } },
+                FilePickerFileTypes.All,
+            },
+        });
+        if (files.FirstOrDefault()?.TryGetLocalPath() is not { } path)
+            return;
+
+        _unselfRapPath = path;
+        this.FindControl<TextBlock>("UnselfRapText")!.Text = Path.GetFileName(path);
+    }
+
+    private async void OnUnself(object? sender, RoutedEventArgs e)
+    {
+        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "Choose an encrypted EBOOT.BIN / SELF to decrypt",
+            AllowMultiple = false,
+            FileTypeFilter = new[]
+            {
+                new FilePickerFileType("SELF / EBOOT") { Patterns = new[] { "EBOOT.BIN", "*.self", "*.sprx", "*.bin" } },
+                FilePickerFileTypes.All,
+            },
+        });
+        if (files.FirstOrDefault()?.TryGetLocalPath() is not { } input)
+            return;
+
+        bool chain = this.FindControl<CheckBox>("UnselfThenResignCheck")!.IsChecked == true;
+        string? rap = _unselfRapPath;
+
+        string baseName = Path.GetFileNameWithoutExtension(input);
+        var save = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = chain ? "Save the fake-signed SELF as…" : "Save the decrypted ELF as…",
+            SuggestedFileName = chain ? "EBOOT.BIN" : baseName + ".ELF",
+            DefaultExtension = chain ? "BIN" : "ELF",
+        });
+        if (save?.TryGetLocalPath() is not { } dest)
+            return;
+
+        try
+        {
+            var summary = await Task.Run(() =>
+            {
+                byte[] self = File.ReadAllBytes(input);
+                byte[]? klic = null;
+                if (rap is not null)
+                {
+                    byte[] rapBytes = File.ReadAllBytes(rap);
+                    if (rapBytes.Length != 16) throw new PkgLens.Core.PkgFormatException("A RAP file must be exactly 16 bytes.");
+                    klic = PkgLens.Core.Npd.NpdKeys.RapToKlicensee(rapBytes);
+                }
+
+                var result = PkgLens.Core.Self.SelfDecryptor.Decrypt(self, klic);
+                string lic = result.WasNpdrm ? (result.License?.ToString() ?? "NPDRM") : "non-NPDRM";
+
+                if (chain)
+                {
+                    byte[] fself = PkgLens.Core.Self.SelfBuilder.MakeFakeSelf(result.Elf, npdrm: result.WasNpdrm);
+                    File.WriteAllBytes(dest, fself);
+                    // Drop the intermediate ELF beside the fSELF for reference.
+                    string elfBeside = Path.Combine(Path.GetDirectoryName(dest) ?? "", baseName + ".ELF");
+                    File.WriteAllBytes(elfBeside, result.Elf);
+                    return $"Decrypted ({lic}) → fake-signed fSELF {Path.GetFileName(dest)} ({fself.Length:n0} bytes); ELF beside it.";
+                }
+
+                File.WriteAllBytes(dest, result.Elf);
+                return $"Decrypted {self.Length:n0}-byte SELF ({lic}) → {Path.GetFileName(dest)} ({result.Elf.Length:n0} bytes).";
+            });
+            Vm.Status = summary;
+            ShowFselfNotes(summary);
+        }
+        catch (Exception ex)
+        {
+            Vm.Status = $"Decrypt failed: {ex.Message}";
+            ShowFselfNotes(ex.Message);
+        }
+    }
+
     private static string DescribeSelf(PkgLens.Core.Self.SelfInfo s)
     {
         var sb = new System.Text.StringBuilder();

@@ -29,6 +29,10 @@ if (command == "pack")
 if (command == "resign")
     return ResignCommand.Run(args.AsSpan(1));
 
+// The `unself` command decrypts a SELF/EBOOT.BIN back to a plaintext ELF.
+if (command == "unself")
+    return UnselfCommand.Run(args.AsSpan(1));
+
 var parsed = CommandLine.Parse(args.AsSpan(1));
 
 if (parsed.Error is not null)

@@ -107,6 +107,7 @@ internal static class CliHelp
               pkglens extract <pkg> [--out DIR] [--filter GLOB] [--keys DIR]   unpack files to a folder
               pkglens decrypt <edat> [--rap FILE] [--out FILE]   decrypt an EDAT/SDAT file
               pkglens self    <eboot>                        inspect a SELF/EBOOT.BIN header
+              pkglens unself  <eboot> [--out FILE] [--rap FILE]   decrypt a SELF → plaintext ELF
               pkglens resign  <elf> [--out FILE] [--npdrm]   ELF → fake-signed SELF (fSELF) for CFW
               pkglens pack    <folder> [--out FILE] [options]   build a .pkg from a content folder
               pkglens keys    import|status|where           manage the runtime retail key
