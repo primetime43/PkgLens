@@ -3,8 +3,8 @@
         xmlns:vm="using:PkgLens.Gui.ViewModels"
         x:Class="PkgLens.Gui.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
-        Width="820" Height="560"
-        MinWidth="560" MinHeight="360"
+        Width="860" Height="580"
+        MinWidth="620" MinHeight="380"
         DragDrop.AllowDrop="True"
         Title="{Binding WindowTitle}">
 
@@ -16,7 +16,7 @@
         <MenuItem Header="_Open .pkg…" Click="OnOpenClick" />
         <MenuItem Header="_Close" Click="OnCloseClick" IsEnabled="{Binding HasPackage}" />
         <Separator />
-        <MenuItem Header="_Pack folder → .pkg…" Click="OnPackClick" />
+        <MenuItem Header="_Pack folder → .pkg…" Click="OnGoPackClick" />
         <MenuItem Header="Extract _all…" Click="OnExtractAllClick"
                   IsEnabled="{Binding Package.IsDecrypted, FallbackValue=False}" />
         <MenuItem Header="Save _As… (repack)" Click="OnSaveAsClick"
@@ -54,22 +54,27 @@
       </MenuItem>
     </Menu>
 
-    <!-- Toolbar -->
+    <!-- Toolbar (package-page actions) -->
     <Border DockPanel.Dock="Top" Padding="4,3"
             Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
             BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="0,0,0,1">
       <StackPanel Orientation="Horizontal" Spacing="3">
         <Button Classes="tool" Click="OnOpenClick" ToolTip.Tip="Open a .pkg file">Open</Button>
-        <Button Classes="tool" Click="OnPackClick" ToolTip.Tip="Build a .pkg from a content folder">Pack</Button>
-        <Border Width="1" Margin="3,2" Background="{DynamicResource SystemControlForegroundBaseLowBrush}" />
+        <Border Width="1" Margin="3,2" Background="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                IsVisible="{Binding IsPackageTool}" />
         <Button Classes="tool" Click="OnExtractClick" ToolTip.Tip="Extract the selected file"
+                IsVisible="{Binding IsPackageTool}"
                 IsEnabled="{Binding Package.HasSelectedFile, FallbackValue=False}">Extract</Button>
         <Button Classes="tool" Click="OnReplaceClick" ToolTip.Tip="Replace the selected file's contents"
+                IsVisible="{Binding IsPackageTool}"
                 IsEnabled="{Binding Package.HasSelectedFile, FallbackValue=False}">Replace</Button>
         <Button Classes="tool" Click="OnEditSfoClick" ToolTip.Tip="Edit PARAM.SFO"
+                IsVisible="{Binding IsPackageTool}"
                 IsEnabled="{Binding Package.CanEditSfo, FallbackValue=False}">Edit SFO</Button>
-        <Border Width="1" Margin="3,2" Background="{DynamicResource SystemControlForegroundBaseLowBrush}" />
-        <Button Classes="tool" Click="OnSaveAsClick" ToolTip.Tip="Save a repacked copy (unsigned)"
+        <Border Width="1" Margin="3,2" Background="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                IsVisible="{Binding IsPackageTool}" />
+        <Button Classes="tool" Click="OnSaveAsClick" ToolTip.Tip="Save a repacked copy"
+                IsVisible="{Binding IsPackageTool}"
                 IsEnabled="{Binding Package.IsDecrypted, FallbackValue=False}">Save As</Button>
       </StackPanel>
     </Border>
@@ -78,85 +83,230 @@
     <Border DockPanel.Dock="Bottom" Padding="6,3"
             Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
             BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="0,1,0,0">
-      <TextBlock Text="{Binding Status}" FontSize="12" TextTrimming="CharacterEllipsis" />
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBlock Grid.Column="0" Text="{Binding Status}" FontSize="12" TextTrimming="CharacterEllipsis" />
+        <TextBlock Grid.Column="1" Text="{Binding KeyStatus}" FontSize="12" Opacity="0.7" Margin="12,0,0,0" />
+      </Grid>
     </Border>
 
-    <!-- Content -->
-    <Grid>
+    <!-- Rail + content -->
+    <Grid ColumnDefinitions="148,*">
 
-      <TextBlock IsVisible="{Binding !HasPackage}"
-                 Text="Open a .pkg file (File → Open), or drag one onto the window."
-                 TextAlignment="Center" TextWrapping="Wrap" MaxWidth="420"
-                 HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.45" />
+      <!-- Left tool rail -->
+      <DockPanel Grid.Column="0"
+                 Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
+        <TextBlock DockPanel.Dock="Top" Text="TOOLS" FontSize="11" FontWeight="SemiBold"
+                   Opacity="0.55" Margin="12,10,0,4" />
+        <ListBox x:Name="ToolRail" Background="Transparent"
+                 BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="0,0,1,0"
+                 SelectedIndex="{Binding SelectedToolIndex, Mode=TwoWay}">
+          <ListBoxItem Content="Package" />
+          <ListBoxItem Content="Pack" />
+          <ListBoxItem Content="Resign" />
+          <ListBoxItem Content="Decrypt" />
+          <ListBoxItem Content="Keys" />
+        </ListBox>
+      </DockPanel>
 
-      <Border IsVisible="{Binding HasPackage}">
-        <Panel DataContext="{Binding Package}">
-          <Grid x:DataType="vm:PackageViewModel" ColumnDefinitions="220,4,*">
+      <!-- Content host: one panel per page -->
+      <Grid Grid.Column="1">
 
-            <!-- Folder tree -->
-            <TreeView Grid.Column="0" ItemsSource="{Binding FolderRoots}"
-                      SelectedItem="{Binding SelectedFolder, Mode=TwoWay}"
-                      BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="0,0,1,0">
-              <TreeView.Styles>
-                <Style Selector="TreeViewItem">
-                  <Setter Property="IsExpanded" Value="{ReflectionBinding IsExpanded, Mode=TwoWay}" />
-                </Style>
-              </TreeView.Styles>
-              <TreeView.ItemTemplate>
-                <TreeDataTemplate ItemsSource="{Binding DirectoryChildren}" x:DataType="vm:EntryNode">
-                  <StackPanel Orientation="Horizontal" Spacing="5">
-                    <TextBlock Text="{Binding Icon}" />
-                    <TextBlock Text="{Binding Name}" />
-                  </StackPanel>
-                </TreeDataTemplate>
-              </TreeView.ItemTemplate>
-            </TreeView>
+        <!-- ===== Package page (inspector) ===== -->
+        <Grid IsVisible="{Binding IsPackageTool}">
+          <TextBlock IsVisible="{Binding !HasPackage}"
+                     Text="Open a .pkg file (File → Open), or drag one onto the window."
+                     TextAlignment="Center" TextWrapping="Wrap" MaxWidth="420"
+                     HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.45" />
 
-            <GridSplitter Grid.Column="1" ResizeDirection="Columns"
-                          Background="{DynamicResource SystemControlForegroundBaseLowBrush}" />
+          <Border IsVisible="{Binding HasPackage}">
+            <Panel DataContext="{Binding Package}">
+              <Grid x:DataType="vm:PackageViewModel" ColumnDefinitions="220,4,*">
 
-            <!-- File list -->
-            <DataGrid Grid.Column="2" ItemsSource="{Binding CurrentItems}"
-                      SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
-                      DoubleTapped="OnGridDoubleTapped" PointerPressed="OnGridPointerPressed"
-                      IsReadOnly="True" CanUserSortColumns="True" CanUserResizeColumns="True"
-                      CanUserReorderColumns="False"
-                      GridLinesVisibility="None" HeadersVisibility="Column">
-              <DataGrid.ContextMenu>
-                <ContextMenu>
-                  <MenuItem Header="View" Click="OnViewClick" />
-                  <MenuItem Header="Extract…" Click="OnExtractClick" />
-                  <MenuItem Header="Replace…" Click="OnReplaceClick" />
-                </ContextMenu>
-              </DataGrid.ContextMenu>
-              <DataGrid.Columns>
-                <DataGridTemplateColumn Header="Name" Width="*" SortMemberPath="Name">
-                  <DataGridTemplateColumn.CellTemplate>
-                    <DataTemplate x:DataType="vm:EntryNode">
-                      <StackPanel Orientation="Horizontal" Spacing="6" Margin="6,0">
+                <!-- Folder tree -->
+                <TreeView Grid.Column="0" ItemsSource="{Binding FolderRoots}"
+                          SelectedItem="{Binding SelectedFolder, Mode=TwoWay}"
+                          BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="0,0,1,0">
+                  <TreeView.Styles>
+                    <Style Selector="TreeViewItem">
+                      <Setter Property="IsExpanded" Value="{ReflectionBinding IsExpanded, Mode=TwoWay}" />
+                    </Style>
+                  </TreeView.Styles>
+                  <TreeView.ItemTemplate>
+                    <TreeDataTemplate ItemsSource="{Binding DirectoryChildren}" x:DataType="vm:EntryNode">
+                      <StackPanel Orientation="Horizontal" Spacing="5">
                         <TextBlock Text="{Binding Icon}" />
-                        <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding Name}" />
                       </StackPanel>
-                    </DataTemplate>
-                  </DataGridTemplateColumn.CellTemplate>
-                </DataGridTemplateColumn>
-                <!-- Displays a friendly size but sorts by the numeric byte count. -->
-                <DataGridTextColumn Header="Size" Binding="{Binding SizeDisplay}"
-                                    SortMemberPath="Size" Width="130" MinWidth="80" />
-              </DataGrid.Columns>
-            </DataGrid>
+                    </TreeDataTemplate>
+                  </TreeView.ItemTemplate>
+                </TreeView>
 
-          </Grid>
-        </Panel>
-      </Border>
+                <GridSplitter Grid.Column="1" ResizeDirection="Columns"
+                              Background="{DynamicResource SystemControlForegroundBaseLowBrush}" />
 
-      <!-- Drag-and-drop feedback overlay (shown only while a file is dragged over the window) -->
-      <Border x:Name="DropOverlay" IsVisible="False" IsHitTestVisible="False" Background="#99000000">
-        <Border Margin="24" BorderBrush="White" BorderThickness="2" CornerRadius="4">
-          <TextBlock Text="Drop a .pkg file to open it" FontSize="18" Foreground="White"
-                     HorizontalAlignment="Center" VerticalAlignment="Center" />
+                <!-- File list -->
+                <DataGrid Grid.Column="2" ItemsSource="{Binding CurrentItems}"
+                          SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
+                          DoubleTapped="OnGridDoubleTapped" PointerPressed="OnGridPointerPressed"
+                          IsReadOnly="True" CanUserSortColumns="True" CanUserResizeColumns="True"
+                          CanUserReorderColumns="False"
+                          GridLinesVisibility="None" HeadersVisibility="Column">
+                  <DataGrid.ContextMenu>
+                    <ContextMenu>
+                      <MenuItem Header="View" Click="OnViewClick" />
+                      <MenuItem Header="Extract…" Click="OnExtractClick" />
+                      <MenuItem Header="Replace…" Click="OnReplaceClick" />
+                    </ContextMenu>
+                  </DataGrid.ContextMenu>
+                  <DataGrid.Columns>
+                    <DataGridTemplateColumn Header="Name" Width="*" SortMemberPath="Name">
+                      <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate x:DataType="vm:EntryNode">
+                          <StackPanel Orientation="Horizontal" Spacing="6" Margin="6,0">
+                            <TextBlock Text="{Binding Icon}" />
+                            <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                          </StackPanel>
+                        </DataTemplate>
+                      </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                    <DataGridTextColumn Header="Size" Binding="{Binding SizeDisplay}"
+                                        SortMemberPath="Size" Width="130" MinWidth="80" />
+                  </DataGrid.Columns>
+                </DataGrid>
+
+              </Grid>
+            </Panel>
+          </Border>
+        </Grid>
+
+        <!-- ===== Pack page ===== -->
+        <ScrollViewer IsVisible="{Binding IsPackTool}">
+          <StackPanel Margin="18" Spacing="10" MaxWidth="560" HorizontalAlignment="Left">
+            <TextBlock Text="Pack folder → .pkg" FontSize="16" FontWeight="SemiBold" />
+            <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.75"
+                       Text="Build a package from a content folder. Fields are pre-filled from the folder's PARAM.SFO where possible." />
+
+            <Grid ColumnDefinitions="110,10,*" RowDefinitions="Auto,8,Auto,8,Auto,8,Auto,8,Auto">
+              <TextBlock Grid.Row="0" Grid.Column="0" Text="Source folder" VerticalAlignment="Center" />
+              <StackPanel Grid.Row="0" Grid.Column="2" Orientation="Horizontal" Spacing="8">
+                <Button Content="Browse…" Click="OnPackBrowseFolder" />
+                <TextBlock x:Name="PackFolderText" VerticalAlignment="Center" FontSize="12" Opacity="0.8"
+                           TextTrimming="CharacterEllipsis" Text="(none)" />
+              </StackPanel>
+
+              <TextBlock Grid.Row="2" Grid.Column="0" Text="Content ID" VerticalAlignment="Center" />
+              <TextBox   Grid.Row="2" Grid.Column="2" x:Name="PackContentIdBox"
+                         Watermark="UP0001-NPUB30910_00-EXAMPLE000000001" FontFamily="Consolas,monospace" />
+
+              <TextBlock Grid.Row="4" Grid.Column="0" Text="Install dir" VerticalAlignment="Center" />
+              <TextBox   Grid.Row="4" Grid.Column="2" x:Name="PackInstallDirBox" Watermark="NPUB30910" />
+
+              <TextBlock Grid.Row="6" Grid.Column="0" Text="Content type" VerticalAlignment="Center" />
+              <ComboBox  Grid.Row="6" Grid.Column="2" x:Name="PackContentTypeBox" HorizontalAlignment="Stretch" />
+
+              <TextBlock Grid.Row="8" Grid.Column="0" Text="DRM type" VerticalAlignment="Center" />
+              <NumericUpDown Grid.Row="8" Grid.Column="2" x:Name="PackDrmBox"
+                             Minimum="0" Maximum="255" Increment="1" Value="3"
+                             HorizontalAlignment="Left" Width="110" />
+            </Grid>
+
+            <TextBlock Text="Output type" Margin="0,4,0,0" />
+            <StackPanel Spacing="4" Margin="4,0,0,0">
+              <RadioButton x:Name="PackRetailRadio" GroupName="PackFin" IsChecked="True"
+                           Content="Retail-encrypted — installs on CFW (unsigned; CFW skips the signature check)" />
+              <RadioButton x:Name="PackDebugRadio" GroupName="PackFin"
+                           Content="Non-finalized (debug) — self-contained, opens in RPCS3 / dev consoles" />
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,4,0,0">
+              <Button Content="Pack…" Click="OnPackBuild" />
+            </StackPanel>
+
+            <TextBlock x:Name="PackNotes" TextWrapping="Wrap" FontSize="12" Opacity="0.7" IsVisible="False" />
+          </StackPanel>
+        </ScrollViewer>
+
+        <!-- ===== Resign page (placeholder) ===== -->
+        <ScrollViewer IsVisible="{Binding IsResignTool}">
+          <StackPanel Margin="18" Spacing="10" MaxWidth="560" HorizontalAlignment="Left">
+            <TextBlock Text="SELF / EBOOT Resigner" FontSize="16" FontWeight="SemiBold" />
+            <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.8"
+                       Text="Decrypt and fake-sign EBOOT.BIN / SELF / SPRX so a repacked game boots on a jailbroken PS3 without its original license." />
+            <Border BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="1"
+                    CornerRadius="3" Padding="12">
+              <StackPanel Spacing="6">
+                <TextBlock Text="Coming next" FontWeight="SemiBold" FontSize="12" />
+                <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.8"
+                           Text="Planned, in order: CEX CFW — decrypt EBOOT, resign to NON-DRM (fSELF), resign to NPDRM. Then DEX/OFW variants. Uses public PS3 keys; nothing per-console." />
+              </StackPanel>
+            </Border>
+          </StackPanel>
+        </ScrollViewer>
+
+        <!-- ===== Decrypt page ===== -->
+        <ScrollViewer IsVisible="{Binding IsDecryptTool}">
+          <StackPanel Margin="18" Spacing="10" MaxWidth="560" HorizontalAlignment="Left">
+            <TextBlock Text="Decrypt EDAT / SDAT" FontSize="16" FontWeight="SemiBold" />
+            <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.75"
+                       Text="Decrypt an NPDRM data file. SDAT and free EDATs need no key; a licensed EDAT needs its RAP." />
+
+            <Grid ColumnDefinitions="90,10,*" RowDefinitions="Auto,8,Auto">
+              <TextBlock Grid.Row="0" Grid.Column="0" Text="EDAT file" VerticalAlignment="Center" />
+              <StackPanel Grid.Row="0" Grid.Column="2" Orientation="Horizontal" Spacing="8">
+                <Button Content="Browse…" Click="OnDecryptBrowseFile" />
+                <TextBlock x:Name="DecryptFileText" VerticalAlignment="Center" FontSize="12" Opacity="0.8"
+                           TextTrimming="CharacterEllipsis" Text="(none)" />
+              </StackPanel>
+
+              <TextBlock Grid.Row="2" Grid.Column="0" Text="RAP (opt.)" VerticalAlignment="Center" />
+              <StackPanel Grid.Row="2" Grid.Column="2" Orientation="Horizontal" Spacing="8">
+                <Button Content="Browse…" Click="OnDecryptBrowseRap" />
+                <TextBlock x:Name="DecryptRapText" VerticalAlignment="Center" FontSize="12" Opacity="0.8"
+                           TextTrimming="CharacterEllipsis" Text="(auto / not needed)" />
+              </StackPanel>
+            </Grid>
+
+            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,4,0,0">
+              <Button Content="Decrypt…" Click="OnDecryptRun" />
+            </StackPanel>
+
+            <TextBlock x:Name="DecryptNotes" TextWrapping="Wrap" FontSize="12" Opacity="0.7" IsVisible="False" />
+          </StackPanel>
+        </ScrollViewer>
+
+        <!-- ===== Keys page ===== -->
+        <ScrollViewer IsVisible="{Binding IsKeysTool}">
+          <StackPanel Margin="18" Spacing="10" MaxWidth="560" HorizontalAlignment="Left">
+            <TextBlock Text="Keys" FontSize="16" FontWeight="SemiBold" />
+            <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.75"
+                       Text="Retail packages need the NPDRM PKG PS3 AES key. Import it once (saved to ~/.pkglens) or point at an existing keys folder. Debug packages need no key." />
+
+            <StackPanel Spacing="3">
+              <TextBlock Text="Status" FontWeight="SemiBold" FontSize="12" />
+              <TextBlock Text="{Binding KeyStatus}" FontSize="12" Opacity="0.85" />
+              <TextBlock Text="{Binding KeysDirectory, FallbackValue='keys folder: default (~/.pkglens)'}"
+                         FontSize="12" Opacity="0.6" />
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,4,0,0">
+              <Button Content="Import retail key…" Click="OnSetKeyClick" />
+              <Button Content="Set keys folder…" Click="OnKeysClick" />
+            </StackPanel>
+
+            <TextBlock TextWrapping="Wrap" FontSize="11" Opacity="0.55"
+                       Text="The key is public but never bundled with PkgLens. See docs/keys.md for where to find it." />
+          </StackPanel>
+        </ScrollViewer>
+
+        <!-- Drag-and-drop overlay (global) -->
+        <Border x:Name="DropOverlay" IsVisible="False" IsHitTestVisible="False" Background="#99000000">
+          <Border Margin="24" BorderBrush="White" BorderThickness="2" CornerRadius="4">
+            <TextBlock Text="Drop a .pkg file to open it" FontSize="18" Foreground="White"
+                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+          </Border>
         </Border>
-      </Border>
+
+      </Grid>
     </Grid>
   </DockPanel>
 </Window>

@@ -16,7 +16,9 @@ internal static class PackCommand
     public static int Run(ReadOnlySpan<string> args)
     {
         string? folder = null, outPath = null, keysDir = null;
-        var options = new PackOptions();
+        // Default to retail-encrypted: it's the format a jailbroken (CFW) PS3 installs. Use --debug for
+        // a self-contained non-finalized package (RPCS3 / dev consoles, no key needed).
+        var options = new PackOptions { Finalization = PkgFinalization.Retail };
 
         for (int i = 0; i < args.Length; i++)
         {
@@ -103,9 +105,10 @@ internal static class PackCommand
             long size = new FileInfo(outPath).Length;
             Console.WriteLine($"Wrote {size:n0} bytes → {Path.GetFullPath(outPath)}");
             if (plan.Finalization == PkgFinalization.Retail)
-                Console.WriteLine("Note: this retail package is UNSIGNED (no ECDSA signature) — it will not install on a real console.");
+                Console.WriteLine("Note: retail-encrypted, unsigned. Installs on a jailbroken (CFW) PS3 — the CFW patches skip " +
+                                  "the signature check. It will NOT install on a stock retail console.");
             else
-                Console.WriteLine("Note: this is a non-finalized (debug) package — installable on dev/debug consoles and readable by RPCS3/PkgLens.");
+                Console.WriteLine("Note: non-finalized (debug) package — for RPCS3 / dev consoles. For a CFW console use --retail.");
             return ExitCode.Ok;
         }
         catch (PkgKeyException ex) { Console.Error.WriteLine($"key error: {ex.Message}"); return ExitCode.KeyOrDecryptError; }

@@ -25,9 +25,11 @@ Core, CLI, and a first GUI are implemented and tested (spec §11 steps 1–5, pl
   forged, so repacked *retail* packages are unsigned (won't install on a real console); *debug*
   packages repack cleanly. The original file is never modified in place.
 - **Pack** — build a `.pkg` from a content folder (`pkglens pack <folder>`). *Fast Pack* infers the
-  content id / install dir / content type from `PARAM.SFO`; pass options for *Custom Pack*. Produces
-  a non-finalized (debug) package by default; `--retail` produces an unsigned retail-encrypted one.
-  PkgLens never finalizes or signs, so a retail build won't install on a real console.
+  content id / install dir / content type from `PARAM.SFO`; pass options for *Custom Pack*. Defaults to
+  retail-encrypted — the format a jailbroken (CFW) PS3 installs; the package is unsigned, which CFW
+  doesn't care about (its patches skip the signature check), but stock retail consoles won't take it.
+  Use `--debug` for a self-contained non-finalized package (RPCS3 / dev consoles, no key). PkgLens
+  never forges signatures.
 - **Integrity `verify`** — structural bounds, the header **SHA-1** digest, and the header **CMAC**
   (`AES-CMAC(gpkg_key, header[0x00:0x80])`, algorithm confirmed against real packages). Detects
   truncation, corruption, and modified/repacked headers. ECDSA signature check is not yet included.
@@ -88,15 +90,21 @@ pkglens keys  import|status|where           # manage the runtime retail key
 id, install directory and content type are inferred from the folder's `PARAM.SFO`:
 
 ```
-pkglens pack ./MyGameFolder                              # Fast Pack (infers from PARAM.SFO)
+pkglens pack ./MyGameFolder                              # Fast Pack, retail-encrypted (for CFW)
 pkglens pack ./MyGameFolder --content-id UP0001-NPUB30910_00-EXAMPLE000000001 \
         --install-dir NPUB30910 --content-type GameExec  # Custom Pack (explicit)
-pkglens pack ./MyGameFolder --retail                     # retail-encrypted (unsigned)
+pkglens pack ./MyGameFolder --debug                      # non-finalized (RPCS3 / dev)
 ```
 
-The default output is a **non-finalized (debug)** package: self-contained, needs no key, and reads
-back in PkgLens / RPCS3. `--retail` re-encrypts with the runtime key but the result is **unsigned**
-(no ECDSA signature) and will not install on a real console — PkgLens never finalizes or signs.
+The default output is **retail-encrypted** (needs the runtime key). It carries a valid CMAC but no
+ECDSA signature, so it's *unsigned* — which is fine for a **jailbroken (CFW) PS3**, where the kernel
+patches skip the signature check on install, but a stock retail console will reject it. Use `--debug`
+for a self-contained non-finalized package that needs no key and reads back in PkgLens / RPCS3.
+PkgLens never forges signatures.
+
+> **Note on running repacked games:** a package installs on CFW, but if it contains a retail NPDRM
+> `EBOOT.BIN`, the game still needs its license (`act.dat`/`.rif`) to boot — or the EBOOT fake-signed
+> to an fSELF. EBOOT resigning is planned (see the Resign tool in the GUI).
 
 Debug (non-finalized) packages decrypt with no key at all. Retail (finalized) packages need the
 NPDRM PKG PS3 AES key supplied **at runtime**. Install it once and every later run just works:

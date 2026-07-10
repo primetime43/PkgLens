@@ -11,6 +11,7 @@ using Avalonia.Markup.Xaml;
 using Avalonia.Platform.Storage;
 using Avalonia.Styling;
 using PkgLens.Core.Keys;
+using PkgLens.Core.Models;
 using PkgLens.Gui.Services;
 using PkgLens.Gui.ViewModels;
 
@@ -30,6 +31,7 @@ public partial class MainWindow : Window
         AddHandler(DragDrop.DropEvent, OnDrop, handledEventsToo: true);
         _dropOverlay = this.FindControl<Border>("DropOverlay");
         UpdateThemeChecks(Application.Current?.RequestedThemeVariant ?? ThemeVariant.Default);
+        PopulatePackContentTypes();
     }
 
     private void InitializeComponent() => AvaloniaXamlLoader.Load(this);
@@ -82,6 +84,7 @@ public partial class MainWindow : Window
         {
             string path = KeyStore.Install(key);
             Vm.Status = $"Key saved to {path} — {KeyStore.Describe(key)}";
+            Vm.RefreshKeyStatus();
             if (Vm.Package is { } current)
                 await Vm.LoadAsync(current.FilePath);
         }
@@ -269,45 +272,98 @@ public partial class MainWindow : Window
         return rap;
     }
 
-    private async void OnPackClick(object? sender, RoutedEventArgs e)
+    // ==================== Pack page ====================
+
+    private string? _packFolder;
+
+    private static readonly PkgContentType[] PackTypeChoices =
     {
-        // 1. Choose the content folder to pack.
+        PkgContentType.GameExec, PkgContentType.GameData, PkgContentType.Theme,
+        PkgContentType.Widget, PkgContentType.License, PkgContentType.Ps1Emu,
+        PkgContentType.Psp, PkgContentType.Vsh, PkgContentType.Ps2Classic,
+    };
+
+    private void PopulatePackContentTypes()
+    {
+        var box = this.FindControl<ComboBox>("PackContentTypeBox")!;
+        box.ItemsSource = PackTypeChoices.Select(t => $"{t} (0x{(uint)t:X})").ToList();
+        box.SelectedIndex = 0; // GameExec
+    }
+
+    /// <summary>Menu/toolbar "Pack folder…" simply switches to the Pack page.</summary>
+    private void OnGoPackClick(object? sender, RoutedEventArgs e) => Vm.ActiveTool = ToolPage.Pack;
+
+    private async void OnPackBrowseFolder(object? sender, RoutedEventArgs e)
+    {
         var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
         {
-            Title = "Pack — choose the content folder to build into a .pkg",
+            Title = "Choose the content folder to pack",
             AllowMultiple = false,
         });
         if (folders.FirstOrDefault()?.TryGetLocalPath() is not { } folder)
             return;
 
-        // 2. Try Fast-Pack inference to pre-fill the dialog (fall back to a blank form on failure).
-        PkgLens.Core.PackPlan? inferred = null;
-        try { inferred = await Task.Run(() => PkgLens.Core.FolderPackage.Plan(folder)); }
-        catch { /* no PARAM.SFO / no inferable content id — the dialog collects it manually */ }
+        _packFolder = folder;
+        this.FindControl<TextBlock>("PackFolderText")!.Text = folder;
 
-        var options = await new PackDialog(folder, inferred).ShowDialog<PkgLens.Core.PackOptions?>(this);
-        if (options is null)
+        // Fast-Pack inference to pre-fill the fields (blank fallback if it can't infer).
+        try
+        {
+            var plan = await Task.Run(() => PkgLens.Core.FolderPackage.Plan(folder));
+            this.FindControl<TextBox>("PackContentIdBox")!.Text = plan.ContentId;
+            this.FindControl<TextBox>("PackInstallDirBox")!.Text = plan.InstallDirectory;
+            this.FindControl<NumericUpDown>("PackDrmBox")!.Value = plan.DrmType;
+            SelectPackContentType(plan.ContentType);
+            ShowPackNotes(plan.Notes.Count > 0 ? "Inferred: " + string.Join("; ", plan.Notes) : null);
+            Vm.Status = $"Ready to pack {plan.FileCount} file(s) from {Path.GetFileName(folder)}.";
+        }
+        catch (Exception ex)
+        {
+            ShowPackNotes($"Couldn't infer from PARAM.SFO — enter the content id manually. ({ex.Message})");
+        }
+    }
+
+    private async void OnPackBuild(object? sender, RoutedEventArgs e)
+    {
+        if (_packFolder is null)
+        {
+            Vm.Status = "Choose a source folder first.";
             return;
+        }
 
-        // 3. Choose the output .pkg path.
+        string contentId = (this.FindControl<TextBox>("PackContentIdBox")!.Text ?? string.Empty).Trim();
+        if (contentId.Length == 0)
+        {
+            Vm.Status = "A content id is required (e.g. UP0001-NPUB30910_00-EXAMPLE000000001).";
+            return;
+        }
+
+        string installDir = (this.FindControl<TextBox>("PackInstallDirBox")!.Text ?? string.Empty).Trim();
+        bool retail = this.FindControl<RadioButton>("PackRetailRadio")!.IsChecked == true;
+
+        var options = new PkgLens.Core.PackOptions
+        {
+            ContentId = contentId,
+            InstallDirectory = installDir.Length == 0 ? null : installDir,
+            ContentType = SelectedPackContentType(),
+            DrmType = (uint)(this.FindControl<NumericUpDown>("PackDrmBox")!.Value ?? 3),
+            Finalization = retail ? PkgFinalization.Retail : PkgFinalization.Debug,
+        };
+
         var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
             Title = "Save the new .pkg as…",
-            SuggestedFileName = SanitizeFileName(options.ContentId) + ".pkg",
+            SuggestedFileName = SanitizeFileName(contentId) + ".pkg",
             DefaultExtension = "pkg",
-            FileTypeChoices = new[]
-            {
-                new FilePickerFileType("PS3 package") { Patterns = new[] { "*.pkg" } },
-            },
+            FileTypeChoices = new[] { new FilePickerFileType("PS3 package") { Patterns = new[] { "*.pkg" } } },
         });
         if (file?.TryGetLocalPath() is not { } dest)
             return;
 
-        // 4. Build off the UI thread.
+        string folder = _packFolder;
         try
         {
             Vm.Status = "Packing…";
-            bool retail = options.Finalization == PkgLens.Core.Models.PkgFinalization.Retail;
             var plan = await Task.Run(() =>
             {
                 var p = PkgLens.Core.FolderPackage.Plan(folder, options);
@@ -318,13 +374,134 @@ public partial class MainWindow : Window
             });
 
             Vm.Status = retail
-                ? $"Packed {plan.FileCount} file(s) → {Path.GetFileName(dest)} — UNSIGNED retail (won't install on a real console)."
-                : $"Packed {plan.FileCount} file(s) → {Path.GetFileName(dest)} — non-finalized (debug), opens in RPCS3/PkgLens.";
+                ? $"Packed {plan.FileCount} file(s) → {Path.GetFileName(dest)} — retail-encrypted (installs on CFW)."
+                : $"Packed {plan.FileCount} file(s) → {Path.GetFileName(dest)} — non-finalized (debug; RPCS3 / dev).";
+            ShowPackNotes($"Wrote {new FileInfo(dest).Length:n0} bytes to {dest}");
         }
         catch (Exception ex)
         {
             Vm.Status = $"Pack failed: {ex.Message}";
         }
+    }
+
+    private void SelectPackContentType(uint value)
+    {
+        int idx = Array.FindIndex(PackTypeChoices, t => (uint)t == value);
+        if (idx >= 0) this.FindControl<ComboBox>("PackContentTypeBox")!.SelectedIndex = idx;
+    }
+
+    private uint SelectedPackContentType()
+    {
+        int idx = this.FindControl<ComboBox>("PackContentTypeBox")!.SelectedIndex;
+        return idx >= 0 ? (uint)PackTypeChoices[idx] : (uint)PkgContentType.GameExec;
+    }
+
+    private void ShowPackNotes(string? text)
+    {
+        var notes = this.FindControl<TextBlock>("PackNotes")!;
+        notes.Text = text ?? string.Empty;
+        notes.IsVisible = !string.IsNullOrEmpty(text);
+    }
+
+    // ==================== Decrypt page ====================
+
+    private string? _decryptFile;
+    private string? _decryptRap;
+
+    private async void OnDecryptBrowseFile(object? sender, RoutedEventArgs e)
+    {
+        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "Choose an EDAT / SDAT file",
+            AllowMultiple = false,
+            FileTypeFilter = new[]
+            {
+                new FilePickerFileType("EDAT / SDAT") { Patterns = new[] { "*.edat", "*.sdat" } },
+                FilePickerFileTypes.All,
+            },
+        });
+        if (files.FirstOrDefault()?.TryGetLocalPath() is not { } path)
+            return;
+        _decryptFile = path;
+        this.FindControl<TextBlock>("DecryptFileText")!.Text = Path.GetFileName(path);
+        ShowDecryptNotes(null);
+    }
+
+    private async void OnDecryptBrowseRap(object? sender, RoutedEventArgs e)
+    {
+        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "Choose the RAP license",
+            AllowMultiple = false,
+            FileTypeFilter = new[]
+            {
+                new FilePickerFileType("RAP license") { Patterns = new[] { "*.rap" } },
+                FilePickerFileTypes.All,
+            },
+        });
+        if (files.FirstOrDefault()?.TryGetLocalPath() is not { } path)
+            return;
+        _decryptRap = path;
+        this.FindControl<TextBlock>("DecryptRapText")!.Text = Path.GetFileName(path);
+    }
+
+    private async void OnDecryptRun(object? sender, RoutedEventArgs e)
+    {
+        if (_decryptFile is null)
+        {
+            Vm.Status = "Choose an EDAT/SDAT file first.";
+            return;
+        }
+
+        try
+        {
+            byte[] bytes = await File.ReadAllBytesAsync(_decryptFile);
+            var npd = PkgLens.Core.Npd.EdatFile.ParseHeader(new MemoryStream(bytes));
+
+            byte[]? klic = null;
+            if (npd.NeedsKlicensee)
+            {
+                byte[]? rap = _decryptRap is not null
+                    ? await File.ReadAllBytesAsync(_decryptRap)
+                    : PkgLens.Core.Npd.RapStore.Find(npd.ContentId);
+                if (rap is null)
+                {
+                    Vm.Status = $"{npd.ContentId} is a licensed EDAT — choose its RAP (Browse next to “RAP”).";
+                    return;
+                }
+                klic = PkgLens.Core.Npd.NpdKeys.RapToKlicensee(rap);
+            }
+
+            var save = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            {
+                Title = "Save decrypted file as…",
+                SuggestedFileName = Path.GetFileNameWithoutExtension(_decryptFile),
+            });
+            if (save?.TryGetLocalPath() is not { } dest)
+                return;
+
+            string src = _decryptFile;
+            byte[]? k = klic;
+            await Task.Run(() =>
+            {
+                using var input = File.OpenRead(src);
+                using var output = File.Create(dest);
+                PkgLens.Core.Npd.EdatFile.Decrypt(input, output, k);
+            });
+            Vm.Status = $"Decrypted {npd.ContentId} → {Path.GetFileName(dest)}";
+            ShowDecryptNotes($"Wrote {new FileInfo(dest).Length:n0} bytes to {dest}");
+        }
+        catch (Exception ex)
+        {
+            Vm.Status = $"Decrypt failed: {ex.Message}";
+        }
+    }
+
+    private void ShowDecryptNotes(string? text)
+    {
+        var notes = this.FindControl<TextBlock>("DecryptNotes")!;
+        notes.Text = text ?? string.Empty;
+        notes.IsVisible = !string.IsNullOrEmpty(text);
     }
 
     private static string SanitizeFileName(string? name)

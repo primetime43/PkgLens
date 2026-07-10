@@ -6,6 +6,9 @@ using PkgLens.Core.Keys;
 
 namespace PkgLens.Gui.ViewModels;
 
+/// <summary>The tool pages shown in the left rail, in rail order.</summary>
+public enum ToolPage { Package, Pack, Resign, Decrypt, Keys }
+
 public sealed partial class MainWindowViewModel : ObservableObject
 {
     [ObservableProperty]
@@ -23,6 +26,46 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [ObservableProperty]
     private string _windowTitle = "PkgLens";
 
+    [ObservableProperty]
+    private ToolPage _activeTool = ToolPage.Package;
+
+    [ObservableProperty]
+    private string _keyStatus = "";
+
+    public MainWindowViewModel() => RefreshKeyStatus();
+
+    /// <summary>Two-way bridge for the rail ListBox's SelectedIndex.</summary>
+    public int SelectedToolIndex
+    {
+        get => (int)ActiveTool;
+        set { if (value >= 0) ActiveTool = (ToolPage)value; }
+    }
+
+    public bool IsPackageTool => ActiveTool == ToolPage.Package;
+    public bool IsPackTool => ActiveTool == ToolPage.Pack;
+    public bool IsResignTool => ActiveTool == ToolPage.Resign;
+    public bool IsDecryptTool => ActiveTool == ToolPage.Decrypt;
+    public bool IsKeysTool => ActiveTool == ToolPage.Keys;
+
+    partial void OnActiveToolChanged(ToolPage value)
+    {
+        OnPropertyChanged(nameof(SelectedToolIndex));
+        OnPropertyChanged(nameof(IsPackageTool));
+        OnPropertyChanged(nameof(IsPackTool));
+        OnPropertyChanged(nameof(IsResignTool));
+        OnPropertyChanged(nameof(IsDecryptTool));
+        OnPropertyChanged(nameof(IsKeysTool));
+    }
+
+    /// <summary>Re-checks whether a retail key is present and updates the status-bar indicator.</summary>
+    public void RefreshKeyStatus()
+    {
+        var provider = new FileKeyProvider(KeysDirectory);
+        KeyStatus = provider.TryLocateKeyFile(out string path)
+            ? $"key: {Path.GetFileName(path)}"
+            : "key: none";
+    }
+
     public bool HasPackage => Package is not null;
 
     partial void OnPackageChanged(PackageViewModel? oldValue, PackageViewModel? newValue)
@@ -39,6 +82,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         Status = string.IsNullOrEmpty(value)
             ? "Keys directory cleared (using $PKGLENS_KEYS / ~/.pkglens)."
             : $"Keys directory set: {value}";
+        RefreshKeyStatus();
     }
 
     /// <summary>Closes the current package (disposing it) and returns to the empty state.</summary>

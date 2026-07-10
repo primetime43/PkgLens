@@ -123,8 +123,9 @@ internal static class CliHelp
               --install-dir D  install directory metadata (default: TITLE_ID)
               --content-type T GameExec | GameData | Theme | … or a number
               --drm-type N     DRM type metadata (default: 3 = free)
-              --retail         retail-encrypt (needs the key); UNSIGNED, will not install on retail.
-                               Default is a non-finalized (debug) package needing no key.
+              --debug          non-finalized package (RPCS3 / dev consoles; needs no key).
+                               Default is retail-encrypted (needs the key) — the format a
+                               jailbroken/CFW PS3 installs; unsigned, so stock retail won't take it.
 
             Exit codes: 0 ok · 1 usage · 2 parse error · 3 key/decryption error · 4 integrity failure
             """);
