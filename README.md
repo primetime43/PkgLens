@@ -24,12 +24,17 @@ Core, CLI, and a first GUI are implemented and tested (spec §11 steps 1–5, pl
 - **Modify / repack** — replace a file and save a new `.pkg` (re-encrypted). Signatures are **not**
   forged, so repacked *retail* packages are unsigned (won't install on a real console); *debug*
   packages repack cleanly. The original file is never modified in place.
+- **Pack** — build a `.pkg` from a content folder (`pkglens pack <folder>`). *Fast Pack* infers the
+  content id / install dir / content type from `PARAM.SFO`; pass options for *Custom Pack*. Produces
+  a non-finalized (debug) package by default; `--retail` produces an unsigned retail-encrypted one.
+  PkgLens never finalizes or signs, so a retail build won't install on a real console.
 - **Integrity `verify`** — structural bounds, the header **SHA-1** digest, and the header **CMAC**
   (`AES-CMAC(gpkg_key, header[0x00:0x80])`, algorithm confirmed against real packages). Detects
   truncation, corruption, and modified/repacked headers. ECDSA signature check is not yet included.
-- **CLI**: `pkglens info | list | sfo | verify | extract | decrypt | keys`, with `--json`, `--keys`, `--out`, `--filter`, `--rap`.
+- **CLI**: `pkglens info | list | sfo | verify | extract | decrypt | pack | keys`, with `--json`, `--keys`, `--out`, `--filter`, `--rap`.
 - **GUI** (Avalonia): classic menu/toolbar, folder tree + Name/Size list, viewer, Package-info dialog,
-  drag-and-drop, light/dark theme, replace + Save-As (repack).
+  drag-and-drop, light/dark theme, replace + Save-As (repack), and **Pack folder → .pkg** (File menu /
+  toolbar) to build a package from a content folder.
 
 Verified against synthetic in-test fixtures **and** a real retail package.
 
@@ -58,7 +63,9 @@ right pane lists the selected folder's files with sizes; **Tools → Package inf
 header, metadata, and PARAM.SFO. Debug packages open immediately. For retail packages, use
 **Tools → Set retail key…** and paste the NPDRM PKG PS3 AES key once (saved to `~/.pkglens`), or
 **Tools → Keys folder…** to point at an existing key file. Select a file and **File → Extract
-selected…**. See [`docs/keys.md`](docs/keys.md) for where to obtain the key.
+selected…**. To build a package, use **File → Pack folder → .pkg…** (or the **Pack** toolbar button):
+pick a content folder, confirm the pre-filled fields, and choose where to save. See
+[`docs/keys.md`](docs/keys.md) for where to obtain the key.
 
 ## Build & test
 
@@ -73,8 +80,23 @@ dotnet test
 pkglens info  <pkg> [--keys DIR] [--json]   # header + content-id + SFO summary
 pkglens list  <pkg> [--keys DIR] [--json]   # entry table
 pkglens sfo   <pkg> [--keys DIR] [--json]   # dump PARAM.SFO key/values
+pkglens pack  <folder> [--out FILE]         # build a .pkg from a content folder
 pkglens keys  import|status|where           # manage the runtime retail key
 ```
+
+**Pack** turns a content folder back into a package. With no options it's *Fast Pack* — the content
+id, install directory and content type are inferred from the folder's `PARAM.SFO`:
+
+```
+pkglens pack ./MyGameFolder                              # Fast Pack (infers from PARAM.SFO)
+pkglens pack ./MyGameFolder --content-id UP0001-NPUB30910_00-EXAMPLE000000001 \
+        --install-dir NPUB30910 --content-type GameExec  # Custom Pack (explicit)
+pkglens pack ./MyGameFolder --retail                     # retail-encrypted (unsigned)
+```
+
+The default output is a **non-finalized (debug)** package: self-contained, needs no key, and reads
+back in PkgLens / RPCS3. `--retail` re-encrypts with the runtime key but the result is **unsigned**
+(no ECDSA signature) and will not install on a real console — PkgLens never finalizes or signs.
 
 Debug (non-finalized) packages decrypt with no key at all. Retail (finalized) packages need the
 NPDRM PKG PS3 AES key supplied **at runtime**. Install it once and every later run just works:

@@ -106,6 +106,7 @@ internal static class CliHelp
               pkglens verify  <pkg> [--keys DIR] [--json]   check header CMAC/SHA-1 + structure
               pkglens extract <pkg> [--out DIR] [--filter GLOB] [--keys DIR]   unpack files to a folder
               pkglens decrypt <edat> [--rap FILE] [--out FILE]   decrypt an EDAT/SDAT file
+              pkglens pack    <folder> [--out FILE] [options]   build a .pkg from a content folder
               pkglens keys    import|status|where           manage the runtime retail key
 
             Options:
@@ -115,6 +116,15 @@ internal static class CliHelp
               --out DIR    extract destination (default: a folder named after the package)
               --filter GLOB  only extract matching entries, e.g. "*.SFO" or "USRDIR/*"
               --json       machine-readable output
+
+            pack options (Fast Pack infers these from PARAM.SFO; pass any to Custom Pack):
+              --out FILE       output .pkg path (default: <content-id>.pkg)
+              --content-id CID 36-char content id, e.g. UP0001-NPUB30910_00-EXAMPLE000000001
+              --install-dir D  install directory metadata (default: TITLE_ID)
+              --content-type T GameExec | GameData | Theme | … or a number
+              --drm-type N     DRM type metadata (default: 3 = free)
+              --retail         retail-encrypt (needs the key); UNSIGNED, will not install on retail.
+                               Default is a non-finalized (debug) package needing no key.
 
             Exit codes: 0 ok · 1 usage · 2 parse error · 3 key/decryption error · 4 integrity failure
             """);

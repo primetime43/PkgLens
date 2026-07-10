@@ -269,6 +269,72 @@ public partial class MainWindow : Window
         return rap;
     }
 
+    private async void OnPackClick(object? sender, RoutedEventArgs e)
+    {
+        // 1. Choose the content folder to pack.
+        var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        {
+            Title = "Pack — choose the content folder to build into a .pkg",
+            AllowMultiple = false,
+        });
+        if (folders.FirstOrDefault()?.TryGetLocalPath() is not { } folder)
+            return;
+
+        // 2. Try Fast-Pack inference to pre-fill the dialog (fall back to a blank form on failure).
+        PkgLens.Core.PackPlan? inferred = null;
+        try { inferred = await Task.Run(() => PkgLens.Core.FolderPackage.Plan(folder)); }
+        catch { /* no PARAM.SFO / no inferable content id — the dialog collects it manually */ }
+
+        var options = await new PackDialog(folder, inferred).ShowDialog<PkgLens.Core.PackOptions?>(this);
+        if (options is null)
+            return;
+
+        // 3. Choose the output .pkg path.
+        var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "Save the new .pkg as…",
+            SuggestedFileName = SanitizeFileName(options.ContentId) + ".pkg",
+            DefaultExtension = "pkg",
+            FileTypeChoices = new[]
+            {
+                new FilePickerFileType("PS3 package") { Patterns = new[] { "*.pkg" } },
+            },
+        });
+        if (file?.TryGetLocalPath() is not { } dest)
+            return;
+
+        // 4. Build off the UI thread.
+        try
+        {
+            Vm.Status = "Packing…";
+            bool retail = options.Finalization == PkgLens.Core.Models.PkgFinalization.Retail;
+            var plan = await Task.Run(() =>
+            {
+                var p = PkgLens.Core.FolderPackage.Plan(folder, options);
+                IKeyProvider keys = new FileKeyProvider(Vm.KeysDirectory);
+                using var dst = File.Create(dest);
+                p.Builder.Build(dst, keys);
+                return p;
+            });
+
+            Vm.Status = retail
+                ? $"Packed {plan.FileCount} file(s) → {Path.GetFileName(dest)} — UNSIGNED retail (won't install on a real console)."
+                : $"Packed {plan.FileCount} file(s) → {Path.GetFileName(dest)} — non-finalized (debug), opens in RPCS3/PkgLens.";
+        }
+        catch (Exception ex)
+        {
+            Vm.Status = $"Pack failed: {ex.Message}";
+        }
+    }
+
+    private static string SanitizeFileName(string? name)
+    {
+        name ??= string.Empty;
+        foreach (char c in Path.GetInvalidFileNameChars())
+            name = name.Replace(c, '_');
+        return string.IsNullOrEmpty(name) ? "package" : name;
+    }
+
     private void OnInfoClick(object? sender, RoutedEventArgs e)
     {
         if (Vm.Package is { } package)

@@ -21,6 +21,10 @@ string command = args[0].ToLowerInvariant();
 if (command == "keys")
     return KeysCommand.Run(args.AsSpan(1));
 
+// The `pack` command builds a package from a <folder> and has its own option set.
+if (command == "pack")
+    return PackCommand.Run(args.AsSpan(1));
+
 var parsed = CommandLine.Parse(args.AsSpan(1));
 
 if (parsed.Error is not null)

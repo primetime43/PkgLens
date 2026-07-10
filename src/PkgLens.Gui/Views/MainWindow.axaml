@@ -16,6 +16,7 @@
         <MenuItem Header="_Open .pkg…" Click="OnOpenClick" />
         <MenuItem Header="_Close" Click="OnCloseClick" IsEnabled="{Binding HasPackage}" />
         <Separator />
+        <MenuItem Header="_Pack folder → .pkg…" Click="OnPackClick" />
         <MenuItem Header="Extract _all…" Click="OnExtractAllClick"
                   IsEnabled="{Binding Package.IsDecrypted, FallbackValue=False}" />
         <MenuItem Header="Save _As… (repack)" Click="OnSaveAsClick"
@@ -59,6 +60,7 @@
             BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="0,0,0,1">
       <StackPanel Orientation="Horizontal" Spacing="3">
         <Button Classes="tool" Click="OnOpenClick" ToolTip.Tip="Open a .pkg file">Open</Button>
+        <Button Classes="tool" Click="OnPackClick" ToolTip.Tip="Build a .pkg from a content folder">Pack</Button>
         <Border Width="1" Margin="3,2" Background="{DynamicResource SystemControlForegroundBaseLowBrush}" />
         <Button Classes="tool" Click="OnExtractClick" ToolTip.Tip="Extract the selected file"
                 IsEnabled="{Binding Package.HasSelectedFile, FallbackValue=False}">Extract</Button>
