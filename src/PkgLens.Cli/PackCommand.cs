@@ -103,7 +103,7 @@ internal static class PackCommand
             Console.WriteLine($"  content id   : {plan.ContentId}");
             Console.WriteLine($"  install dir  : {plan.InstallDirectory}");
             Console.WriteLine($"  content type : {ContentTypeName(plan.ContentType)}");
-            Console.WriteLine($"  drm type     : {plan.DrmType}");
+            Console.WriteLine($"  drm type     : {plan.DrmType} ({PkgLens.Core.Models.DrmType.Name(plan.DrmType)})");
             Console.WriteLine($"  finalization : {(plan.Finalization == PkgFinalization.Retail ? "retail (unsigned)" : "non-finalized (debug)")}");
             foreach (var note in plan.Notes)
                 Console.WriteLine($"  · {note}");

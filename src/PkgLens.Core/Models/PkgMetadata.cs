@@ -48,6 +48,35 @@ public enum PkgContentType : uint
     Ps2Classic = 0x1B,
 }
 
+/// <summary>
+/// Values of the <see cref="PkgMetadataId.DrmType"/> entry — how the package's content is licensed.
+/// The three that matter when building a package are <see cref="Free"/> (no license needed),
+/// <see cref="Local"/> (tied to the console/account, needs an <c>act.dat</c>/<c>.rif</c>) and
+/// <see cref="Network"/>. Official PSN packages also carry other values (e.g. 0xD); those are shown
+/// as raw hex. Homebrew / repacks use <see cref="Free"/> (3).
+/// </summary>
+public enum PkgDrmType : uint
+{
+    /// <summary>1 — network license.</summary>
+    Network = 0x1,
+
+    /// <summary>2 — local license (needs the content's act.dat / .rif to run).</summary>
+    Local = 0x2,
+
+    /// <summary>3 — free / no DRM. The usual choice for homebrew and repacks.</summary>
+    Free = 0x3,
+
+    /// <summary>4 — PSP DRM.</summary>
+    Psp = 0x4,
+}
+
+/// <summary>Friendly names for DRM-type values (falls back to hex for unrecognized ones).</summary>
+public static class DrmType
+{
+    public static string Name(uint value) =>
+        Enum.IsDefined(typeof(PkgDrmType), value) ? ((PkgDrmType)value).ToString() : $"0x{value:X}";
+}
+
 /// <summary>One raw metadata record. <see cref="Data"/> is the payload after the id/size header.</summary>
 public sealed class PkgMetadataEntry
 {

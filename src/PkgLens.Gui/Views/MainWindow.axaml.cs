@@ -368,6 +368,13 @@ public partial class MainWindow : Window
         return sb.ToString().TrimEnd();
     }
 
+    private void OnPackDrmChanged(object? sender, Avalonia.Controls.NumericUpDownValueChangedEventArgs e)
+    {
+        var label = this.FindControl<TextBlock>("PackDrmName");
+        if (label is not null)
+            label.Text = PkgLens.Core.Models.DrmType.Name((uint)(e.NewValue ?? 3));
+    }
+
     private async void OnPackBrowseFolder(object? sender, RoutedEventArgs e)
     {
         var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions

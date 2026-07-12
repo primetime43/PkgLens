@@ -205,9 +205,11 @@
               <ComboBox  Grid.Row="6" Grid.Column="2" x:Name="PackContentTypeBox" HorizontalAlignment="Stretch" />
 
               <TextBlock Grid.Row="8" Grid.Column="0" Text="DRM type" VerticalAlignment="Center" />
-              <NumericUpDown Grid.Row="8" Grid.Column="2" x:Name="PackDrmBox"
-                             Minimum="0" Maximum="255" Increment="1" Value="3"
-                             HorizontalAlignment="Left" Width="110" />
+              <StackPanel Grid.Row="8" Grid.Column="2" Orientation="Horizontal" Spacing="10">
+                <NumericUpDown x:Name="PackDrmBox" Minimum="0" Maximum="255" Increment="1" Value="3"
+                               ValueChanged="OnPackDrmChanged" HorizontalAlignment="Left" Width="110" />
+                <TextBlock x:Name="PackDrmName" VerticalAlignment="Center" FontSize="12" Opacity="0.8" Text="Free" />
+              </StackPanel>
             </Grid>
 
             <TextBlock Text="Output type" Margin="0,4,0,0" />
