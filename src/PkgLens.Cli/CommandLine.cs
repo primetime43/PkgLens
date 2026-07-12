@@ -109,6 +109,7 @@ internal static class CliHelp
               pkglens self    <eboot>                        inspect a SELF/EBOOT.BIN header
               pkglens unself  <eboot> [--out FILE] [--rap FILE]   decrypt a SELF → plaintext ELF
               pkglens resign  <elf> [--out FILE] [--npdrm]   ELF → fake-signed SELF (fSELF) for CFW
+              pkglens folderinfo <folder> [--json]           report on an extracted content folder
               pkglens pack    <folder> [--out FILE] [options]   build a .pkg from a content folder
               pkglens keys    import|status|where           manage the runtime retail key
 
@@ -129,6 +130,8 @@ internal static class CliHelp
               --debug          non-finalized package (RPCS3 / dev consoles; needs no key).
                                Default is retail-encrypted (needs the key) — the format a
                                jailbroken/CFW PS3 installs; unsigned, so stock retail won't take it.
+              --resign         fake-sign EBOOT.BIN as it is packed (boots on CFW without a license);
+                               add --rap FILE for a licensed EBOOT that must be decrypted first.
 
             Exit codes: 0 ok · 1 usage · 2 parse error · 3 key/decryption error · 4 integrity failure
             """);

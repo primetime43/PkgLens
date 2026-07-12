@@ -174,6 +174,48 @@ internal static class Render
         }
     }
 
+    public static void FolderInfo(GameFolderReport r, bool json)
+    {
+        if (json) { WriteJson(r); return; }
+
+        Console.WriteLine($"Folder       : {r.Folder}");
+        Console.WriteLine($"Content ID   : {r.ContentId ?? "(unknown)"}");
+        Console.WriteLine($"Title        : {r.Title ?? "(none)"}");
+        Console.WriteLine($"Title ID     : {r.TitleId ?? "(none)"}");
+        if (r.AppVersion is not null) Console.WriteLine($"App version  : {r.AppVersion}");
+        if (r.Category is not null)   Console.WriteLine($"Category     : {r.Category}");
+        Console.WriteLine($"Content type : {r.ContentTypeGuess ?? "(unknown)"}");
+        Console.WriteLine($"Contents     : {r.FileCount} file(s), {r.DirectoryCount} folder(s), {r.TotalBytes:n0} bytes");
+
+        foreach (var e in r.Eboots)
+        {
+            string state = e.State switch
+            {
+                EbootState.EncryptedSigned => "encrypted / signed",
+                EbootState.FakeSigned => "fake-signed (fSELF, CFW-ready)",
+                EbootState.PlainElf => "plain ELF (decrypted)",
+                _ => "unknown",
+            };
+            Console.WriteLine($"EBOOT        : {e.RelativePath}  [{state}]");
+            if (e.State is EbootState.EncryptedSigned or EbootState.FakeSigned)
+            {
+                Console.WriteLine($"  key rev    : 0x{e.KeyRevision:X4}" + (e.Npdrm ? "  NPDRM" : ""));
+                if (e.License is not null) Console.WriteLine($"  license    : {e.License}");
+                if (e.ContentId is { Length: > 0 }) Console.WriteLine($"  content id : {e.ContentId}");
+            }
+        }
+
+        if (r.Edats.Count > 0)
+        {
+            Console.WriteLine($"Data files   : {r.Edats.Count} EDAT/SDAT");
+            foreach (var d in r.Edats)
+                Console.WriteLine($"  {d.RelativePath}  [{(d.IsSdat ? "SDAT" : "EDAT")}, {d.License}{(d.NeedsRap ? ", needs RAP" : "")}]");
+        }
+
+        foreach (var note in r.Notes)
+            Console.WriteLine($"  · {note}");
+    }
+
     public static void Sfo(PkgInfo info, Options o)
     {
         var sfo = info.Sfo!;

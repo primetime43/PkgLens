@@ -33,6 +33,10 @@ if (command == "resign")
 if (command == "unself")
     return UnselfCommand.Run(args.AsSpan(1));
 
+// The `folderinfo` command reports on a content <folder>, not a <pkg>.
+if (command == "folderinfo")
+    return FolderInfoCommand.Run(args.AsSpan(1));
+
 var parsed = CommandLine.Parse(args.AsSpan(1));
 
 if (parsed.Error is not null)

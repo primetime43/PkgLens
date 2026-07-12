@@ -38,6 +38,13 @@ Core, CLI, and a first GUI are implemented and tested (spec §11 steps 1–5, pl
 - **Resign (ELF → fSELF)** — fake-sign a plaintext ELF into a SELF (`pkglens resign <elf>`) that boots on
   a jailbroken (CFW) PS3. No keys; the ELF is stored unencrypted with key revision `0x8000`, so it runs
   where signature checks are patched (CFW) — never on stock retail.
+- **Resign-on-pack** — pack a content folder with `--resign` (or the Pack page's *Resign EBOOT.BIN as it
+  packs* checkbox) and PkgLens fake-signs the folder's `EBOOT.BIN` to an fSELF as it builds, so the packaged
+  game boots on CFW without its license. A licensed EBOOT needs its RAP (`--rap` / the RAP picker) to decrypt
+  first; free-license, debug, plain-ELF and already-fSELF EBOOTs need nothing.
+- **Game folder info** — a read-only report on an extracted content folder (`pkglens folderinfo <folder>`,
+  or the Pack page's *Show folder info…* button): content id / title from `PARAM.SFO`, file counts and size,
+  the EBOOT's sign state (encrypted / fake-signed / plain ELF), and any EDAT/SDAT files with their license.
 - **Unself (SELF → ELF)** — decrypt an encrypted `EBOOT.BIN` / `.self` back to its plaintext ELF
   (`pkglens unself <eboot>`), so you can inspect or fake-sign one you only have encrypted. Uses public
   decryption keysets (appldr / NPDRM, by key revision); free-license and debug SELFs need no key, a
@@ -96,7 +103,8 @@ pkglens sfo   <pkg> [--keys DIR] [--json]   # dump PARAM.SFO key/values
 pkglens self  <eboot>                       # inspect a SELF/EBOOT.BIN header (no keys)
 pkglens unself <eboot> [--rap FILE] [--out FILE]  # decrypt a SELF → plaintext ELF
 pkglens resign <elf> [--out FILE] [--npdrm] # ELF → fake-signed SELF (fSELF) for CFW
-pkglens pack  <folder> [--out FILE]         # build a .pkg from a content folder
+pkglens folderinfo <folder> [--json]        # report on an extracted content folder
+pkglens pack  <folder> [--out FILE] [--resign [--rap FILE]]   # build a .pkg (optionally resign EBOOT)
 pkglens keys  import|status|where           # manage the runtime retail key
 ```
 

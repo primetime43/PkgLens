@@ -293,6 +293,81 @@ public partial class MainWindow : Window
     /// <summary>Menu/toolbar "Pack folder…" simply switches to the Pack page.</summary>
     private void OnGoPackClick(object? sender, RoutedEventArgs e) => Vm.ActiveTool = ToolPage.Pack;
 
+    private string? _packRapPath;
+
+    private async void OnPackPickRap(object? sender, RoutedEventArgs e)
+    {
+        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "Choose the RAP license file for the EBOOT's content id",
+            AllowMultiple = false,
+            FileTypeFilter = new[]
+            {
+                new FilePickerFileType("RAP") { Patterns = new[] { "*.rap", "*.RAP" } },
+                FilePickerFileTypes.All,
+            },
+        });
+        if (files.FirstOrDefault()?.TryGetLocalPath() is not { } path)
+            return;
+        _packRapPath = path;
+        this.FindControl<TextBlock>("PackRapText")!.Text = Path.GetFileName(path);
+    }
+
+    private async void OnPackFolderInfo(object? sender, RoutedEventArgs e)
+    {
+        if (_packFolder is null)
+        {
+            Vm.Status = "Choose a source folder first.";
+            return;
+        }
+
+        var box = this.FindControl<Border>("FolderInfoBox")!;
+        var text = this.FindControl<TextBlock>("FolderInfoText")!;
+        try
+        {
+            var report = await Task.Run(() => PkgLens.Core.GameFolderInfo.Describe(_packFolder));
+            text.Text = DescribeFolder(report);
+            box.IsVisible = true;
+            Vm.Status = $"Folder: {report.FileCount} file(s), {report.TotalBytes:n0} bytes.";
+        }
+        catch (Exception ex)
+        {
+            box.IsVisible = false;
+            Vm.Status = $"Couldn't read folder: {ex.Message}";
+        }
+    }
+
+    private static string DescribeFolder(PkgLens.Core.GameFolderReport r)
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine($"Content ID   : {r.ContentId ?? "(unknown)"}");
+        sb.AppendLine($"Title        : {r.Title ?? "(none)"}");
+        sb.AppendLine($"Title ID     : {r.TitleId ?? "(none)"}");
+        if (r.AppVersion is not null) sb.AppendLine($"App version  : {r.AppVersion}");
+        if (r.Category is not null) sb.AppendLine($"Category     : {r.Category}");
+        sb.AppendLine($"Content type : {r.ContentTypeGuess ?? "(unknown)"}");
+        sb.AppendLine($"Contents     : {r.FileCount} file(s), {r.DirectoryCount} folder(s), {r.TotalBytes:n0} bytes");
+        foreach (var eb in r.Eboots)
+        {
+            string state = eb.State switch
+            {
+                PkgLens.Core.EbootState.EncryptedSigned => "encrypted / signed",
+                PkgLens.Core.EbootState.FakeSigned => "fake-signed (fSELF, CFW-ready)",
+                PkgLens.Core.EbootState.PlainElf => "plain ELF",
+                _ => "unknown",
+            };
+            sb.AppendLine($"EBOOT        : {eb.RelativePath}  [{state}]");
+            if (eb.License is not null) sb.AppendLine($"  license    : {eb.License}" + (eb.Npdrm ? "  (NPDRM)" : ""));
+        }
+        if (r.Edats.Count > 0)
+        {
+            sb.AppendLine($"Data files   : {r.Edats.Count} EDAT/SDAT");
+            foreach (var d in r.Edats)
+                sb.AppendLine($"  {d.RelativePath}  [{(d.IsSdat ? "SDAT" : "EDAT")}, {d.License}{(d.NeedsRap ? ", needs RAP" : "")}]");
+        }
+        return sb.ToString().TrimEnd();
+    }
+
     private async void OnPackBrowseFolder(object? sender, RoutedEventArgs e)
     {
         var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
@@ -340,6 +415,19 @@ public partial class MainWindow : Window
 
         string installDir = (this.FindControl<TextBox>("PackInstallDirBox")!.Text ?? string.Empty).Trim();
         bool retail = this.FindControl<RadioButton>("PackRetailRadio")!.IsChecked == true;
+        bool resign = this.FindControl<CheckBox>("PackResignCheck")!.IsChecked == true;
+
+        byte[]? ebootKlic = null;
+        if (resign && _packRapPath is not null)
+        {
+            try
+            {
+                byte[] rapBytes = File.ReadAllBytes(_packRapPath);
+                if (rapBytes.Length != 16) { Vm.Status = "The chosen RAP is not 16 bytes."; return; }
+                ebootKlic = PkgLens.Core.Npd.NpdKeys.RapToKlicensee(rapBytes);
+            }
+            catch (Exception ex) { Vm.Status = $"Couldn't read the RAP: {ex.Message}"; return; }
+        }
 
         var options = new PkgLens.Core.PackOptions
         {
@@ -348,6 +436,8 @@ public partial class MainWindow : Window
             ContentType = SelectedPackContentType(),
             DrmType = (uint)(this.FindControl<NumericUpDown>("PackDrmBox")!.Value ?? 3),
             Finalization = retail ? PkgFinalization.Retail : PkgFinalization.Debug,
+            ResignEboot = resign,
+            EbootKlicensee = ebootKlic,
         };
 
         var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions

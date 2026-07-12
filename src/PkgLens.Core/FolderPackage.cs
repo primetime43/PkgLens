@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using PkgLens.Core.Models;
+using PkgLens.Core.Self;
 using PkgLens.Core.Sfo;
 
 namespace PkgLens.Core;
@@ -12,6 +13,17 @@ public sealed class PackOptions
     public uint? DrmType { get; set; }
     public uint? ContentType { get; set; }
     public PkgFinalization Finalization { get; set; } = PkgFinalization.Debug;
+
+    /// <summary>
+    /// When set, the folder's <c>EBOOT.BIN</c> is fake-signed (to a fSELF) as it is packed, so the
+    /// packaged game boots on a jailbroken (CFW) PS3 without its original license. An encrypted,
+    /// <em>licensed</em> EBOOT needs <see cref="EbootKlicensee"/> (from its RAP) to decrypt first;
+    /// free-license, debug, plaintext-ELF and already-fSELF EBOOTs need nothing.
+    /// </summary>
+    public bool ResignEboot { get; set; }
+
+    /// <summary>Optional 16-byte klicensee (from a RAP) for decrypting a licensed EBOOT during resign-on-pack.</summary>
+    public byte[]? EbootKlicensee { get; set; }
 }
 
 /// <summary>A configured builder plus a record of what was inferred, so the CLI/GUI can report it.</summary>
@@ -76,7 +88,7 @@ public static class FolderPackage
 
         long totalBytes = 0;
         int files = 0, dirs = 0;
-        Walk(root, string.Empty, builder, ref totalBytes, ref files, ref dirs);
+        Walk(root, string.Empty, builder, options, notes, ref totalBytes, ref files, ref dirs);
         if (files == 0)
             throw new PkgFormatException($"Content folder '{folder}' contains no files to pack.");
 
@@ -84,8 +96,8 @@ public static class FolderPackage
             options.Finalization, files, dirs, totalBytes, notes);
     }
 
-    private static void Walk(DirectoryInfo dir, string prefix, PkgBuilder builder,
-        ref long totalBytes, ref int files, ref int dirs)
+    private static void Walk(DirectoryInfo dir, string prefix, PkgBuilder builder, PackOptions options,
+        List<string> notes, ref long totalBytes, ref int files, ref int dirs)
     {
         foreach (var info in dir.GetFileSystemInfos().OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase))
         {
@@ -94,14 +106,47 @@ public static class FolderPackage
             {
                 builder.AddDirectory(name);
                 dirs++;
-                Walk(sub, name, builder, ref totalBytes, ref files, ref dirs);
+                Walk(sub, name, builder, options, notes, ref totalBytes, ref files, ref dirs);
             }
             else if (info is FileInfo file)
             {
-                builder.AddFile(name, file.Length, () => File.OpenRead(file.FullName), KindFor(file.Name));
-                totalBytes += file.Length;
+                if (options.ResignEboot && string.Equals(file.Name, "EBOOT.BIN", StringComparison.OrdinalIgnoreCase))
+                {
+                    byte[] resigned = ResignEboot(file, options, notes);
+                    builder.AddFile(name, resigned, PkgEntryType.Npdrm);
+                    totalBytes += resigned.Length;
+                }
+                else
+                {
+                    builder.AddFile(name, file.Length, () => File.OpenRead(file.FullName), KindFor(file.Name));
+                    totalBytes += file.Length;
+                }
                 files++;
             }
+        }
+    }
+
+    /// <summary>Fake-signs the EBOOT during packing (resign-on-pack). Falls back with a note on failure.</summary>
+    private static byte[] ResignEboot(FileInfo file, PackOptions options, List<string> notes)
+    {
+        byte[] raw = File.ReadAllBytes(file.FullName);
+        try
+        {
+            var r = EbootResigner.Resign(raw, options.EbootKlicensee);
+            string what = r.Action switch
+            {
+                EbootResignAction.AlreadyFakeSigned => "already fake-signed (unchanged)",
+                EbootResignAction.ResignedFromElf => "signed from ELF → fSELF",
+                _ => "decrypted → fake-signed fSELF",
+            };
+            notes.Add($"EBOOT.BIN resigned: {what}");
+            return r.Data;
+        }
+        catch (PkgFormatException ex)
+        {
+            // Don't fail the whole pack: keep the original EBOOT and warn loudly.
+            notes.Add($"EBOOT.BIN NOT resigned ({ex.Message}) — packed as-is; supply its RAP to resign a licensed EBOOT.");
+            return raw;
         }
     }
 
