@@ -37,7 +37,10 @@ Core, CLI, and a first GUI are implemented and tested (spec §11 steps 1–5, pl
   type, key revision, the embedded ELF header, and NPDRM content id — no keys needed.
 - **Resign (ELF → fSELF)** — fake-sign a plaintext ELF into a SELF (`pkglens resign <elf>`) that boots on
   a jailbroken (CFW) PS3. No keys; the ELF is stored unencrypted with key revision `0x8000`, so it runs
-  where signature checks are patched (CFW) — never on stock retail.
+  where signature checks are patched (CFW) — never on stock retail. **Custom Sign** lets you override the
+  `app_info` fields — auth id, vendor id, app/firmware version, program type — and the NPDRM content id
+  (`--auth-id`, `--vendor-id`, `--app-version`, `--type`, `--content-id`, or the Pack/Resign page's
+  *Custom sign fields* panel); unset fields use the fSELF defaults.
 - **Resign-on-pack** — pack a content folder with `--resign` (or the Pack page's *Resign EBOOT.BIN as it
   packs* checkbox) and PkgLens fake-signs the folder's `EBOOT.BIN` to an fSELF as it builds, so the packaged
   game boots on CFW without its license. A licensed EBOOT needs its RAP (`--rap` / the RAP picker) to decrypt
@@ -48,9 +51,10 @@ Core, CLI, and a first GUI are implemented and tested (spec §11 steps 1–5, pl
 - **Unself (SELF → ELF)** — decrypt an encrypted `EBOOT.BIN` / `.self` back to its plaintext ELF
   (`pkglens unself <eboot>`), so you can inspect or fake-sign one you only have encrypted. Uses public
   decryption keysets (appldr / NPDRM, by key revision); free-license and debug SELFs need no key, a
-  licensed NPDRM SELF needs its RAP (`--rap`). Verified **byte-for-byte** against a real retail
-  `EBOOT.BIN → EBOOT.ELF` pair. No signing keys are involved — the output is a plaintext ELF, not a
-  resigned file.
+  licensed NPDRM SELF needs its RAP (`--rap`). Also decrypts **fake-signed / debug (fSELF) EBOOTs**
+  (key version 0x80 / 0xC0) — the ELF is stored in the clear, so no keys are needed. Verified
+  **byte-for-byte** against a real retail `EBOOT.BIN → EBOOT.ELF` pair *and* on the fSELF round-trip.
+  No signing keys are involved — the output is a plaintext ELF, not a resigned file.
 - **CLI**: `pkglens info | list | sfo | verify | extract | decrypt | self | unself | resign | pack | keys`, with `--json`, `--keys`, `--out`, `--filter`, `--rap`.
 - **GUI** (Avalonia): classic menu/toolbar, folder tree + Name/Size list, viewer, Package-info dialog,
   drag-and-drop, light/dark theme, replace + Save-As (repack), and **Pack folder → .pkg** (File menu /
@@ -150,6 +154,8 @@ PkgLens **parses and inspects** package structure and extracts content the user 
   never recomputes the header CMAC or forges the ECDSA signature — a repacked retail package is
   unsigned and will not install on a retail console.
 - **Out of scope, permanently:** signature forgery / re-signing, and any private-key or per-console
-  (IDPS/EID) operation.
+  (IDPS/EID) operation. This includes **Finalize-for-retail** and **DEX/OFW resigning**: making a package
+  or SELF pass a *stock, non-jailbroken* console's signature check needs Sony's private signing keys,
+  which PkgLens never uses. The keyless fSELF path targets *patched* loaders (CFW) only.
 
 Licensing: keep it permissive (the original is ISC; MIT/ISC pairs well).

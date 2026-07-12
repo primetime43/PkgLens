@@ -270,6 +270,24 @@
               <Button Content="Fake-sign an ELF…" Click="OnMakeFself" />
               <CheckBox x:Name="FselfNpdrmCheck" Content="NPDRM (app type 8)" VerticalAlignment="Center" />
             </StackPanel>
+
+            <Expander x:Name="FselfCustomExpander" Header="Custom sign fields (optional)">
+              <Grid ColumnDefinitions="92,10,*" RowDefinitions="Auto,6,Auto,6,Auto,6,Auto" Margin="0,4">
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="Auth ID" VerticalAlignment="Center" />
+                <TextBox   Grid.Row="0" Grid.Column="2" x:Name="FselfAuthIdBox"
+                           Watermark="0x1010000001000003" FontFamily="Consolas,monospace" />
+                <TextBlock Grid.Row="2" Grid.Column="0" Text="Vendor ID" VerticalAlignment="Center" />
+                <TextBox   Grid.Row="2" Grid.Column="2" x:Name="FselfVendorIdBox"
+                           Watermark="0x01000002" FontFamily="Consolas,monospace" />
+                <TextBlock Grid.Row="4" Grid.Column="0" Text="App version" VerticalAlignment="Center" />
+                <TextBox   Grid.Row="4" Grid.Column="2" x:Name="FselfAppVerBox"
+                           Watermark="0x0001000000000000" FontFamily="Consolas,monospace" />
+                <TextBlock Grid.Row="6" Grid.Column="0" Text="Content ID" VerticalAlignment="Center" />
+                <TextBox   Grid.Row="6" Grid.Column="2" x:Name="FselfContentIdBox"
+                           Watermark="(NPDRM only) UP0001-NPUB30910_00-EXAMPLE000000001" FontFamily="Consolas,monospace" />
+              </Grid>
+            </Expander>
+
             <TextBlock x:Name="FselfNotes" TextWrapping="Wrap" FontSize="12" Opacity="0.7" IsVisible="False" />
 
             <Border Height="1" Background="{DynamicResource SystemControlForegroundBaseLowBrush}" Margin="0,4" />

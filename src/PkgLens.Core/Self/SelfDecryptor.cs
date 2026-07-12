@@ -76,6 +76,34 @@ public static class SelfDecryptor
         // ---- NPDRM control info (license type + content id) ----
         var npd = FindNpdrm(self, supplOffset, supplSize);
 
+        // ---- Debug / fake-signed SELF (key_version 0x80 or 0xC0) ----
+        // These carry the ELF appended in the clear after the header — no metadata to decrypt. Our own
+        // fSELF (key revision 0x8000 big-endian = bytes 80 00 = 0x80 little-endian) is exactly this
+        // format, as are DEX/debug EBOOTs. RPCS3's CheckDebugSelf: read the ELF start from se_hsize
+        // (@0x10, big-endian for 0x80 / little-endian for 0xC0) and copy from there to end of file.
+        int keyVersionLe = self[0x08] | (self[0x09] << 8);
+        if (keyVersionLe is 0x80 or 0xC0)
+        {
+            ulong elfStart = keyVersionLe == 0x80
+                ? BinaryPrimitives.ReadUInt64BigEndian(self.AsSpan(0x10))
+                : BinaryPrimitives.ReadUInt64LittleEndian(self.AsSpan(0x10));
+            if (elfStart >= (ulong)self.Length)
+                throw new PkgFormatException("Debug/fake-signed SELF: the ELF offset is past end of file.");
+
+            byte[] plainElf = self[(int)elfStart..];
+            if (plainElf.Length < 4 || BinaryPrimitives.ReadUInt32BigEndian(plainElf) != 0x7F454C46)
+                throw new PkgFormatException("Debug/fake-signed SELF: no ELF found at the appended offset.");
+
+            return new SelfDecryptResult
+            {
+                Elf = plainElf,
+                KeyRevision = keyRevision,
+                WasNpdrm = npd is not null,
+                License = npd?.License,
+                ContentId = npd?.ContentId,
+            };
+        }
+
         bool isDebug = (keyRevision & 0x8000) == 0x8000;
 
         // ---- metadata region ----

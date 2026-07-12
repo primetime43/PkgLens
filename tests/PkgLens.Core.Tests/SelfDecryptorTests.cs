@@ -33,8 +33,26 @@ public class SelfDecryptorTests
 
         var result = SelfDecryptor.Decrypt(self);
 
-        Assert.Equal(0x8000, result.KeyRevision);
+        Assert.Equal(0x8001, result.KeyRevision);
         Assert.False(result.WasNpdrm);
+        Assert.Equal(elf, result.Elf);
+    }
+
+    [Fact]
+    public void Decrypt_FakeSignedSelf_ExtractsEmbeddedElf()
+    {
+        // A fSELF (key revision 0x8000 = debug/fake-signed marker) stores the ELF appended in the
+        // clear; decrypting it must reproduce the input ELF byte-for-byte with no keys.
+        byte[] elf = BuildElf(shdrCount: 1, segments: new[]
+        {
+            (type: 1u, data: RandomBytes(0x80)),
+            (type: 1u, data: RandomBytes(0x33)),
+        });
+        byte[] fself = PkgLens.Core.Self.SelfBuilder.MakeFakeSelf(elf, npdrm: false);
+
+        var result = SelfDecryptor.Decrypt(fself);
+
+        Assert.Equal(0x8000, result.KeyRevision);
         Assert.Equal(elf, result.Elf);
     }
 
@@ -108,7 +126,10 @@ public class SelfDecryptorTests
     /// CTR-encrypted, and each program segment is a CTR-encrypted section. The inverse of
     /// <see cref="SelfDecryptor"/>'s debug path.
     /// </summary>
-    private static byte[] EncodeDebugSelf(byte[] elf, out int hSize, ushort keyRevision = 0x8000, uint programType = 4)
+    // Default key revision 0x8001: the debug bit (0x8000) is set so the keyset layers are skipped, but
+    // the low byte is not 0x80/0xC0, so it is not the "ELF appended in the clear" (CheckDebugSelf) form —
+    // this fixture genuinely exercises the CTR metadata/section decrypt path.
+    private static byte[] EncodeDebugSelf(byte[] elf, out int hSize, ushort keyRevision = 0x8001, uint programType = 4)
     {
         int phnum = BinaryPrimitives.ReadUInt16BigEndian(elf.AsSpan(0x38));
         int shnum = BinaryPrimitives.ReadUInt16BigEndian(elf.AsSpan(0x3C));

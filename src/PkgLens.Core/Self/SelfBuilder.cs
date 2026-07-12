@@ -32,6 +32,11 @@ public static class SelfBuilder
         0x09, 0x17, 0x08, 0x72, 0x6A, 0x57, 0x9E, 0x25, 0x86, 0xE4,
     };
 
+    // fself.py's default app_info values (identical in real retail SELFs); used when a field is unset.
+    private const ulong DefaultAuthId = 0x1010000001000003;
+    private const uint DefaultVendorId = 0x01000002;
+    private const ulong DefaultAppVersion = 0x0001000000000000;
+
     /// <summary>fself.py's fake NPDRM content id: 0x2F bytes of 0x30 then a null.</summary>
     private static byte[] FakeNpdrmContentId()
     {
@@ -40,13 +45,58 @@ public static class SelfBuilder
         return c;
     }
 
+    /// <summary>Encodes a content id into the 0x30-byte NPDRM field (ASCII, null-padded), or the fake default.</summary>
+    private static byte[] ContentIdBytes(string? contentId)
+    {
+        if (string.IsNullOrEmpty(contentId)) return FakeNpdrmContentId();
+        var c = new byte[0x30];
+        var ascii = System.Text.Encoding.ASCII.GetBytes(contentId);
+        Array.Copy(ascii, c, Math.Min(ascii.Length, 0x2F)); // keep the trailing null
+        return c;
+    }
+
+    /// <summary>
+    /// Fields written into a fake-signed SELF's <c>app_info</c> and NPDRM block (Custom Sign). Any field
+    /// left null uses the fSELF default. These are metadata only — they don't affect the (keyless)
+    /// signature, but let callers match a specific SDK/firmware profile or content id.
+    /// </summary>
+    public sealed class FakeSelfOptions
+    {
+        /// <summary>Tag the SELF as NPDRM (app type 8) rather than a plain app (type 4).</summary>
+        public bool Npdrm { get; set; }
+
+        /// <summary>app_info auth id (default 0x1010000001000003).</summary>
+        public ulong? AuthId { get; set; }
+
+        /// <summary>app_info vendor id (default 0x01000002).</summary>
+        public uint? VendorId { get; set; }
+
+        /// <summary>app_info version / SDK-firmware field (default 0x0001000000000000).</summary>
+        public ulong? AppVersion { get; set; }
+
+        /// <summary>Override the app_info program type outright (else 8 for NPDRM, 4 otherwise).</summary>
+        public uint? ProgramType { get; set; }
+
+        /// <summary>Content id for the NPDRM control block (NPDRM builds only; default is the fake 0x30-byte id).</summary>
+        public string? ContentId { get; set; }
+    }
+
     /// <summary>
     /// Turns a plaintext ELF into a fake-signed SELF. <paramref name="npdrm"/> tags it NPDRM
     /// (app type 8) for use inside an NPDRM package; otherwise it's a plain app (type 4).
     /// </summary>
-    public static byte[] MakeFakeSelf(byte[] elf, bool npdrm = false)
+    public static byte[] MakeFakeSelf(byte[] elf, bool npdrm = false) =>
+        MakeFakeSelf(elf, new FakeSelfOptions { Npdrm = npdrm });
+
+    /// <summary>
+    /// Turns a plaintext ELF into a fake-signed SELF with custom <c>app_info</c> / NPDRM fields
+    /// (Custom Sign). See <see cref="FakeSelfOptions"/>; unset fields use the fSELF defaults.
+    /// </summary>
+    public static byte[] MakeFakeSelf(byte[] elf, FakeSelfOptions options)
     {
         ArgumentNullException.ThrowIfNull(elf);
+        ArgumentNullException.ThrowIfNull(options);
+        bool npdrm = options.Npdrm;
         if (elf.Length < ElfHeaderLen ||
             elf[0] != 0x7F || elf[1] != 0x45 || elf[2] != 0x4C || elf[3] != 0x46)
             throw new PkgFormatException(
@@ -109,10 +159,10 @@ public static class SelfBuilder
 
         // ---- app_info (0x18) ----
         Span<byte> ai = stackalloc byte[AppInfoLen];
-        BinaryPrimitives.WriteUInt64BigEndian(ai[0x00..], 0x1010000001000003); // auth id
-        BinaryPrimitives.WriteUInt32BigEndian(ai[0x08..], 0x01000002);          // vendor id
-        BinaryPrimitives.WriteUInt32BigEndian(ai[0x0C..], npdrm ? 8u : 4u);     // program type
-        BinaryPrimitives.WriteUInt64BigEndian(ai[0x10..], 0x0001000000000000);  // version
+        BinaryPrimitives.WriteUInt64BigEndian(ai[0x00..], options.AuthId ?? DefaultAuthId);
+        BinaryPrimitives.WriteUInt32BigEndian(ai[0x08..], options.VendorId ?? DefaultVendorId);
+        BinaryPrimitives.WriteUInt32BigEndian(ai[0x0C..], options.ProgramType ?? (npdrm ? 8u : 4u));
+        BinaryPrimitives.WriteUInt64BigEndian(ai[0x10..], options.AppVersion ?? DefaultAppVersion);
         outMs.Write(ai);
         Pad(outMs, appInfoOff + AppInfoLen, 0x10);
 
@@ -139,8 +189,8 @@ public static class SelfBuilder
         }
         Pad(outMs, controlInfoRaw, 0x10);
 
-        // ---- control info: the type-2 "cap flags" block (+ fake NPDRM block if requested) ----
-        WriteControlInfo(outMs, npdrm);
+        // ---- control info: the type-2 "cap flags" block (+ NPDRM block if requested) ----
+        WriteControlInfo(outMs, npdrm, options.ContentId);
         Pad(outMs, endOfHeader, 0x80);
 
         // ---- the whole ELF, unencrypted ----
@@ -149,7 +199,7 @@ public static class SelfBuilder
         return outMs.ToArray();
     }
 
-    private static void WriteControlInfo(Stream outMs, bool npdrm)
+    private static void WriteControlInfo(Stream outMs, bool npdrm, string? contentId)
     {
         // Sub-header: type 2, size 0x40, cont = 1 if an NPDRM block follows.
         Span<byte> sub = stackalloc byte[SubHeaderLen];
@@ -175,7 +225,7 @@ public static class SelfBuilder
         BinaryPrimitives.WriteUInt32BigEndian(npd[0x04..], 1);
         BinaryPrimitives.WriteUInt32BigEndian(npd[0x08..], 2);          // drm type
         BinaryPrimitives.WriteUInt32BigEndian(npd[0x0C..], 1);
-        FakeNpdrmContentId().CopyTo(npd[0x10..]);
+        ContentIdBytes(contentId).CopyTo(npd[0x10..]);
         outMs.Write(npd);
     }
 

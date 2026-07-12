@@ -131,12 +131,15 @@ public static class SelfReader
         {
             uint type = BinaryPrimitives.ReadUInt32BigEndian(buf.AsSpan(pos));
             uint blockSize = BinaryPrimitives.ReadUInt32BigEndian(buf.AsSpan(pos + 0x04));
-            if (blockSize < 0x10 || pos + (int)blockSize > end)
+            if (blockSize < 0x10)
                 break; // malformed — stop rather than throw; header info is still useful
 
             if (type == 3) // NPDRM
             {
                 int p = pos + 0x10;
+                // Read the NPD payload whenever it fits the buffer, even if the block's declared size
+                // overshoots the control-info region (fSELFs from make_fself size this block as 0x90
+                // though the payload is 0x80).
                 if (p + 0x50 <= want && BinaryPrimitives.ReadUInt32BigEndian(buf.AsSpan(p)) == NpdMagic)
                 {
                     return new SelfNpdrmInfo
@@ -149,6 +152,8 @@ public static class SelfReader
                 }
             }
 
+            if (pos + (int)blockSize > end)
+                break; // last block overshoots the region — nothing more to walk
             pos += (int)blockSize;
         }
 

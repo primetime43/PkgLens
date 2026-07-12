@@ -650,6 +650,14 @@ public partial class MainWindow : Window
 
         bool npdrm = this.FindControl<CheckBox>("FselfNpdrmCheck")!.IsChecked == true;
 
+        var opts = new PkgLens.Core.Self.SelfBuilder.FakeSelfOptions { Npdrm = npdrm };
+        if (!TryReadFselfCustomFields(opts, out string? fieldError))
+        {
+            Vm.Status = fieldError!;
+            ShowFselfNotes(fieldError);
+            return;
+        }
+
         var save = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
             Title = "Save the fake-signed SELF as…",
@@ -664,7 +672,7 @@ public partial class MainWindow : Window
             long size = await Task.Run(() =>
             {
                 byte[] elf = File.ReadAllBytes(input);
-                byte[] fself = PkgLens.Core.Self.SelfBuilder.MakeFakeSelf(elf, npdrm);
+                byte[] fself = PkgLens.Core.Self.SelfBuilder.MakeFakeSelf(elf, opts);
                 File.WriteAllBytes(dest, fself);
                 return (long)fself.Length;
             });
@@ -683,6 +691,39 @@ public partial class MainWindow : Window
         var notes = this.FindControl<TextBlock>("FselfNotes")!;
         notes.Text = text ?? string.Empty;
         notes.IsVisible = !string.IsNullOrEmpty(text);
+    }
+
+    /// <summary>Reads the optional Custom Sign fields into <paramref name="opts"/>. Blank fields are left at defaults.</summary>
+    private bool TryReadFselfCustomFields(PkgLens.Core.Self.SelfBuilder.FakeSelfOptions opts, out string? error)
+    {
+        error = null;
+        if (!TryHexU64(this.FindControl<TextBox>("FselfAuthIdBox")!.Text, "Auth ID", out var authId, out error)) return false;
+        if (authId is not null) opts.AuthId = authId;
+
+        if (!TryHexU64(this.FindControl<TextBox>("FselfVendorIdBox")!.Text, "Vendor ID", out var vendor, out error)) return false;
+        if (vendor is not null)
+        {
+            if (vendor > uint.MaxValue) { error = "Vendor ID must fit in 32 bits."; return false; }
+            opts.VendorId = (uint)vendor;
+        }
+
+        if (!TryHexU64(this.FindControl<TextBox>("FselfAppVerBox")!.Text, "App version", out var ver, out error)) return false;
+        if (ver is not null) opts.AppVersion = ver;
+
+        string cid = (this.FindControl<TextBox>("FselfContentIdBox")!.Text ?? string.Empty).Trim();
+        if (cid.Length > 0) opts.ContentId = cid;
+        return true;
+    }
+
+    private static bool TryHexU64(string? text, string label, out ulong? value, out string? error)
+    {
+        value = null; error = null;
+        text = text?.Trim();
+        if (string.IsNullOrEmpty(text)) return true; // blank → keep default
+        string body = text.StartsWith("0x", StringComparison.OrdinalIgnoreCase) ? text[2..] : text;
+        if (ulong.TryParse(body, System.Globalization.NumberStyles.HexNumber, null, out ulong v)) { value = v; return true; }
+        error = $"{label} must be a hex number (e.g. 0x1010000001000003).";
+        return false;
     }
 
     private string? _unselfRapPath;

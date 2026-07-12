@@ -100,4 +100,37 @@ public class SelfBuilderTests
         notElf[0] = 0x53; notElf[1] = 0x43; notElf[2] = 0x45; // "SCE" — a SELF, not an ELF
         Assert.Throws<PkgFormatException>(() => SelfBuilder.MakeFakeSelf(notElf));
     }
+
+    [Fact]
+    public void MakeFakeSelf_CustomSign_WritesCustomAppInfoAndContentId()
+    {
+        byte[] elf = BuildElf(new (uint, byte[])[] { (1u, new byte[] { 1, 2, 3, 4 }) });
+
+        byte[] fself = SelfBuilder.MakeFakeSelf(elf, new SelfBuilder.FakeSelfOptions
+        {
+            Npdrm = true,
+            AuthId = 0x1070000052000001,
+            VendorId = 0x01000007,
+            AppVersion = 0x0003005500000000,
+            ContentId = "UP0001-NPUB30910_00-CUSTOMEBOOT00001",
+        });
+
+        var info = SelfReader.ParseInfo(new MemoryStream(fself));
+        Assert.Equal(0x1070000052000001UL, info.AuthId);
+        Assert.Equal(0x01000007u, info.VendorId);
+        Assert.Equal(0x0003005500000000UL, info.SdkVersion);
+        Assert.Equal(SelfProgramType.Npdrm, info.ProgramType);
+        Assert.Equal("UP0001-NPUB30910_00-CUSTOMEBOOT00001", info.Npdrm?.ContentId);
+    }
+
+    [Fact]
+    public void MakeFakeSelf_CustomSign_DefaultsMatchLegacyOverload()
+    {
+        byte[] elf = BuildElf(new (uint, byte[])[] { (1u, new byte[] { 9, 8, 7, 6 }) });
+
+        // The bool overload and an all-defaults options object must produce identical bytes.
+        byte[] viaBool = SelfBuilder.MakeFakeSelf(elf, npdrm: false);
+        byte[] viaOptions = SelfBuilder.MakeFakeSelf(elf, new SelfBuilder.FakeSelfOptions());
+        Assert.Equal(viaBool, viaOptions);
+    }
 }

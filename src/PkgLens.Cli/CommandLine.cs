@@ -109,6 +109,7 @@ internal static class CliHelp
               pkglens self    <eboot>                        inspect a SELF/EBOOT.BIN header
               pkglens unself  <eboot> [--out FILE] [--rap FILE]   decrypt a SELF → plaintext ELF
               pkglens resign  <elf> [--out FILE] [--npdrm]   ELF → fake-signed SELF (fSELF) for CFW
+                       custom sign: [--auth-id HEX] [--vendor-id HEX] [--app-version HEX] [--type N] [--content-id CID]
               pkglens folderinfo <folder> [--json]           report on an extracted content folder
               pkglens pack    <folder> [--out FILE] [options]   build a .pkg from a content folder
               pkglens keys    import|status|where           manage the runtime retail key
