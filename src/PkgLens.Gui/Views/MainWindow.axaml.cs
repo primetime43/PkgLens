@@ -693,6 +693,93 @@ public partial class MainWindow : Window
         notes.IsVisible = !string.IsNullOrEmpty(text);
     }
 
+    private void ShowMagicNotes(string? text)
+    {
+        var notes = this.FindControl<TextBlock>("MagicNotes")!;
+        notes.Text = text ?? string.Empty;
+        notes.IsVisible = !string.IsNullOrEmpty(text);
+    }
+
+    private async void OnMagicPatch(object? sender, RoutedEventArgs e)
+    {
+        string fw = (this.FindControl<TextBox>("MagicFwBox")!.Text ?? string.Empty).Trim();
+        var parts = fw.Split('.');
+        if (parts.Length != 2 || !int.TryParse(parts[0], out int major) || !int.TryParse(parts[1], out int minor)
+            || major is < 0 or > 15 || minor is < 0 or > 99)
+        {
+            Vm.Status = "Enter a target firmware like 4.00 first.";
+            ShowMagicNotes("Enter a target firmware like 4.00 (major.minor) before patching.");
+            return;
+        }
+
+        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "Choose an EBOOT.BIN / SELF / ELF to magic-patch",
+            AllowMultiple = false,
+            FileTypeFilter = new[]
+            {
+                new FilePickerFileType("EBOOT / SELF / ELF") { Patterns = new[] { "EBOOT.BIN", "*.self", "*.sprx", "*.elf", "*.bin" } },
+                FilePickerFileTypes.All,
+            },
+        });
+        if (files.FirstOrDefault()?.TryGetLocalPath() is not { } input)
+            return;
+
+        string? rap = _unselfRapPath;
+        var save = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "Save the patched, fake-signed EBOOT as…",
+            SuggestedFileName = "EBOOT.BIN",
+            DefaultExtension = "BIN",
+        });
+        if (save?.TryGetLocalPath() is not { } dest)
+            return;
+
+        try
+        {
+            string summary = await Task.Run(() =>
+            {
+                byte[] raw = File.ReadAllBytes(input);
+                uint magic = System.Buffers.Binary.BinaryPrimitives.ReadUInt32BigEndian(raw);
+
+                byte[] elf; bool npdrm = false;
+                if (magic == 0x53434500) // SCE — decrypt first
+                {
+                    byte[]? klic = null;
+                    if (rap is not null)
+                    {
+                        byte[] rb = File.ReadAllBytes(rap);
+                        if (rb.Length != 16) throw new PkgLens.Core.PkgFormatException("A RAP must be 16 bytes.");
+                        klic = PkgLens.Core.Npd.NpdKeys.RapToKlicensee(rb);
+                    }
+                    var dec = PkgLens.Core.Self.SelfDecryptor.Decrypt(raw, klic);
+                    elf = dec.Elf; npdrm = dec.WasNpdrm;
+                }
+                else if (magic == 0x7F454C46) // ELF
+                {
+                    elf = raw;
+                }
+                else throw new PkgLens.Core.PkgFormatException("Input is neither an ELF nor a SELF/EBOOT.BIN.");
+
+                var prev = PkgLens.Core.Self.EbootPatcher.SetFirmwareVersion(elf, major, minor);
+                string fwNote = prev is null
+                    ? "no sys_process_param found — firmware left unchanged"
+                    : $"firmware {prev.Display} → {major}.{minor:D2}";
+
+                byte[] fself = PkgLens.Core.Self.SelfBuilder.MakeFakeSelf(elf, npdrm);
+                File.WriteAllBytes(dest, fself);
+                return $"Magic-patched → {Path.GetFileName(dest)} ({fself.Length:n0} bytes); {fwNote}.";
+            });
+            Vm.Status = summary;
+            ShowMagicNotes(summary + "  Runs on CFW; not on stock retail.");
+        }
+        catch (Exception ex)
+        {
+            Vm.Status = $"Magic patch failed: {ex.Message}";
+            ShowMagicNotes(ex.Message);
+        }
+    }
+
     /// <summary>Reads the optional Custom Sign fields into <paramref name="opts"/>. Blank fields are left at defaults.</summary>
     private bool TryReadFselfCustomFields(PkgLens.Core.Self.SelfBuilder.FakeSelfOptions opts, out string? error)
     {

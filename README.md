@@ -51,6 +51,12 @@ Core, CLI, and a first GUI are implemented and tested (spec §11 steps 1–5, pl
 - **Game folder info** — a read-only report on an extracted content folder (`pkglens folderinfo <folder>`,
   or the Pack page's *Show folder info…* button): content id / title from `PARAM.SFO`, file counts and size,
   the EBOOT's sign state (encrypted / fake-signed / plain ELF), and any EDAT/SDAT files with their license.
+- **Magic Patch** — apply static byte edits to an EBOOT/ELF so a game boots on CFW (`pkglens patch <eboot>`,
+  or the Resign page's *Magic patch* section). The headline patch **lowers the firmware/SDK version** the
+  executable demands (`--sdk-version 4.00`) — stored in the ELF's `sys_process_param` block — so a title built
+  against a newer SDK runs on an older CFW. Generic `--find/--replace` and `--at OFFSET=HEX` patches cover
+  other known edits. Accepts an encrypted EBOOT (decrypted first, then re-fake-signed). Verified end-to-end
+  against the real golden EBOOT (4.40 → 4.00, byte-checked after a decrypt/patch/resign/re-decrypt round-trip).
 - **Unself (SELF → ELF)** — decrypt an encrypted `EBOOT.BIN` / `.self` back to its plaintext ELF
   (`pkglens unself <eboot>`), so you can inspect or fake-sign one you only have encrypted. Uses public
   decryption keysets (appldr / NPDRM, by key revision); free-license and debug SELFs need no key, a
@@ -58,12 +64,61 @@ Core, CLI, and a first GUI are implemented and tested (spec §11 steps 1–5, pl
   (key version 0x80 / 0xC0) — the ELF is stored in the clear, so no keys are needed. Verified
   **byte-for-byte** against a real retail `EBOOT.BIN → EBOOT.ELF` pair *and* on the fSELF round-trip.
   No signing keys are involved — the output is a plaintext ELF, not a resigned file.
-- **CLI**: `pkglens info | list | sfo | verify | extract | decrypt | self | unself | resign | pack | keys`, with `--json`, `--keys`, `--out`, `--filter`, `--rap`.
+- **CLI**: `pkglens info | list | sfo | verify | extract | decrypt | self | unself | resign | patch | pack | folderinfo | keys`, with `--json`, `--keys`, `--out`, `--filter`, `--rap`.
 - **GUI** (Avalonia): classic menu/toolbar, folder tree + Name/Size list, viewer, Package-info dialog,
   drag-and-drop, light/dark theme, replace + Save-As (repack), and **Pack folder → .pkg** (File menu /
   toolbar) to build a package from a content folder.
 
 Verified against synthetic in-test fixtures **and** a real retail package.
+
+## Feature coverage vs TrueAncestor
+
+How PkgLens maps to the two TrueAncestor tools (PKG Repacker + SELF Resigner). A rich, themed version of
+this table is in [`docs/coverage.html`](docs/coverage.html) — open it in a browser.
+
+**19 covered · 1 partial · 3 out of scope by design · 1 not built.** The out-of-scope items all require
+Sony's private signing keys (making content pass a *stock, non-jailbroken* console's signature check),
+which PkgLens never does.
+
+Legend: ✅ covered · 🟡 partial · ⛔ out of scope (needs signing keys) · ⬜ not yet built
+
+### PKG Repacker
+
+| # | Feature | Status | In PkgLens |
+|---|---------|:------:|-----------|
+| 1 | Fast Pack Pkg | ✅ | `pkglens pack` (infers IDs from PARAM.SFO) |
+| 2 | Custom Pack Pkg | ✅ | `pack` with `--content-id`, `--install-dir`, … |
+| 3 | Unpack Pkg | ✅ | `pkglens extract` · right-click · extract-all |
+| 4 | Repack Pkg | ✅ | Replace a file → Save As (unsigned rebuild) |
+| 5 | Finalize Pkg | ⛔ | Forges the retail ECDSA signature |
+| 6 | Show Game Folder Info | ✅ | `pkglens folderinfo` · Pack page button |
+| 7 | Edit PARAM.SFO | ✅ | SFO editor → Save As |
+| 8 | Show Pkg Info | ✅ | `pkglens info` · Package info dialog |
+| P | Patch PARAM.SFO *(switch)* | ✅ | Same SFO editor path |
+| R | Resign EBOOT.BIN *(switch)* | ✅ | `pack --resign` — fake-signs while packing |
+
+### SELF Resigner
+
+| # | Feature | Status | In PkgLens |
+|---|---------|:------:|-----------|
+| 1 | Decrypt EBOOT.BIN Only | ✅ | `pkglens unself` (byte-exact vs real EBOOT) |
+| 2 | Resign to NON-DRM EBOOT | ✅ | `unself` → `resign` (GUI chains it) |
+| 3 | Resign to NPDRM EBOOT | ✅ | `resign --npdrm` |
+| 4 | Decrypt SELF / SPRX Only | ✅ | `unself` (same SCE format) |
+| 5 | Fast Resign NON-DRM SELF/SPRX | ✅ | Decrypt → fake-sign chain |
+| 6 | Fast Resign NPDRM SELF/SPRX | ✅ | Same, `--npdrm` |
+| 7 | Custom Sign → NON-DRM | ✅ | `resign --auth-id --vendor-id --app-version --type` |
+| 8 | Custom Sign → NPDRM | ✅ | Custom fields + `--content-id` |
+| 9 | Magic Patch EBOOT/SELF/SPRX | ✅ | `pkglens patch --sdk-version` + find/replace/offset |
+| 10 | Decrypt DEX EBOOT (fSELF) | ✅ | `unself` handles fake-signed / debug SELFs |
+| 11 | Resign to NON-DRM EBOOT — DEX/OFW | ⛔ | OFW signature check needs debug signing keys |
+| 12 | Resign to NPDRM EBOOT — DEX/OFW | ⛔ | Same — signing keys, out of scope |
+| O | Output Method *(switch)* | 🟡 | One fSELF profile; no firmware-target selector |
+| D | Compress Data *(switch)* | ⬜ | fSELF segments are stored uncompressed |
+
+**Beyond TrueAncestor**, PkgLens also has a full package-inspector GUI (tree + list + image/text/hex viewer),
+integrity `verify` (SHA-1 + AES-CMAC), EDAT/SDAT decryption (incl. compressed), SELF-header inspect, `--json`
+output, and runs cross-platform.
 
 ## Layout
 
@@ -73,6 +128,7 @@ src/PkgLens.Cli    # thin CLI over the core  ->  builds the `pkglens` executable
 src/PkgLens.Gui    # Avalonia MVVM desktop inspector
 tests/PkgLens.Core.Tests  # synthetic PKG/SFO builders + xUnit tests (no copyrighted data, no keys)
 docs/keys.md       # how to supply the runtime key for retail packages
+docs/coverage.html # feature coverage vs TrueAncestor (themed, open in a browser)
 ```
 
 ## GUI
@@ -110,6 +166,7 @@ pkglens sfo   <pkg> [--keys DIR] [--json]   # dump PARAM.SFO key/values
 pkglens self  <eboot>                       # inspect a SELF/EBOOT.BIN header (no keys)
 pkglens unself <eboot> [--rap FILE] [--out FILE]  # decrypt a SELF → plaintext ELF
 pkglens resign <elf> [--out FILE] [--npdrm] # ELF → fake-signed SELF (fSELF) for CFW
+pkglens patch <eboot> [--sdk-version 4.00] [--find HEX --replace HEX] [--at OFF=HEX]  # magic-patch an EBOOT
 pkglens folderinfo <folder> [--json]        # report on an extracted content folder
 pkglens pack  <folder> [--out FILE] [--resign [--rap FILE]]   # build a .pkg (optionally resign EBOOT)
 pkglens keys  import|status|where           # manage the runtime retail key

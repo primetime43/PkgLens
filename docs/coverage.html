@@ -1,0 +1,231 @@
+<title>PkgLens vs TrueAncestor — Feature Coverage</title>
+<style>
+  :root {
+    --ground:#F5F7FA; --surface:#FFFFFF; --surface-2:#EDF1F6; --raise:#FFFFFF;
+    --ink:#161B24; --ink-2:#525A69; --ink-3:#7C8493; --line:#E1E6ED; --line-2:#D3D9E2;
+    --accent:#0B7C8C; --accent-2:#0A5C68;
+    --done:#1B7F49; --done-bg:#E4F3EA;
+    --partial:#9A6A12; --partial-bg:#F6EDD8;
+    --scope:#4A57A6; --scope-bg:#E8EAF7;
+    --miss:#B23A54; --miss-bg:#F6E4E8;
+    --shadow:0 1px 2px rgba(18,25,38,.05), 0 4px 16px rgba(18,25,38,.05);
+    --font-sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --font-mono:ui-monospace,"SF Mono","JetBrains Mono","Cascadia Code",Menlo,Consolas,monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground:#0D1117; --surface:#141A22; --surface-2:#1B222C; --raise:#182029;
+      --ink:#E8EDF4; --ink-2:#9AA4B2; --ink-3:#6E7787; --line:#242C37; --line-2:#2E3742;
+      --accent:#33C9D6; --accent-2:#5AD6E0;
+      --done:#43C079; --done-bg:#123021;
+      --partial:#D9A63E; --partial-bg:#332715;
+      --scope:#8B98E6; --scope-bg:#1E2140;
+      --miss:#E76D84; --miss-bg:#3A1E26;
+      --shadow:0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.28);
+    }
+  }
+  :root[data-theme="light"] {
+    --ground:#F5F7FA; --surface:#FFFFFF; --surface-2:#EDF1F6; --raise:#FFFFFF;
+    --ink:#161B24; --ink-2:#525A69; --ink-3:#7C8493; --line:#E1E6ED; --line-2:#D3D9E2;
+    --accent:#0B7C8C; --accent-2:#0A5C68;
+    --done:#1B7F49; --done-bg:#E4F3EA; --partial:#9A6A12; --partial-bg:#F6EDD8;
+    --scope:#4A57A6; --scope-bg:#E8EAF7; --miss:#B23A54; --miss-bg:#F6E4E8;
+    --shadow:0 1px 2px rgba(18,25,38,.05), 0 4px 16px rgba(18,25,38,.05);
+  }
+  :root[data-theme="dark"] {
+    --ground:#0D1117; --surface:#141A22; --surface-2:#1B222C; --raise:#182029;
+    --ink:#E8EDF4; --ink-2:#9AA4B2; --ink-3:#6E7787; --line:#242C37; --line-2:#2E3742;
+    --accent:#33C9D6; --accent-2:#5AD6E0;
+    --done:#43C079; --done-bg:#123021; --partial:#D9A63E; --partial-bg:#332715;
+    --scope:#8B98E6; --scope-bg:#1E2140; --miss:#E76D84; --miss-bg:#3A1E26;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.28);
+  }
+
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--ground); color:var(--ink); font-family:var(--font-sans);
+    line-height:1.55; -webkit-font-smoothing:antialiased; }
+  .wrap { max-width:1020px; margin:0 auto; padding:clamp(1.5rem,4vw,3.5rem) clamp(1rem,4vw,2rem) 4rem; }
+
+  .eyebrow { font-family:var(--font-mono); font-size:.72rem; letter-spacing:.16em; text-transform:uppercase;
+    color:var(--accent); font-weight:600; margin:0 0 .7rem; }
+  h1 { font-size:clamp(1.7rem,4.2vw,2.5rem); line-height:1.08; letter-spacing:-.02em; margin:0 0 .6rem;
+    text-wrap:balance; font-weight:700; }
+  .lede { color:var(--ink-2); font-size:1.02rem; max-width:60ch; margin:0; }
+  .lede b { color:var(--ink); font-weight:600; }
+
+  /* summary tiles */
+  .tiles { display:grid; grid-template-columns:repeat(4,1fr); gap:.75rem; margin:2.2rem 0 1.4rem; }
+  .tile { background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:1rem 1.05rem;
+    box-shadow:var(--shadow); position:relative; overflow:hidden; }
+  .tile::before { content:""; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--tc,var(--accent)); }
+  .tile .n { font-size:2rem; font-weight:700; line-height:1; font-variant-numeric:tabular-nums;
+    letter-spacing:-.02em; }
+  .tile .l { font-size:.78rem; color:var(--ink-2); margin-top:.35rem; }
+  .tile.done { --tc:var(--done); } .tile.partial { --tc:var(--partial); }
+  .tile.scope { --tc:var(--scope); } .tile.miss { --tc:var(--miss); }
+  .tile.done .n { color:var(--done); } .tile.partial .n { color:var(--partial); }
+  .tile.scope .n { color:var(--scope); } .tile.miss .n { color:var(--miss); }
+
+  /* legend */
+  .legend { display:flex; flex-wrap:wrap; gap:.5rem 1.1rem; padding:.85rem 1.05rem; background:var(--surface-2);
+    border:1px solid var(--line); border-radius:10px; font-size:.82rem; color:var(--ink-2); margin-bottom:2.4rem; }
+  .legend span { display:inline-flex; align-items:center; gap:.45rem; }
+  .dot { width:.62rem; height:.62rem; border-radius:50%; flex:none; }
+  .dot.done{background:var(--done);} .dot.partial{background:var(--partial);}
+  .dot.scope{background:var(--scope);} .dot.miss{background:var(--miss);}
+
+  section { margin-bottom:2.6rem; }
+  .sec-head { display:flex; align-items:baseline; gap:.8rem; margin-bottom:.3rem; flex-wrap:wrap; }
+  h2 { font-size:1.28rem; letter-spacing:-.015em; margin:0; font-weight:700; }
+  .sec-sub { font-family:var(--font-mono); font-size:.74rem; color:var(--ink-3); letter-spacing:.03em; }
+  .sec-note { color:var(--ink-2); font-size:.9rem; margin:.15rem 0 1rem; max-width:70ch; }
+
+  .tablecard { background:var(--surface); border:1px solid var(--line); border-radius:12px;
+    box-shadow:var(--shadow); overflow:hidden; }
+  .scroll { overflow-x:auto; }
+  table { border-collapse:collapse; width:100%; min-width:560px; }
+  thead th { text-align:left; font-family:var(--font-mono); font-size:.68rem; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--ink-3); font-weight:600; padding:.7rem 1rem; background:var(--surface-2);
+    border-bottom:1px solid var(--line); white-space:nowrap; }
+  tbody td { padding:.72rem 1rem; border-bottom:1px solid var(--line); vertical-align:top; font-size:.92rem; }
+  tbody tr:last-child td { border-bottom:none; }
+  tbody tr:hover { background:var(--surface-2); }
+  .num { font-family:var(--font-mono); color:var(--ink-3); font-size:.82rem; font-variant-numeric:tabular-nums;
+    white-space:nowrap; width:2.4rem; }
+  .feat { font-weight:560; color:var(--ink); }
+  .how { color:var(--ink-2); font-size:.86rem; }
+  .how code { font-family:var(--font-mono); font-size:.82em; background:var(--surface-2); border:1px solid var(--line);
+    padding:.06rem .34rem; border-radius:5px; color:var(--accent-2); white-space:nowrap; }
+
+  .pill { display:inline-flex; align-items:center; gap:.4rem; font-family:var(--font-mono); font-size:.72rem;
+    font-weight:600; letter-spacing:.02em; padding:.2rem .55rem .2rem .45rem; border-radius:100px;
+    white-space:nowrap; border:1px solid transparent; }
+  .pill .dot { width:.5rem; height:.5rem; }
+  .pill.done { color:var(--done); background:var(--done-bg); border-color:color-mix(in srgb,var(--done) 22%,transparent); }
+  .pill.partial { color:var(--partial); background:var(--partial-bg); border-color:color-mix(in srgb,var(--partial) 22%,transparent); }
+  .pill.scope { color:var(--scope); background:var(--scope-bg); border-color:color-mix(in srgb,var(--scope) 22%,transparent); }
+  .pill.miss { color:var(--miss); background:var(--miss-bg); border-color:color-mix(in srgb,var(--miss) 22%,transparent); }
+
+  /* extras grid */
+  .extras { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:.7rem; }
+  .xcard { background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:.85rem .95rem;
+    box-shadow:var(--shadow); }
+  .xcard h3 { margin:0 0 .2rem; font-size:.94rem; display:flex; align-items:center; gap:.5rem; }
+  .xcard h3 .chk { color:var(--done); font-weight:700; }
+  .xcard p { margin:0; font-size:.82rem; color:var(--ink-2); }
+
+  .foot { margin-top:2.4rem; padding-top:1.2rem; border-top:1px solid var(--line); font-size:.82rem;
+    color:var(--ink-3); }
+  .foot p { margin:.3rem 0; }
+  .foot b { color:var(--ink-2); }
+
+  @media (max-width:620px){ .tiles{ grid-template-columns:repeat(2,1fr);} }
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">PkgLens · coverage report</p>
+    <h1>PkgLens vs. TrueAncestor</h1>
+    <p class="lede">Every menu item from TrueAncestor's <b>PKG Repacker</b> and <b>SELF Resigner</b>,
+      mapped to where PkgLens stands today — plus what PkgLens does that TrueAncestor doesn't.
+      Two things stay out of scope by design: anything that forges Sony's signature for a
+      <b>non-jailbroken</b> console.</p>
+  </header>
+
+  <div class="tiles">
+    <div class="tile done"><div class="n">19</div><div class="l">Covered</div></div>
+    <div class="tile partial"><div class="n">1</div><div class="l">Partial</div></div>
+    <div class="tile scope"><div class="n">3</div><div class="l">Out of scope <em>by design</em></div></div>
+    <div class="tile miss"><div class="n">1</div><div class="l">Not yet built</div></div>
+  </div>
+
+  <div class="legend">
+    <span><i class="dot done"></i> Covered — shipped &amp; tested</span>
+    <span><i class="dot partial"></i> Partial — some cases</span>
+    <span><i class="dot scope"></i> Out of scope — needs signing keys</span>
+    <span><i class="dot miss"></i> Not yet built</span>
+  </div>
+
+  <!-- ============ PKG REPACKER ============ -->
+  <section>
+    <div class="sec-head">
+      <h2>PKG Repacker</h2>
+      <span class="sec-sub">build · unpack · repack a .pkg</span>
+    </div>
+    <p class="sec-note">Building and unpacking packages. All of it is covered except retail
+      finalization, which forges the console signature check for a stock console.</p>
+    <div class="tablecard"><div class="scroll"><table>
+      <thead><tr><th class="num">#</th><th>TrueAncestor feature</th><th>PkgLens</th><th>How</th></tr></thead>
+      <tbody>
+        <tr><td class="num">1</td><td class="feat">Fast Pack Pkg</td><td><span class="pill done"><i class="dot done"></i>Covered</span></td><td class="how"><code>pkglens pack &lt;folder&gt;</code> — infers IDs from PARAM.SFO</td></tr>
+        <tr><td class="num">2</td><td class="feat">Custom Pack Pkg</td><td><span class="pill done"><i class="dot done"></i>Covered</span></td><td class="how"><code>pack</code> with <code>--content-id</code>, <code>--install-dir</code>, …</td></tr>
+        <tr><td class="num">3</td><td class="feat">Unpack Pkg</td><td><span class="pill done"><i class="dot done"></i>Covered</span></td><td class="how"><code>pkglens extract</code> · right-click · extract-all</td></tr>
+        <tr><td class="num">4</td><td class="feat">Repack Pkg</td><td><span class="pill done"><i class="dot done"></i>Covered</span></td><td class="how">Replace a file → Save As (unsigned rebuild)</td></tr>
+        <tr><td class="num">5</td><td class="feat">Finalize Pkg</td><td><span class="pill scope"><i class="dot scope"></i>By design</span></td><td class="how">Forges the retail ECDSA signature — permanently excluded</td></tr>
+        <tr><td class="num">6</td><td class="feat">Show Game Folder Info</td><td><span class="pill done"><i class="dot done"></i>Covered</span></td><td class="how"><code>pkglens folderinfo</code> · Pack page button</td></tr>
+        <tr><td class="num">7</td><td class="feat">Edit PARAM.SFO</td><td><span class="pill done"><i class="dot done"></i>Covered</span></td><td class="how">SFO editor → Save As repacks the change</td></tr>
+        <tr><td class="num">8</td><td class="feat">Show Pkg Info</td><td><span class="pill done"><i class="dot done"></i>Covered</span></td><td class="how"><code>pkglens info</code> · Package info dialog</td></tr>
+        <tr><td class="num">P</td><td class="feat">Patch PARAM.SFO <span style="color:var(--ink-3);font-size:.82em">(switch)</span></td><td><span class="pill done"><i class="dot done"></i>Covered</span></td><td class="how">Same SFO editor path</td></tr>
+        <tr><td class="num">R</td><td class="feat">Resign EBOOT.BIN <span style="color:var(--ink-3);font-size:.82em">(switch)</span></td><td><span class="pill done"><i class="dot done"></i>Covered</span></td><td class="how"><code>pack --resign</code> — fake-signs the EBOOT while packing</td></tr>
+      </tbody>
+    </table></div></div>
+  </section>
+
+  <!-- ============ SELF RESIGNER ============ -->
+  <section>
+    <div class="sec-head">
+      <h2>SELF Resigner</h2>
+      <span class="sec-sub">decrypt · fake-sign EBOOT / SELF / SPRX</span>
+    </div>
+    <p class="sec-note">The whole <b>CEX / CFW</b> column is covered — decrypt, resign, and custom-sign, all
+      verified byte-for-byte against a real EBOOT. The <b>DEX / OFW</b> resign items need Sony's debug
+      signing keys, so they sit with Finalize as out of scope.</p>
+    <div class="tablecard"><div class="scroll"><table>
+      <thead><tr><th class="num">#</th><th>TrueAncestor feature</th><th>PkgLens</th><th>How</th></tr></thead>
+      <tbody>
+        <tr><td class="num">1</td><td class="feat">Decrypt EBOOT.BIN Only</td><td><span class="pill done"><i class="dot done"></i>Covered</span></td><td class="how"><code>pkglens unself</code> — retail SELF → ELF, byte-exact</td></tr>
+        <tr><td class="num">2</td><td class="feat">Resign to NON-DRM EBOOT</td><td><span class="pill done"><i class="dot done"></i>Covered</span></td><td class="how"><code>unself</code> → <code>resign</code> (GUI chains it)</td></tr>
+        <tr><td class="num">3</td><td class="feat">Resign to NPDRM EBOOT</td><td><span class="pill done"><i class="dot done"></i>Covered</span></td><td class="how"><code>resign --npdrm</code></td></tr>
+        <tr><td class="num">4</td><td class="feat">Decrypt SELF / SPRX Only</td><td><span class="pill done"><i class="dot done"></i>Covered</span></td><td class="how"><code>unself</code> — same SCE format</td></tr>
+        <tr><td class="num">5</td><td class="feat">Fast Resign NON-DRM SELF/SPRX</td><td><span class="pill done"><i class="dot done"></i>Covered</span></td><td class="how">Decrypt → fake-sign chain</td></tr>
+        <tr><td class="num">6</td><td class="feat">Fast Resign NPDRM SELF/SPRX</td><td><span class="pill done"><i class="dot done"></i>Covered</span></td><td class="how">Same, <code>--npdrm</code></td></tr>
+        <tr><td class="num">7</td><td class="feat">Custom Sign → NON-DRM</td><td><span class="pill done"><i class="dot done"></i>Covered</span></td><td class="how"><code>--auth-id --vendor-id --app-version --type</code></td></tr>
+        <tr><td class="num">8</td><td class="feat">Custom Sign → NPDRM</td><td><span class="pill done"><i class="dot done"></i>Covered</span></td><td class="how">Custom fields + <code>--content-id</code></td></tr>
+        <tr><td class="num">9</td><td class="feat">Magic Patch EBOOT/SELF/SPRX</td><td><span class="pill done"><i class="dot done"></i>Covered</span></td><td class="how"><code>pkglens patch --sdk-version</code> lowers the firmware requirement · plus find/replace &amp; offset patches</td></tr>
+        <tr><td class="num">10</td><td class="feat">Decrypt EBOOT.BIN (FSELF) — DEX</td><td><span class="pill done"><i class="dot done"></i>Covered</span></td><td class="how"><code>unself</code> handles fake-signed / debug SELFs</td></tr>
+        <tr><td class="num">11</td><td class="feat">Resign to NON-DRM EBOOT — DEX/OFW</td><td><span class="pill scope"><i class="dot scope"></i>By design</span></td><td class="how">OFW signature check needs debug signing keys</td></tr>
+        <tr><td class="num">12</td><td class="feat">Resign to NPDRM EBOOT — DEX/OFW</td><td><span class="pill scope"><i class="dot scope"></i>By design</span></td><td class="how">Same — signing keys, out of scope</td></tr>
+        <tr><td class="num">O</td><td class="feat">Output Method <span style="color:var(--ink-3);font-size:.82em">(switch)</span></td><td><span class="pill partial"><i class="dot partial"></i>Partial</span></td><td class="how">One fSELF profile produced; no firmware-target selector</td></tr>
+        <tr><td class="num">D</td><td class="feat">Compress Data <span style="color:var(--ink-3);font-size:.82em">(switch)</span></td><td><span class="pill miss"><i class="dot miss"></i>Not built</span></td><td class="how">fSELF segments are stored uncompressed</td></tr>
+      </tbody>
+    </table></div></div>
+  </section>
+
+  <!-- ============ BEYOND ============ -->
+  <section>
+    <div class="sec-head">
+      <h2>Beyond TrueAncestor</h2>
+      <span class="sec-sub">what PkgLens adds</span>
+    </div>
+    <p class="sec-note">PkgLens is one library-first tool, not two console utilities — so it also carries
+      capabilities TrueAncestor never had.</p>
+    <div class="extras">
+      <div class="xcard"><h3><span class="chk">✓</span> Package inspector GUI</h3><p>Folder tree, file list, and a built-in viewer — image (ICON0/PIC1), text, or hex dump.</p></div>
+      <div class="xcard"><h3><span class="chk">✓</span> Integrity <code style="font-family:var(--font-mono);font-size:.8em">verify</code></h3><p>Structural bounds, header SHA-1, and header AES-CMAC — confirmed against real packages.</p></div>
+      <div class="xcard"><h3><span class="chk">✓</span> EDAT / SDAT decrypt</h3><p>SDAT keyless, EDAT via RAP or free key — verified byte-for-byte; compressed EDATs supported.</p></div>
+      <div class="xcard"><h3><span class="chk">✓</span> SELF header inspect</h3><p><code style="font-family:var(--font-mono);font-size:.8em">pkglens self</code> reads program type, key revision, ELF header &amp; NPDRM id — no keys.</p></div>
+      <div class="xcard"><h3><span class="chk">✓</span> Cross-platform</h3><p>Avalonia GUI + .NET CLI on Windows/macOS/Linux — not a Windows-only console app.</p></div>
+      <div class="xcard"><h3><span class="chk">✓</span> Scriptable output</h3><p><code style="font-family:var(--font-mono);font-size:.8em">--json</code> on the inspection commands for tooling and pipelines.</p></div>
+    </div>
+  </section>
+
+  <div class="foot">
+    <p><b>One open verification gap.</b> Compressed-EDAT decrypt works and its plumbing is tested, but the
+      LZ core is a faithful RPCS3 port not yet checked against a real compressed sample — a <code style="font-family:var(--font-mono)">.edat</code>
+      with the compress flag set plus its expected plaintext would close it.</p>
+    <p><b>Still on the shelf (low priority):</b> the Compress-Data switch, a firmware-target Output Method
+      selector, batch/catalog runs, a <code style="font-family:var(--font-mono)">pkglens replace</code> CLI
+      verb, and PSP/Vita formats.</p>
+    <p style="margin-top:.8rem;color:var(--ink-3)">96 tests passing · SELF decrypt, fSELF resign, magic patch, and pack all verified against real PS3 data.</p>
+  </div>
+</div>

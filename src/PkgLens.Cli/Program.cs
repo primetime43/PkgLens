@@ -37,6 +37,10 @@ if (command == "unself")
 if (command == "folderinfo")
     return FolderInfoCommand.Run(args.AsSpan(1));
 
+// The `patch` command applies magic patches to an EBOOT/ELF.
+if (command == "patch")
+    return PatchCommand.Run(args.AsSpan(1));
+
 var parsed = CommandLine.Parse(args.AsSpan(1));
 
 if (parsed.Error is not null)
