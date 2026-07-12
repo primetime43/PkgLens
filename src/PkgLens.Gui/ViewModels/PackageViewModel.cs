@@ -254,6 +254,8 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
 
             if (e.Id == PkgMetadataId.ContentType && metadata.ContentType is { } ct)
                 value = $"{(uint)ct} ({ct})";
+            else if (e.Id == PkgMetadataId.DrmType && e.AsUInt32() is uint drm)
+                value = $"{drm} ({DrmType.Name(drm)})";
 
             rows.Add(new MetadataRow { Label = e.Label, Value = value });
         }

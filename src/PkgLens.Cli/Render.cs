@@ -40,6 +40,7 @@ internal static class Render
                 {
                     count = info.Metadata.Entries.Count,
                     drmType = info.Metadata.DrmType,
+                    drmTypeName = info.Metadata.DrmType is uint d ? DrmType.Name(d) : null,
                     contentType = info.Metadata.ContentType?.ToString(),
                     contentTypeRaw = info.Metadata.ContentTypeRaw,
                     installDirectory = info.Metadata.InstallDirectory,
@@ -73,7 +74,7 @@ internal static class Render
         Console.WriteLine($"Data       : offset 0x{h.DataOffset:X}, size {h.DataSize:n0} bytes");
 
         Console.WriteLine($"Metadata   : {info.Metadata.Entries.Count} entries");
-        if (info.Metadata.DrmType is uint drm) Console.WriteLine($"  DRM type : {drm}");
+        if (info.Metadata.DrmType is uint drm) Console.WriteLine($"  DRM type : {drm} ({DrmType.Name(drm)})");
         if (info.Metadata.ContentTypeRaw is uint ct)
             Console.WriteLine($"  Content  : {info.Metadata.ContentType?.ToString() ?? $"0x{ct:X}"}");
         if (info.Metadata.InstallDirectory is { Length: > 0 } dir)
