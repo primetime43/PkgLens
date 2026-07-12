@@ -20,7 +20,10 @@ Core, CLI, and a first GUI are implemented and tested (spec §11 steps 1–5, pl
 - **Extraction** (streamed) — single file, right-click, or **extract-all** to a folder (rebuilds the tree).
 - **File viewing** — render images (ICON0/PIC1), show text, or a hex dump.
 - **EDAT / SDAT decryption** — decrypt NPDRM data files: SDAT with no key, EDAT with its RAP
-  (or the free key). Viewer decrypts EDATs automatically; `pkglens decrypt` on the CLI.
+  (or the free key). Viewer decrypts EDATs automatically; `pkglens decrypt` on the CLI. **Compressed**
+  EDATs are supported too (LZ decompressor ported from RPCS3); the decrypt/metadata pipeline is verified
+  byte-for-byte against real EDATs, and the compressed path's plumbing is tested end-to-end, though the LZ
+  core awaits a check against a real compressed sample.
 - **Modify / repack** — replace a file and save a new `.pkg` (re-encrypted). Signatures are **not**
   forged, so repacked *retail* packages are unsigned (won't install on a real console); *debug*
   packages repack cleanly. The original file is never modified in place.

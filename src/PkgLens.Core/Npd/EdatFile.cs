@@ -33,8 +33,9 @@ public sealed class NpdInfo
 /// <summary>
 /// Decrypts PS3 NPDRM data files: <b>SDAT</b> (self-keyed, no license) and <b>EDAT</b> (needs the
 /// content's klicensee, from a RAP or the free key). Algorithm ported from make_npdata (GPL) and
-/// verified byte-for-byte against a real retail EDAT. Compressed EDATs are detected but not yet
-/// decompressed.
+/// verified byte-for-byte against a real retail EDAT. Compressed EDATs are supported via
+/// <see cref="EdatLz"/> (a faithful RPCS3 port; the LZ core is not yet verified against a real
+/// compressed sample here — see its remarks).
 /// </summary>
 public static class EdatFile
 {
@@ -94,9 +95,6 @@ public static class EdatFile
     {
         var npd = ParseHeader(source);
 
-        if (npd.IsCompressed)
-            throw new PkgFormatException("This EDAT is compressed; compressed decryption is not yet supported.");
-
         // Select the crypt key.
         byte[] cryptKey;
         if (npd.IsSdat)
@@ -119,8 +117,10 @@ public static class EdatFile
         byte[] edatKey = npd.Version == 4 ? NpdKeys.EdatKey1 : NpdKeys.EdatKey0;
         bool encryptedKey = (npd.Flags & 0x00000008) != 0;
         bool aesCbc = (npd.Flags & 0x00000002) == 0; // else data is plain
+        bool compressed = npd.IsCompressed;
         bool flag0x20 = (npd.Flags & 0x00000020) != 0;
-        int metadataEntry = flag0x20 ? 0x20 : 0x10;
+        // COMPRESSED takes precedence over FLAG 0x20 for the metadata layout (matches RPCS3).
+        int metadataEntry = (compressed || flag0x20) ? 0x20 : 0x10;
 
         int numBlocks = (int)((npd.FileSize + npd.BlockSize - 1) / npd.BlockSize);
         byte[] iv = npd.Version <= 1 ? new byte[16] : npd.Digest;
@@ -130,14 +130,35 @@ public static class EdatFile
 
         for (int i = 0; i < numBlocks; i++)
         {
-            int blockLen = (int)Math.Min(npd.BlockSize, npd.FileSize - (long)i * npd.BlockSize);
-            int encLen = (blockLen + 15) & ~15;
+            long dataOffset;
+            int readLen;    // bytes of ciphertext to read (16-aligned)
+            int payloadLen; // meaningful decrypted bytes before optional decompression
+            bool decompressBlock = false;
 
-            long dataOffset = flag0x20
-                ? MetadataOffset + (long)i * (0x20 + npd.BlockSize) + 0x20        // metadata+data interleaved
-                : MetadataOffset + (long)numBlocks * metadataEntry + (long)i * npd.BlockSize;
+            if (compressed)
+            {
+                // Per-block metadata (0x20) is decrypted (unshuffled) into offset/length/compression_end.
+                byte[] meta = ReadAt(source, MetadataOffset + (long)i * 0x20, 0x20);
+                (long off, int len, int compEnd) = npd.Version <= 1
+                    ? (BinaryPrimitives.ReadInt64BigEndian(meta.AsSpan(0x10)),
+                       BinaryPrimitives.ReadInt32BigEndian(meta.AsSpan(0x18)),
+                       BinaryPrimitives.ReadInt32BigEndian(meta.AsSpan(0x1C)))
+                    : DecSection(meta);
+                dataOffset = off;
+                payloadLen = len;
+                readLen = (len + 15) & ~15;
+                decompressBlock = compEnd != 0;
+            }
+            else
+            {
+                payloadLen = (int)Math.Min(npd.BlockSize, npd.FileSize - (long)i * npd.BlockSize);
+                readLen = (payloadLen + 15) & ~15;
+                dataOffset = flag0x20
+                    ? MetadataOffset + (long)i * (0x20 + npd.BlockSize) + 0x20   // metadata+data interleaved
+                    : MetadataOffset + (long)numBlocks * metadataEntry + (long)i * npd.BlockSize;
+            }
 
-            byte[] enc = ReadAt(source, dataOffset, encLen);
+            byte[] enc = ReadAt(source, dataOffset, readLen);
 
             // Per-block key: dev_hash[0..12] (zeros for v<=1) then the block index, big-endian.
             byte[] bKey = new byte[16];
@@ -148,8 +169,50 @@ public static class EdatFile
             byte[] dataKey = encryptedKey ? CbcDecrypt(aes, edatKey, new byte[16], keyResult) : keyResult;
 
             byte[] dec = aesCbc ? CbcDecrypt(aes, dataKey, iv, enc) : enc;
-            destination.Write(dec, 0, blockLen);
+
+            if (decompressBlock)
+            {
+                var outBlock = new byte[npd.BlockSize];
+                int res = EdatLz.Decompress(outBlock, dec, npd.BlockSize);
+                if (res < 0)
+                    throw new PkgFormatException($"Failed to decompress EDAT block {i} (offset 0x{dataOffset:X}).");
+                destination.Write(outBlock, 0, res);
+            }
+            else
+            {
+                destination.Write(dec, 0, payloadLen);
+            }
         }
+    }
+
+    /// <summary>
+    /// Unshuffles a compressed EDAT's per-block metadata (0x20 bytes) into the block's data offset,
+    /// length and compression flag. The fixed XOR permutation is from RPCS3's <c>dec_section</c>.
+    /// </summary>
+    private static (long offset, int length, int compressionEnd) DecSection(byte[] m)
+    {
+        Span<byte> d = stackalloc byte[0x10];
+        d[0x00] = (byte)(m[0xC] ^ m[0x8] ^ m[0x10]);
+        d[0x01] = (byte)(m[0xD] ^ m[0x9] ^ m[0x11]);
+        d[0x02] = (byte)(m[0xE] ^ m[0xA] ^ m[0x12]);
+        d[0x03] = (byte)(m[0xF] ^ m[0xB] ^ m[0x13]);
+        d[0x04] = (byte)(m[0x4] ^ m[0x8] ^ m[0x14]);
+        d[0x05] = (byte)(m[0x5] ^ m[0x9] ^ m[0x15]);
+        d[0x06] = (byte)(m[0x6] ^ m[0xA] ^ m[0x16]);
+        d[0x07] = (byte)(m[0x7] ^ m[0xB] ^ m[0x17]);
+        d[0x08] = (byte)(m[0xC] ^ m[0x0] ^ m[0x18]);
+        d[0x09] = (byte)(m[0xD] ^ m[0x1] ^ m[0x19]);
+        d[0x0A] = (byte)(m[0xE] ^ m[0x2] ^ m[0x1A]);
+        d[0x0B] = (byte)(m[0xF] ^ m[0x3] ^ m[0x1B]);
+        d[0x0C] = (byte)(m[0x4] ^ m[0x0] ^ m[0x1C]);
+        d[0x0D] = (byte)(m[0x5] ^ m[0x1] ^ m[0x1D]);
+        d[0x0E] = (byte)(m[0x6] ^ m[0x2] ^ m[0x1E]);
+        d[0x0F] = (byte)(m[0x7] ^ m[0x3] ^ m[0x1F]);
+
+        long offset = BinaryPrimitives.ReadInt64BigEndian(d);
+        int length = BinaryPrimitives.ReadInt32BigEndian(d[0x08..]);
+        int compressionEnd = BinaryPrimitives.ReadInt32BigEndian(d[0x0C..]);
+        return (offset, length, compressionEnd);
     }
 
     private static byte[] EcbEncrypt(Aes aes, byte[] key, byte[] data)
