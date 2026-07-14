@@ -6,9 +6,10 @@ obj/
 dist/
 *.user
 
-# Never commit key material — keys are supplied at runtime, not stored in the repo.
+# Never commit user-supplied key material (runtime override keys). Anchored to the repo root so it
+# does not swallow the source directory src/PkgLens.Core/Keys/.
 *.key
-keys/
+/keys/
 *.gpkg_key
 gpkg_key
 
