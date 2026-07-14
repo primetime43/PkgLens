@@ -504,6 +504,14 @@ public partial class MainWindow : Window
 
     private string? _decryptFile;
     private string? _decryptRap;
+    private string? _decryptResultPath;
+
+    /// <summary>Shows or hides the "View result" button and remembers the file it points at.</summary>
+    private void SetDecryptResult(string? path)
+    {
+        _decryptResultPath = path;
+        this.FindControl<Button>("DecryptViewButton")!.IsVisible = path is not null;
+    }
 
     private async void OnDecryptBrowseFile(object? sender, RoutedEventArgs e)
     {
@@ -522,6 +530,7 @@ public partial class MainWindow : Window
         _decryptFile = path;
         this.FindControl<TextBlock>("DecryptFileText")!.Text = Path.GetFileName(path);
         ShowDecryptNotes(null);
+        SetDecryptResult(null); // a new input invalidates any previous result
     }
 
     private async void OnDecryptBrowseRap(object? sender, RoutedEventArgs e)
@@ -587,10 +596,30 @@ public partial class MainWindow : Window
             });
             Vm.Status = $"Decrypted {npd.ContentId} → {Path.GetFileName(dest)}";
             ShowDecryptNotes($"Wrote {new FileInfo(dest).Length:n0} bytes to {dest}");
+            SetDecryptResult(dest);
         }
         catch (Exception ex)
         {
             Vm.Status = $"Decrypt failed: {ex.Message}";
+            SetDecryptResult(null);
+        }
+    }
+
+    private async void OnDecryptView(object? sender, RoutedEventArgs e)
+    {
+        if (_decryptResultPath is not { } path || !File.Exists(path))
+        {
+            Vm.Status = "No decrypted file to view — run Decrypt first.";
+            return;
+        }
+        try
+        {
+            byte[] data = await File.ReadAllBytesAsync(path);
+            await new FileViewerDialog(Path.GetFileName(path), data).ShowDialog(this);
+        }
+        catch (Exception ex)
+        {
+            Vm.Status = $"Could not open the decrypted file: {ex.Message}";
         }
     }
 
@@ -830,6 +859,28 @@ public partial class MainWindow : Window
 
         string cid = (this.FindControl<TextBox>("FselfContentIdBox")!.Text ?? string.Empty).Trim();
         if (cid.Length > 0) opts.ContentId = cid;
+
+        string npLic = (this.FindControl<TextBox>("FselfNpLicenseBox")!.Text ?? string.Empty).Trim();
+        if (npLic.Length > 0)
+        {
+            if (!PkgLens.Core.Self.SelfBuilder.TryParseNpLicenseType(npLic, out uint lic))
+            {
+                error = "NP license must be FREE, LOCAL or NETWORK.";
+                return false;
+            }
+            opts.NpLicenseType = lic;
+        }
+
+        string npApp = (this.FindControl<TextBox>("FselfNpAppTypeBox")!.Text ?? string.Empty).Trim();
+        if (npApp.Length > 0)
+        {
+            if (!PkgLens.Core.Self.SelfBuilder.TryParseNpAppType(npApp, out uint at))
+            {
+                error = "NP app type must be SPRX, EXEC, USPRX or UEXEC.";
+                return false;
+            }
+            opts.NpAppType = at;
+        }
         return true;
     }
 

@@ -163,6 +163,48 @@ public class SelfBuilderTests
     }
 
     [Fact]
+    public void MakeFakeSelf_Npdrm_WritesCustomLicenseAndAppType()
+    {
+        byte[] elf = BuildElf(new (uint, byte[])[] { (1u, new byte[] { 1, 2, 3, 4 }) });
+
+        byte[] fself = SelfBuilder.MakeFakeSelf(elf, new SelfBuilder.FakeSelfOptions
+        {
+            Npdrm = true,
+            NpLicenseType = 3,  // FREE
+            NpAppType = 0x21,   // UEXEC
+        });
+
+        var info = SelfReader.ParseInfo(new MemoryStream(fself));
+        Assert.NotNull(info.Npdrm);
+        Assert.Equal(3u, info.Npdrm!.RawLicenseType);
+        Assert.Equal(0x21u, info.Npdrm.AppType);
+    }
+
+    [Fact]
+    public void MakeFakeSelf_Npdrm_DefaultsToLocalExec()
+    {
+        byte[] elf = BuildElf(new (uint, byte[])[] { (1u, new byte[] { 1, 2, 3, 4 }) });
+        var info = SelfReader.ParseInfo(new MemoryStream(SelfBuilder.MakeFakeSelf(elf, npdrm: true)));
+        Assert.Equal(2u, info.Npdrm!.RawLicenseType); // Local
+        Assert.Equal(1u, info.Npdrm.AppType);         // EXEC
+    }
+
+    [Fact]
+    public void NpTypeParsers_MapNamesToScetoolValues()
+    {
+        Assert.True(SelfBuilder.TryParseNpLicenseType("free", out var l)); Assert.Equal(3u, l);
+        Assert.True(SelfBuilder.TryParseNpLicenseType("LOCAL", out l)); Assert.Equal(2u, l);
+        Assert.True(SelfBuilder.TryParseNpLicenseType("network", out l)); Assert.Equal(1u, l);
+        Assert.False(SelfBuilder.TryParseNpLicenseType("bogus", out _));
+
+        Assert.True(SelfBuilder.TryParseNpAppType("SPRX", out var a)); Assert.Equal(0u, a);
+        Assert.True(SelfBuilder.TryParseNpAppType("exec", out a)); Assert.Equal(0x01u, a);
+        Assert.True(SelfBuilder.TryParseNpAppType("USPRX", out a)); Assert.Equal(0x20u, a);
+        Assert.True(SelfBuilder.TryParseNpAppType("uexec", out a)); Assert.Equal(0x21u, a);
+        Assert.False(SelfBuilder.TryParseNpAppType("nope", out _));
+    }
+
+    [Fact]
     public void MakeFakeSelf_RejectsWrongLengthControlFlags()
     {
         byte[] elf = BuildElf(new (uint, byte[])[] { (1u, new byte[] { 1, 2, 3, 4 }) });

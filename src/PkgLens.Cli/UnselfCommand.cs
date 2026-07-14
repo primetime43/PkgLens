@@ -1,5 +1,4 @@
 using PkgLens.Core;
-using PkgLens.Core.Npd;
 using PkgLens.Core.Self;
 
 namespace PkgLens.Cli;
@@ -30,7 +29,8 @@ internal static class UnselfCommand
                     rap = args[++i];
                     break;
                 case "--klic":
-                    if (i + 1 >= args.Length) { Console.Error.WriteLine("error: --klic requires a 32-hex-char key."); return ExitCode.Usage; }
+                case "--klicensee":
+                    if (i + 1 >= args.Length) { Console.Error.WriteLine($"error: {a} requires a 32-hex-char key."); return ExitCode.Usage; }
                     klicHex = args[++i];
                     break;
                 default:
@@ -58,19 +58,16 @@ internal static class UnselfCommand
         }
 
         byte[]? klic = null;
-        if (klicHex is not null)
+        try
         {
-            try { klic = Convert.FromHexString(klicHex); }
-            catch (FormatException) { Console.Error.WriteLine("error: --klic must be 32 hex characters."); return ExitCode.Usage; }
-            if (klic.Length != 16) { Console.Error.WriteLine("error: --klic must be 16 bytes (32 hex characters)."); return ExitCode.Usage; }
+            if (klicHex is not null) klic = NpKlic.ParseHex(klicHex);
+            else if (rap is not null)
+            {
+                if (!File.Exists(rap)) { Console.Error.WriteLine($"error: RAP file not found: {rap}"); return ExitCode.Usage; }
+                klic = NpKlic.FromRapFile(rap);
+            }
         }
-        else if (rap is not null)
-        {
-            if (!File.Exists(rap)) { Console.Error.WriteLine($"error: RAP file not found: {rap}"); return ExitCode.Usage; }
-            byte[] rapBytes = File.ReadAllBytes(rap);
-            if (rapBytes.Length != 16) { Console.Error.WriteLine("error: a RAP file must be exactly 16 bytes."); return ExitCode.Usage; }
-            klic = NpdKeys.RapToKlicensee(rapBytes);
-        }
+        catch (FormatException ex) { Console.Error.WriteLine($"error: {ex.Message}"); return ExitCode.Usage; }
 
         try
         {

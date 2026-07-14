@@ -130,12 +130,18 @@ if (command == "decrypt")
         byte[]? klic = null;
         if (npd.NeedsKlicensee)
         {
-            if (parsed.RapFile is null)
+            try
             {
-                Console.Error.WriteLine($"error: '{npd.ContentId}' is a licensed EDAT — supply its RAP with --rap FILE.");
+                if (parsed.KlicHex is not null) klic = NpKlic.ParseHex(parsed.KlicHex);
+                else if (parsed.RapFile is not null) klic = NpKlic.FromRapFile(parsed.RapFile);
+            }
+            catch (FormatException ex) { Console.Error.WriteLine($"error: {ex.Message}"); return ExitCode.Usage; }
+
+            if (klic is null)
+            {
+                Console.Error.WriteLine($"error: '{npd.ContentId}' is a licensed EDAT — supply its RAP with --rap FILE, or the klicensee with --klic HEX.");
                 return ExitCode.KeyOrDecryptError;
             }
-            klic = PkgLens.Core.Npd.NpdKeys.RapToKlicensee(File.ReadAllBytes(parsed.RapFile));
         }
 
         string outPath = parsed.OutDir ?? StripNpdExtension(parsed.Path);

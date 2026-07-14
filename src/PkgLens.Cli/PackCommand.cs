@@ -32,9 +32,15 @@ internal static class PackCommand
                 case "--rap":
                     if (!Next(args, ref i, a, out var rapPath)) return ExitCode.Usage;
                     if (!File.Exists(rapPath)) { Console.Error.WriteLine($"error: RAP file not found: {rapPath}"); return ExitCode.Usage; }
-                    var rapBytes = File.ReadAllBytes(rapPath);
-                    if (rapBytes.Length != 16) { Console.Error.WriteLine("error: a RAP file must be exactly 16 bytes."); return ExitCode.Usage; }
-                    options.EbootKlicensee = PkgLens.Core.Npd.NpdKeys.RapToKlicensee(rapBytes);
+                    try { options.EbootKlicensee = NpKlic.FromRapFile(rapPath); }
+                    catch (FormatException ex) { Console.Error.WriteLine($"error: {ex.Message}"); return ExitCode.Usage; }
+                    break;
+
+                case "--klic":
+                case "--klicensee":
+                    if (!Next(args, ref i, a, out var klicHex)) return ExitCode.Usage;
+                    try { options.EbootKlicensee = NpKlic.ParseHex(klicHex); }
+                    catch (FormatException ex) { Console.Error.WriteLine($"error: {ex.Message}"); return ExitCode.Usage; }
                     break;
 
                 case "--out": if (!Next(args, ref i, a, out outPath)) return ExitCode.Usage; break;

@@ -80,6 +80,12 @@ public static class SelfBuilder
         /// <summary>Content id for the NPDRM control block (NPDRM builds only; default is the fake 0x30-byte id).</summary>
         public string? ContentId { get; set; }
 
+        /// <summary>NPDRM license type in the control block: 1 = Network, 2 = Local, 3 = Free. Null keeps the default (2).</summary>
+        public uint? NpLicenseType { get; set; }
+
+        /// <summary>NPDRM app type in the control block: SPRX = 0, EXEC = 1, USPRX = 0x20, UEXEC = 0x21. Null keeps the default (1 = EXEC).</summary>
+        public uint? NpAppType { get; set; }
+
         /// <summary>
         /// Firmware version to record in the type-2 digest control block (scetool <c>-6</c>), as a
         /// decimal version — <c>major*10000 + minor*100</c> (e.g. 4.46 → 44600). Null leaves it 0.
@@ -205,7 +211,8 @@ public static class SelfBuilder
         Pad(outMs, controlInfoRaw, 0x10);
 
         // ---- control info: optional type-1 control flags, the type-2 digest block, + NPDRM if requested ----
-        WriteControlInfo(outMs, npdrm, options.ContentId, options.ControlFlags, options.FirmwareVersion);
+        WriteControlInfo(outMs, npdrm, options.ContentId, options.ControlFlags, options.FirmwareVersion,
+            options.NpLicenseType, options.NpAppType);
         Pad(outMs, endOfHeader, 0x80);
 
         // ---- the whole ELF, unencrypted ----
@@ -215,7 +222,7 @@ public static class SelfBuilder
     }
 
     private static void WriteControlInfo(Stream outMs, bool npdrm, string? contentId,
-        byte[]? controlFlags, ulong? firmwareVersion)
+        byte[]? controlFlags, ulong? firmwareVersion, uint? npLicenseType, uint? npAppType)
     {
         Span<byte> sub = stackalloc byte[SubHeaderLen];
 
@@ -254,10 +261,36 @@ public static class SelfBuilder
         Span<byte> npd = stackalloc byte[0x70];
         BinaryPrimitives.WriteUInt32BigEndian(npd[0x00..], 0x4E504400); // "NPD\0"
         BinaryPrimitives.WriteUInt32BigEndian(npd[0x04..], 1);
-        BinaryPrimitives.WriteUInt32BigEndian(npd[0x08..], 2);          // drm type
-        BinaryPrimitives.WriteUInt32BigEndian(npd[0x0C..], 1);
+        BinaryPrimitives.WriteUInt32BigEndian(npd[0x08..], npLicenseType ?? 2); // license type (default Local)
+        BinaryPrimitives.WriteUInt32BigEndian(npd[0x0C..], npAppType ?? 1);     // app type (default EXEC)
         ContentIdBytes(contentId).CopyTo(npd[0x10..]);
         outMs.Write(npd);
+    }
+
+    /// <summary>Maps an NPDRM license-type name to its control-block value: NETWORK=1, LOCAL=2, FREE=3.</summary>
+    public static bool TryParseNpLicenseType(string name, out uint value)
+    {
+        value = name?.Trim().ToUpperInvariant() switch
+        {
+            "NETWORK" => 1u,
+            "LOCAL" => 2u,
+            "FREE" => 3u,
+            _ => 0u,
+        };
+        return value != 0;
+    }
+
+    /// <summary>Maps an NPDRM app-type name to its control-block value: SPRX=0, EXEC=1, USPRX=0x20, UEXEC=0x21.</summary>
+    public static bool TryParseNpAppType(string name, out uint value)
+    {
+        switch (name?.Trim().ToUpperInvariant())
+        {
+            case "SPRX": value = 0x00; return true;
+            case "EXEC": value = 0x01; return true;
+            case "USPRX": value = 0x20; return true;
+            case "UEXEC": value = 0x21; return true;
+            default: value = 0; return false;
+        }
     }
 
     /// <summary>fself.py alignment: always advances by <c>alignment - (addr % alignment)</c> (a full block when aligned).</summary>

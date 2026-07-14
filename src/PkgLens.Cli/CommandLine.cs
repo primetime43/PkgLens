@@ -11,6 +11,7 @@ internal sealed class Options
     public string? OutDir { get; set; }
     public string? Filter { get; set; }
     public string? RapFile { get; set; }
+    public string? KlicHex { get; set; }
     public string? Error { get; set; }
 }
 
@@ -51,6 +52,12 @@ internal static class CommandLine
                 case "--rap":
                     if (i + 1 >= args.Length) { o.Error = "--rap requires a RAP file path."; return o; }
                     o.RapFile = args[++i];
+                    break;
+
+                case "--klic":
+                case "--klicensee":
+                    if (i + 1 >= args.Length) { o.Error = $"{a} requires a 32-hex-char klicensee."; return o; }
+                    o.KlicHex = args[++i];
                     break;
 
                 default:
@@ -105,12 +112,13 @@ internal static class CliHelp
               pkglens sfo     <pkg> [--keys DIR] [--json]   dump PARAM.SFO key/values
               pkglens verify  <pkg> [--keys DIR] [--json]   check header CMAC/SHA-1 + structure
               pkglens extract <pkg> [--out DIR] [--filter GLOB] [--keys DIR]   unpack files to a folder
-              pkglens decrypt <edat> [--rap FILE] [--out FILE]   decrypt an EDAT/SDAT file
+              pkglens decrypt <edat> [--rap FILE | --klic HEX] [--out FILE]   decrypt an EDAT/SDAT file
               pkglens self    <eboot>                        inspect a SELF/EBOOT.BIN header
-              pkglens unself  <eboot> [--out FILE] [--rap FILE]   decrypt a SELF → plaintext ELF
+              pkglens unself  <eboot> [--out FILE] [--rap FILE | --klic HEX]   decrypt a SELF → plaintext ELF
               pkglens resign  <elf> [--out FILE] [--npdrm]   ELF → fake-signed SELF (fSELF) for CFW
                        custom sign: [--auth-id HEX] [--vendor-id HEX] [--app-version HEX] [--type N] [--content-id CID]
                                     [--fw-version M.NN] [--control-flags 64-HEX]
+                                    [--np-license-type FREE|LOCAL|NETWORK] [--np-app-type SPRX|EXEC|USPRX|UEXEC]
               pkglens patch   <eboot> [--sdk-version VER] [--find HEX --replace HEX] [--at OFF=HEX] [--resign]
                        magic-patch an EBOOT/ELF (e.g. lower the firmware requirement: --sdk-version 4.00)
               pkglens folderinfo <folder> [--json]           report on an extracted content folder
@@ -135,7 +143,7 @@ internal static class CliHelp
                                Default is retail-encrypted (needs the key) — the format a
                                jailbroken/CFW PS3 installs; unsigned, so stock retail won't take it.
               --resign         fake-sign EBOOT.BIN as it is packed (boots on CFW without a license);
-                               add --rap FILE for a licensed EBOOT that must be decrypted first.
+                               add --rap FILE (or --klic HEX) for a licensed EBOOT to decrypt first.
 
             Exit codes: 0 ok · 1 usage · 2 parse error · 3 key/decryption error · 4 integrity failure
             """);

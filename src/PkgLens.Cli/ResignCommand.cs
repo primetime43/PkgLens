@@ -42,6 +42,14 @@ internal static class ResignCommand
                 case "--content-id":
                     if (i + 1 >= args.Length) { Console.Error.WriteLine("error: --content-id requires a value."); return ExitCode.Usage; }
                     opts.ContentId = args[++i]; break;
+                case "--np-license-type":
+                    if (i + 1 >= args.Length) { Console.Error.WriteLine("error: --np-license-type requires FREE|LOCAL|NETWORK."); return ExitCode.Usage; }
+                    if (!SelfBuilder.TryParseNpLicenseType(args[++i], out uint lic)) { Console.Error.WriteLine($"error: unknown --np-license-type '{args[i]}' (use FREE, LOCAL or NETWORK)."); return ExitCode.Usage; }
+                    opts.NpLicenseType = lic; break;
+                case "--np-app-type":
+                    if (i + 1 >= args.Length) { Console.Error.WriteLine("error: --np-app-type requires SPRX|EXEC|USPRX|UEXEC."); return ExitCode.Usage; }
+                    if (!SelfBuilder.TryParseNpAppType(args[++i], out uint at)) { Console.Error.WriteLine($"error: unknown --np-app-type '{args[i]}' (use SPRX, EXEC, USPRX or UEXEC)."); return ExitCode.Usage; }
+                    opts.NpAppType = at; break;
                 case "--fw-version":
                     if (i + 1 >= args.Length) { Console.Error.WriteLine("error: --fw-version requires a value, e.g. 4.46."); return ExitCode.Usage; }
                     if (!TryParseFirmware(args[++i], out ulong fw)) { Console.Error.WriteLine($"error: --fw-version '{args[i]}' is not a M.NN version."); return ExitCode.Usage; }
@@ -69,6 +77,7 @@ internal static class ResignCommand
             Console.Error.WriteLine("usage: pkglens resign <elf> [--out FILE] [--npdrm]");
             Console.Error.WriteLine("       custom sign: [--auth-id HEX] [--vendor-id HEX] [--app-version HEX] [--type N] [--content-id CID]");
             Console.Error.WriteLine("                    [--fw-version M.NN] [--control-flags 64-HEX]");
+            Console.Error.WriteLine("                    [--np-license-type FREE|LOCAL|NETWORK] [--np-app-type SPRX|EXEC|USPRX|UEXEC]");
             return ExitCode.Usage;
         }
         if (!File.Exists(input))

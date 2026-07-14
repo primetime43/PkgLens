@@ -45,10 +45,12 @@ Core, CLI, and a first GUI are implemented and tested (spec §11 steps 1–5, pl
   where signature checks are patched (CFW) — never on stock retail. **Custom Sign** lets you override the
   `app_info` fields — auth id, vendor id, app version, program type — plus the **firmware version** (in the
   type-2 digest control block) and the 32-byte **control flags** (a type-1 control-info block), and the
-  NPDRM content id (`--auth-id`, `--vendor-id`, `--app-version`, `--type`, `--fw-version M.NN`,
-  `--control-flags 64-HEX`, `--content-id`, or the Pack/Resign page's *Custom sign fields* panel); unset
-  fields use the fSELF defaults. (Capability flags and NPDRM real-filename aren't settable: they live in
-  the encrypted-metadata / real-signature path a keyless fSELF doesn't have.)
+  NPDRM content id, plus the NPDRM **license type** and **app type** (`--auth-id`, `--vendor-id`,
+  `--app-version`, `--type`, `--fw-version M.NN`, `--control-flags 64-HEX`, `--content-id`,
+  `--np-license-type FREE|LOCAL|NETWORK`, `--np-app-type SPRX|EXEC|USPRX|UEXEC`, or the Pack/Resign page's
+  *Custom sign fields* panel); unset fields use the fSELF defaults. (Capability flags and NPDRM
+  real-filename aren't settable: they live in the encrypted-metadata / real-signature path a keyless
+  fSELF doesn't have.)
 - **Resign-on-pack** — pack a content folder with `--resign` (or the Pack page's *Resign EBOOT.BIN as it
   packs* checkbox) and PkgLens fake-signs the folder's `EBOOT.BIN` to an fSELF as it builds, so the packaged
   game boots on CFW without its license. A licensed EBOOT needs its RAP (`--rap` / the RAP picker) to decrypt
@@ -65,11 +67,11 @@ Core, CLI, and a first GUI are implemented and tested (spec §11 steps 1–5, pl
 - **Unself (SELF → ELF)** — decrypt an encrypted `EBOOT.BIN` / `.self` back to its plaintext ELF
   (`pkglens unself <eboot>`), so you can inspect or fake-sign one you only have encrypted. Uses public
   decryption keysets (appldr / NPDRM, by key revision); free-license and debug SELFs need no key, a
-  licensed NPDRM SELF needs its RAP (`--rap`). Also decrypts **fake-signed / debug (fSELF) EBOOTs**
+  licensed NPDRM SELF needs its RAP (`--rap`) or its raw klicensee (`--klic`). Also decrypts **fake-signed / debug (fSELF) EBOOTs**
   (key version 0x80 / 0xC0) — the ELF is stored in the clear, so no keys are needed. Verified
   **byte-for-byte** against a real retail `EBOOT.BIN → EBOOT.ELF` pair *and* on the fSELF round-trip.
   No signing keys are involved — the output is a plaintext ELF, not a resigned file.
-- **CLI**: `pkglens info | list | sfo | verify | extract | decrypt | self | unself | resign | patch | pack | folderinfo | keys`, with `--json`, `--keys`, `--out`, `--filter`, `--rap`.
+- **CLI**: `pkglens info | list | sfo | verify | extract | decrypt | self | unself | resign | patch | pack | folderinfo | keys`, with `--json`, `--keys`, `--out`, `--filter`, `--rap`, `--klic`.
 - **GUI** (Avalonia): classic menu/toolbar, folder tree + Name/Size list, viewer, Package-info dialog,
   drag-and-drop, light/dark theme, replace + Save-As (repack), and **Pack folder → .pkg** (File menu /
   toolbar) to build a package from a content folder.
@@ -169,7 +171,7 @@ pkglens info  <pkg> [--keys DIR] [--json]   # header + content-id + SFO summary
 pkglens list  <pkg> [--keys DIR] [--json]   # entry table
 pkglens sfo   <pkg> [--keys DIR] [--json]   # dump PARAM.SFO key/values
 pkglens self  <eboot>                       # inspect a SELF/EBOOT.BIN header (no keys)
-pkglens unself <eboot> [--rap FILE] [--out FILE]  # decrypt a SELF → plaintext ELF
+pkglens unself <eboot> [--rap FILE | --klic HEX] [--out FILE]  # decrypt a SELF → plaintext ELF
 pkglens resign <elf> [--out FILE] [--npdrm] # ELF → fake-signed SELF (fSELF) for CFW
 pkglens patch <eboot> [--sdk-version 4.00] [--find HEX --replace HEX] [--at OFF=HEX]  # magic-patch an EBOOT
 pkglens folderinfo <folder> [--json]        # report on an extracted content folder
