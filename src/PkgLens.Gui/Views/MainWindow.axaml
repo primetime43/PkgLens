@@ -270,30 +270,41 @@
                        Text="Pick a decrypted ELF; PkgLens writes a fake-signed NON-DRM SELF (no keys). It runs on CFW — signature checks patched — not on stock retail." />
             <StackPanel Orientation="Horizontal" Spacing="8">
               <Button Content="Fake-sign an ELF…" Click="OnMakeFself" />
-              <CheckBox x:Name="FselfNpdrmCheck" Content="NPDRM (app type 8)" VerticalAlignment="Center" />
+              <CheckBox x:Name="FselfNpdrmCheck" Content="NPDRM (app type 8)" VerticalAlignment="Center"
+                        ToolTip.Tip="Tag the fSELF as NPDRM (app type 8) for use inside an NPDRM package, instead of a plain app (type 4)." />
             </StackPanel>
 
             <Expander x:Name="FselfCustomExpander" Header="Custom sign fields (optional)">
-              <Grid ColumnDefinitions="92,10,*" RowDefinitions="Auto,6,Auto,6,Auto,6,Auto,6,Auto,6,Auto" Margin="0,4">
-                <TextBlock Grid.Row="0" Grid.Column="0" Text="Auth ID" VerticalAlignment="Center" />
-                <TextBox   Grid.Row="0" Grid.Column="2" x:Name="FselfAuthIdBox"
-                           Watermark="0x1010000001000003" FontFamily="Consolas,monospace" />
-                <TextBlock Grid.Row="2" Grid.Column="0" Text="Vendor ID" VerticalAlignment="Center" />
-                <TextBox   Grid.Row="2" Grid.Column="2" x:Name="FselfVendorIdBox"
-                           Watermark="0x01000002" FontFamily="Consolas,monospace" />
-                <TextBlock Grid.Row="4" Grid.Column="0" Text="App version" VerticalAlignment="Center" />
-                <TextBox   Grid.Row="4" Grid.Column="2" x:Name="FselfAppVerBox"
-                           Watermark="0x0001000000000000" FontFamily="Consolas,monospace" />
-                <TextBlock Grid.Row="6" Grid.Column="0" Text="FW version" VerticalAlignment="Center" />
-                <TextBox   Grid.Row="6" Grid.Column="2" x:Name="FselfFwVerBox"
-                           Watermark="e.g. 4.46 (blank = none)" FontFamily="Consolas,monospace" />
-                <TextBlock Grid.Row="8" Grid.Column="0" Text="Ctrl flags" VerticalAlignment="Center" />
-                <TextBox   Grid.Row="8" Grid.Column="2" x:Name="FselfCtrlFlagsBox"
-                           Watermark="64 hex chars (0x20 bytes); blank = none" FontFamily="Consolas,monospace" />
-                <TextBlock Grid.Row="10" Grid.Column="0" Text="Content ID" VerticalAlignment="Center" />
-                <TextBox   Grid.Row="10" Grid.Column="2" x:Name="FselfContentIdBox"
-                           Watermark="(NPDRM only) UP0001-NPUB30910_00-EXAMPLE000000001" FontFamily="Consolas,monospace" />
-              </Grid>
+              <StackPanel Spacing="8" Margin="0,4">
+                <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.7"
+                           Text="Advanced — leave every field blank to use the standard fSELF defaults, which is what most repacks want. Each field matches a specific SDK / firmware / console profile; fill only the ones you need. Hover a box for what it does." />
+                <Grid ColumnDefinitions="100,10,*" RowDefinitions="Auto,6,Auto,6,Auto,6,Auto,6,Auto,6,Auto">
+                  <TextBlock Grid.Row="0" Grid.Column="0" Text="Auth ID" VerticalAlignment="Center" />
+                  <TextBox   Grid.Row="0" Grid.Column="2" x:Name="FselfAuthIdBox"
+                             Watermark="0x1010000001000003" FontFamily="Consolas,monospace"
+                             ToolTip.Tip="app_info authentication id (16 hex digits). Blank = the standard fSELF default 0x1010000001000003." />
+                  <TextBlock Grid.Row="2" Grid.Column="0" Text="Vendor ID" VerticalAlignment="Center" />
+                  <TextBox   Grid.Row="2" Grid.Column="2" x:Name="FselfVendorIdBox"
+                             Watermark="0x01000002" FontFamily="Consolas,monospace"
+                             ToolTip.Tip="app_info vendor id (up to 8 hex digits). Blank = the default 0x01000002." />
+                  <TextBlock Grid.Row="4" Grid.Column="0" Text="App version" VerticalAlignment="Center" />
+                  <TextBox   Grid.Row="4" Grid.Column="2" x:Name="FselfAppVerBox"
+                             Watermark="0x0001000000000000" FontFamily="Consolas,monospace"
+                             ToolTip.Tip="app_info version field (16 hex digits). Blank = the default 0x0001000000000000." />
+                  <TextBlock Grid.Row="6" Grid.Column="0" Text="FW version" VerticalAlignment="Center" />
+                  <TextBox   Grid.Row="6" Grid.Column="2" x:Name="FselfFwVerBox"
+                             Watermark="e.g. 4.46 (blank = unset)" FontFamily="Consolas,monospace"
+                             ToolTip.Tip="Minimum firmware the executable claims to need, as M.NN (e.g. 4.46), written into the SELF's digest block. Blank = leave it unset." />
+                  <TextBlock Grid.Row="8" Grid.Column="0" Text="Control flags" VerticalAlignment="Center" />
+                  <TextBox   Grid.Row="8" Grid.Column="2" x:Name="FselfCtrlFlagsBox"
+                             Watermark="e.g. 0000…0000 — 64 hex chars (blank = omit)" FontFamily="Consolas,monospace"
+                             ToolTip.Tip="The 32-byte SELF control-flags block, as exactly 64 hex characters. Advanced; blank = omit the block entirely (the default)." />
+                  <TextBlock Grid.Row="10" Grid.Column="0" Text="Content ID" VerticalAlignment="Center" />
+                  <TextBox   Grid.Row="10" Grid.Column="2" x:Name="FselfContentIdBox"
+                             Watermark="UP0001-NPUB30910_00-EXAMPLE000000001" FontFamily="Consolas,monospace"
+                             ToolTip.Tip="NPDRM content id (37 chars). Used only with the NPDRM option; blank = the fake default id." />
+                </Grid>
+              </StackPanel>
             </Expander>
 
             <TextBlock x:Name="FselfNotes" TextWrapping="Wrap" FontSize="12" Opacity="0.7" IsVisible="False" />
@@ -321,7 +332,8 @@
                        Text="Lower the firmware version an EBOOT demands so a higher-firmware game boots on a lower CFW. Pick an EBOOT.BIN/.self (decrypted automatically) or a plaintext ELF; the result is fake-signed." />
             <StackPanel Orientation="Horizontal" Spacing="8">
               <TextBlock Text="Target firmware" VerticalAlignment="Center" FontSize="12" />
-              <TextBox x:Name="MagicFwBox" Width="90" Watermark="4.00" FontFamily="Consolas,monospace" />
+              <TextBox x:Name="MagicFwBox" Width="90" Watermark="4.00" FontFamily="Consolas,monospace"
+                       ToolTip.Tip="The firmware version to write into the EBOOT's SDK field, e.g. 4.00 — lower it so a higher-firmware game boots on a lower CFW." />
               <Button Content="Magic-patch EBOOT…" Click="OnMagicPatch" />
             </StackPanel>
             <TextBlock x:Name="MagicNotes" TextWrapping="Wrap" FontSize="12" Opacity="0.7" IsVisible="False" />
