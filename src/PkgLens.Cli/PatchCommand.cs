@@ -125,7 +125,6 @@ internal static class PatchCommand
                 return ExitCode.ParseError;
             }
 
-            // ---- apply patches ----
             if (sdk is not null)
             {
                 SdkVersion? prev = ApplySdkVersion(elf, sdk, out string? err);

@@ -3,8 +3,7 @@ using System.Security.Cryptography;
 namespace PkgLens.Core.Npd;
 
 /// <summary>
-/// NPDRM/EDAT decryption constants and the RAP→klicensee conversion. Ported from make_npdata and
-/// verified byte-for-byte against a real retail EDAT.
+/// NPDRM/EDAT decryption constants and the RAP→klicensee conversion. Ported from make_npdata.
 /// </summary>
 public static class NpdKeys
 {

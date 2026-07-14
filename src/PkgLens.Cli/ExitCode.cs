@@ -1,6 +1,6 @@
 namespace PkgLens.Cli;
 
-/// <summary>Process exit codes, as documented in the spec's CLI sketch (§6).</summary>
+/// <summary>Process exit codes.</summary>
 internal static class ExitCode
 {
     public const int Ok = 0;

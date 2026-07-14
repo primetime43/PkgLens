@@ -3,12 +3,6 @@ using PkgLens.Core.Keys;
 using PkgLens.Core.Models;
 using PkgLens.Cli;
 
-// pkglens <command> <pkg> [--keys DIR] [--json]
-//   info | list | sfo
-//
-// A deliberately small, dependency-free arg parser (the spec suggests System.CommandLine; that
-// package's API churns across previews, so a hand-rolled parser keeps the build friction-free).
-
 if (args.Length == 0 || args[0] is "-h" or "--help" or "help")
 {
     CliHelp.PrintUsage();

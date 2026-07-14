@@ -19,7 +19,7 @@ public sealed class SelfDecryptResult
 /// <summary>
 /// Decrypts a retail / NPDRM SELF (<c>EBOOT.BIN</c>, <c>.self</c>, <c>.sprx</c>) back to its plaintext
 /// ELF — the inverse of signing, needed when you only have the encrypted executable and want to
-/// inspect it or fake-sign it (<see cref="SelfBuilder"/>). Ported faithfully from RPCS3's
+/// inspect it or fake-sign it (<see cref="SelfBuilder"/>). Ported from RPCS3's
 /// <c>unself.cpp</c> (<c>SELFDecrypter::LoadMetadata / DecryptNPDRM / DecryptData / MakeElf</c>):
 /// the NPDRM klicensee layer, the AES-256-CBC metadata-info decrypt, the AES-128-CTR metadata-header
 /// and per-section decrypt, and the ELF rebuild. Uses only public decryption keys

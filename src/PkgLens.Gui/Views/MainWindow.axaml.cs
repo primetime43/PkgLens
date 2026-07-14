@@ -306,7 +306,7 @@ public partial class MainWindow : Window
         box.SelectedIndex = 0; // GameExec
     }
 
-    /// <summary>Menu/toolbar "Pack folder…" simply switches to the Pack page.</summary>
+    /// <summary>Menu/toolbar "Pack folder…" switches to the Pack page.</summary>
     private void OnGoPackClick(object? sender, RoutedEventArgs e) => Vm.ActiveTool = ToolPage.Pack;
 
     private string? _packRapPath;

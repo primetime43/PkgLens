@@ -22,7 +22,7 @@ internal sealed class CipherKey
 
 /// <summary>
 /// PSP AMCTRL (<c>amctrl.prx</c>) reimplemented over the KIRK CBC primitives — the BBMac and BBCipher
-/// used to decrypt a PGD. Ported faithfully from tpunix's <c>amctrl.c</c> (KIRK CMD4/CMD7 are just
+/// used to decrypt a PGD. Ported from tpunix's <c>amctrl.c</c> (KIRK CMD4/CMD7 are just
 /// AES-128-CBC with a fixed zero IV and a keyed table lookup). Only the fixed-key path is supported
 /// (mac/cipher type 1 and 3); the fuse-id path (type 2) needs a per-console secret and is rejected.
 /// One instance owns the shared 0x814-byte KIRK work buffer, so it is not thread-safe.

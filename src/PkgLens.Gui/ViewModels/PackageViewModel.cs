@@ -249,7 +249,7 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
         foreach (var e in metadata.Entries)
         {
             // Render each entry by what it actually is — several fields are u64, a 24-byte digest, or
-            // a decoded version, not the 4-byte int the display used to assume for everything.
+            // a decoded version, not a plain 4-byte int.
             string value = e.Id switch
             {
                 PkgMetadataId.ContentType when metadata.ContentType is { } ct => $"{(uint)ct} ({ct})",

@@ -21,7 +21,7 @@ public sealed class PkgVerificationReport
 }
 
 /// <summary>
-/// Verifies a PS3 package's integrity. Checks (algorithm confirmed against real retail packages):
+/// Verifies a PS3 package's integrity. Checks:
 /// <list type="bullet">
 ///   <item>structural bounds — magic, total_size vs file length, data/metadata region ranges,</item>
 ///   <item>header SHA-1 digest — last 8 bytes of <c>SHA1(header[0x00:0x80])</c> at 0xB8 (no key),</item>

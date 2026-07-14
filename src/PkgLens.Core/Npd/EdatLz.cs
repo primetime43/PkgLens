@@ -1,19 +1,16 @@
 namespace PkgLens.Core.Npd;
 
 /// <summary>
-/// The range-coder LZ decompressor used by NPDRM EDAT compression. Ported faithfully from RPCS3's
+/// The range-coder LZ decompressor used by NPDRM EDAT compression. Ported from RPCS3's
 /// <c>lz.cpp</c> (originally Hykem, GPL v2.0+); the pointer arithmetic is reproduced with array
 /// indices. One call decompresses one EDAT block. Returns the number of bytes written to
 /// <paramref name="output"/>, or a negative value on error (malformed stream / buffer over- or
-/// under-run) — it fails loudly rather than emitting corrupt data.
+/// under-run).
 ///
-/// VERIFICATION: audited line-for-line against RPCS3's <c>lz.cpp</c> (2026-07). Every context offset
-/// (0xB68, 0x7F1, 0xBA8, 0x928, +0x18/+0x8/+0x10, +4/+1/+2), the index ladders, the probability-table
-/// init (0xCA8 of 0xCC8 bytes set to 0x80), and the range/code arithmetic match the reference exactly.
-/// The single intentional deviation is the stored-block (<c>head &gt; 0x80</c>) return value, which
-/// returns the copied length instead of the reference's 0 (a truncation bug — see below). The stored
-/// branch is covered by tests; a runtime byte-for-byte check of the range-coded path against a real
-/// Sony-compressed EDAT block remains pending a sample (no public compressor exists to synthesize one).
+/// The stored-block (<c>head &gt; 0x80</c>) branch intentionally returns the copied length instead of
+/// the reference's 0 (which truncates output — see below). NOTE: a runtime check of the range-coded
+/// path against a real Sony-compressed EDAT block is still pending a sample (no public compressor
+/// exists to synthesize one).
 /// </summary>
 internal static class EdatLz
 {

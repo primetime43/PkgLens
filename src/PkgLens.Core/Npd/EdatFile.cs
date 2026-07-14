@@ -32,10 +32,8 @@ public sealed class NpdInfo
 
 /// <summary>
 /// Decrypts PS3 NPDRM data files: <b>SDAT</b> (self-keyed, no license) and <b>EDAT</b> (needs the
-/// content's klicensee, from a RAP or the free key). Algorithm ported from make_npdata (GPL) and
-/// verified byte-for-byte against a real retail EDAT. Compressed EDATs are supported via
-/// <see cref="EdatLz"/> (audited line-for-line against RPCS3's lz.cpp; a runtime check of the
-/// range-coded path against a real compressed sample is still pending — see its remarks).
+/// content's klicensee, from a RAP or the free key). Algorithm ported from make_npdata (GPL).
+/// Compressed EDATs are supported via <see cref="EdatLz"/>.
 /// </summary>
 public static class EdatFile
 {
@@ -70,7 +68,7 @@ public static class EdatFile
         if (BinaryPrimitives.ReadUInt32BigEndian(head) != Magic)
         {
             // PSP EDATs ("\0PSPEDAT") share the .edat extension but are a different DRM format (PSP
-            // AMCTRL/PGD, not PS3 NPDRM) that this decryptor does not handle — say so specifically.
+            // AMCTRL/PGD, not PS3 NPDRM) that this decryptor does not handle.
             if (head[0] == 0x00 && Encoding.ASCII.GetString(head, 1, 7) == "PSPEDAT")
                 throw new PkgFormatException(
                     "This is a PSP EDAT ('\\0PSPEDAT'), a different DRM format from the PS3 NPDRM EDAT/SDAT " +

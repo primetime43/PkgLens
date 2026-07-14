@@ -9,8 +9,8 @@ namespace PkgLens.Core;
 
 /// <summary>
 /// Builds a PS3 PKG from scratch out of a set of entries (the "Pack" operation). The resulting
-/// package is a valid, self-contained <b>non-finalized (debug)</b> package by default: it needs no
-/// key, and both PkgLens and RPCS3 can read/unpack it. A <see cref="PkgFinalization.Retail"/> build
+/// package is a self-contained <b>non-finalized (debug)</b> package by default: it needs no
+/// key. A <see cref="PkgFinalization.Retail"/> build
 /// is also supported when the runtime NPDRM PKG PS3 AES key is available, but — exactly as with
 /// <see cref="PkgWriter"/> — the ECDSA signature is <b>not</b> forged, so a retail build is
 /// <em>unsigned</em> and will not install on a real console. PkgLens never finalizes or signs.
@@ -23,7 +23,7 @@ public sealed class PkgBuilder
 {
     private sealed record Entry(string Name, PkgEntryType Kind, long Size, Func<Stream>? Open);
 
-    /// <summary>Header + digest area size; metadata begins here, mirroring real packages.</summary>
+    /// <summary>Header + digest area size; metadata begins here.</summary>
     private const int HeaderSize = 0xC0;
 
     private readonly List<Entry> _entries = new();

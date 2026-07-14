@@ -10,7 +10,7 @@ namespace PkgLens.Core;
 /// Rebuilds ("repacks") a package to a new stream, optionally replacing the data of individual
 /// entries. The header CMAC and ECDSA signature are <b>not</b> recomputed — PkgLens never forges
 /// signatures — so a repacked <em>retail</em> package is unsigned and will not pass integrity
-/// checks or install on a real console. Debug packages repack cleanly.
+/// checks or install on a real console.
 ///
 /// Layout of the rebuilt (encrypted) data region: <c>[item table | entry names | file data]</c>,
 /// with fresh offsets/sizes. Everything before <c>data_offset</c> (header + metadata) is copied

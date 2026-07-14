@@ -9,7 +9,7 @@ namespace PkgLens.Core.Self;
 /// a pure container transform (the ELF segments are stored unencrypted), so it will only load on a
 /// console whose signature checks are patched (CFW) — never on stock retail.
 ///
-/// Layout and constants ported faithfully from PS3Py's <c>fself.py</c> (phiren), including its
+/// Layout and constants ported from PS3Py's <c>fself.py</c> (phiren), including its
 /// alignment convention (a fully-aligned address still advances a whole block).
 /// </summary>
 public static class SelfBuilder
@@ -25,14 +25,14 @@ public static class SelfBuilder
 
     private const int PtLoad = 1;
 
-    /// <summary>The "cap flags" digest constant fself.py writes (identical in real retail SELFs).</summary>
+    /// <summary>The "cap flags" digest constant fself.py writes.</summary>
     private static readonly byte[] Type2MagicBits =
     {
         0x62, 0x7C, 0xB1, 0x80, 0x8A, 0xB9, 0x38, 0xE3, 0x2C, 0x8C,
         0x09, 0x17, 0x08, 0x72, 0x6A, 0x57, 0x9E, 0x25, 0x86, 0xE4,
     };
 
-    // fself.py's default app_info values (identical in real retail SELFs); used when a field is unset.
+    // fself.py's default app_info values; used when a field is unset.
     private const ulong DefaultAuthId = 0x1010000001000003;
     private const uint DefaultVendorId = 0x01000002;
     private const ulong DefaultAppVersion = 0x0001000000000000;

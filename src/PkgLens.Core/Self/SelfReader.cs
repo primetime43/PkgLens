@@ -7,8 +7,7 @@ namespace PkgLens.Core.Self;
 /// Parses a SELF (Signed ELF) header without any keys. Reads the SCE header, the SELF extended
 /// header (segment offsets), <c>app_info</c>, the embedded plaintext ELF header, the segment
 /// (section-info) table, and the control-info blocks (control flags + the NPDRM block with its
-/// content id). All multi-byte fields are big-endian. Layout verified against real retail SELFs
-/// (EBOOT.BIN / default.self).
+/// content id). All multi-byte fields are big-endian.
 /// </summary>
 public static class SelfReader
 {
