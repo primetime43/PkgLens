@@ -38,6 +38,7 @@
       <MenuItem Header="_Tools">
         <MenuItem Header="_Verify integrity…" Click="OnVerifyClick" IsEnabled="{Binding HasPackage}" />
         <MenuItem Header="Package _info…" Click="OnInfoClick" IsEnabled="{Binding HasPackage}" />
+        <MenuItem Header="_Folder info…" Click="OnFolderInfoClick" />
         <Separator />
         <MenuItem Header="Import _override key…" Click="OnSetKeyClick" />
         <MenuItem Header="Keys _folder…" Click="OnKeysClick" />
@@ -345,6 +346,38 @@
               <Button Content="Magic-patch EBOOT…" Click="OnMagicPatch" />
             </StackPanel>
             <TextBlock x:Name="MagicNotes" TextWrapping="Wrap" FontSize="12" Opacity="0.7" IsVisible="False" />
+
+            <Border Height="1" Background="{DynamicResource SystemControlForegroundBaseLowBrush}" Margin="0,4" />
+
+            <TextBlock Text="Byte patch (find/replace · at-offset)" FontWeight="SemiBold" FontSize="12" />
+            <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.75"
+                       Text="Apply raw byte edits to an EBOOT/ELF — a hex find→replace (equal length) and/or an at-offset overwrite. A SELF/EBOOT input is decrypted first; tick 'fake-sign' to write the result back as a CFW-ready fSELF." />
+            <Grid ColumnDefinitions="86,10,*" RowDefinitions="Auto,6,Auto,6,Auto">
+              <TextBlock Grid.Row="0" Grid.Column="0" Text="Find (hex)" VerticalAlignment="Center" FontSize="12" />
+              <TextBox   Grid.Row="0" Grid.Column="2" x:Name="PatchFindBox" Watermark="e.g. 90909090"
+                         FontFamily="Consolas,monospace"
+                         ToolTip.Tip="Bytes to search for, as hex. Replaced everywhere it occurs. Leave blank to skip find/replace." />
+              <TextBlock Grid.Row="2" Grid.Column="0" Text="Replace (hex)" VerticalAlignment="Center" FontSize="12" />
+              <TextBox   Grid.Row="2" Grid.Column="2" x:Name="PatchReplaceBox" Watermark="same length as find"
+                         FontFamily="Consolas,monospace"
+                         ToolTip.Tip="Replacement bytes, as hex. Must be exactly the same length as Find." />
+              <TextBlock Grid.Row="4" Grid.Column="0" Text="At offset" VerticalAlignment="Center" FontSize="12" />
+              <StackPanel Grid.Row="4" Grid.Column="2" Orientation="Horizontal" Spacing="6">
+                <TextBox x:Name="PatchAtOffsetBox" Width="110" Watermark="0x1234" FontFamily="Consolas,monospace"
+                         ToolTip.Tip="Offset into the ELF to overwrite (0x-hex or decimal). Leave blank to skip." />
+                <TextBlock Text="=" VerticalAlignment="Center" />
+                <TextBox x:Name="PatchAtBytesBox" Width="200" Watermark="hex bytes" FontFamily="Consolas,monospace"
+                         ToolTip.Tip="Bytes to write at the offset, as hex." />
+              </StackPanel>
+            </Grid>
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Button Content="Byte-patch EBOOT…" Click="OnBytePatch" />
+              <CheckBox x:Name="BytePatchResignCheck" Content="fake-sign output (fSELF)" VerticalAlignment="Center"
+                        ToolTip.Tip="Write the patched result as a fake-signed SELF. Always on when the input was a SELF/EBOOT.BIN." />
+              <CheckBox x:Name="BytePatchNpdrmCheck" Content="NPDRM" VerticalAlignment="Center"
+                        ToolTip.Tip="Tag the fSELF as NPDRM (app type 8)." />
+            </StackPanel>
+            <TextBlock x:Name="BytePatchNotes" TextWrapping="Wrap" FontSize="12" Opacity="0.7" IsVisible="False" />
           </StackPanel>
         </ScrollViewer>
 

@@ -1,0 +1,19 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="PkgLens.Gui.Views.FolderInfoDialog"
+        Width="580" Height="500"
+        WindowStartupLocation="CenterOwner"
+        Title="Folder info">
+
+  <DockPanel Margin="12">
+    <TextBlock x:Name="HeaderText" DockPanel.Dock="Top" FontWeight="SemiBold" FontSize="12"
+               Margin="0,0,0,8" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" />
+
+    <Button DockPanel.Dock="Bottom" Content="Close" Click="OnClose"
+            HorizontalAlignment="Right" Margin="0,10,0,0" />
+
+    <ScrollViewer>
+      <TextBlock x:Name="InfoText" FontFamily="Consolas,monospace" FontSize="12" TextWrapping="Wrap" />
+    </ScrollViewer>
+  </DockPanel>
+</Window>

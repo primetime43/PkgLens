@@ -24,6 +24,15 @@ public sealed partial class SfoEditRow : ObservableObject
         Value = e.Value,
     };
 
+    /// <summary>Builds a fresh row for a newly-added key. MaxLength 0 lets the writer size the field to the value.</summary>
+    public static SfoEditRow NewKey(string key, bool isInt, string value) => new()
+    {
+        Key = key,
+        Format = isInt ? SfoFormat.Int32 : SfoFormat.Utf8,
+        MaxLength = 0,
+        Value = value,
+    };
+
     /// <summary>Converts back to a core <see cref="SfoEntry"/>. Assumes int values were validated.</summary>
     public SfoEntry ToEntry() => IsInt
         ? new SfoEntry { Key = Key, Format = Format, MaxLength = MaxLength, Value = Value, IntValue = uint.Parse(Value) }

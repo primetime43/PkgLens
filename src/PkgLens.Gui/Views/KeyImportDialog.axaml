@@ -9,8 +9,13 @@
     <TextBlock TextWrapping="Wrap"
                Text="Paste the standard NPDRM PKG PS3 AES key — 32 hex characters. It will be saved to ~/.pkglens so retail packages open automatically next time." />
 
-    <TextBox x:Name="KeyBox" Watermark="2E7B71D7C9C9A14EA3221F188828B8F8"
-             FontFamily="Consolas,monospace" AcceptsReturn="False" />
+    <StackPanel Orientation="Horizontal" Spacing="8">
+      <TextBox x:Name="KeyBox" Watermark="2E7B71D7C9C9A14EA3221F188828B8F8"
+               FontFamily="Consolas,monospace" AcceptsReturn="False"
+               HorizontalAlignment="Stretch" Width="330" />
+      <Button Content="From file…" Click="OnLoadFromFile"
+              ToolTip.Tip="Load the key from a .key file (16 raw bytes or 32 hex characters)." />
+    </StackPanel>
 
     <TextBlock x:Name="Feedback" IsVisible="False" TextWrapping="Wrap" FontSize="12" Foreground="#D08A00" />
 
