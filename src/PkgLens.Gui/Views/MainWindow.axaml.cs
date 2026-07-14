@@ -1323,7 +1323,8 @@ public partial class MainWindow : Window
         {
             Vm.Status = "Decrypting PSP ISO (this can take a minute)…";
             await Task.Run(() => package.ExtractSelectedPspIsoTo(dest));
-            Vm.Status = $"Decrypted PSP ISO → {dest}";
+            Vm.Status = $"Saved PSP ISO → {Path.GetFileName(dest)} — ready to run in a PSP emulator " +
+                        "(the EBOOT/.prx executables inside stay encrypted until the emulator loads them).";
         }
         catch (Exception ex)
         {
