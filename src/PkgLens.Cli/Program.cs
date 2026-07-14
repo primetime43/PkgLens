@@ -52,6 +52,10 @@ if (command == "unpbp")
 if (command == "undoc")
     return UndocCommand.Run(args.AsSpan(1));
 
+// The `psar` command inspects/decrypts a PSP NPUMDIMG image (DATA.PSAR) to an ISO.
+if (command == "psar")
+    return PsarCommand.Run(args.AsSpan(1));
+
 // The `patch` command applies magic patches to an EBOOT/ELF.
 if (command == "patch")
     return PatchCommand.Run(args.AsSpan(1));
