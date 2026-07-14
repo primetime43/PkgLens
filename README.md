@@ -29,10 +29,18 @@ Core, CLI, and a first GUI are implemented and tested (spec §11 steps 1–5, pl
 - **Extraction** (streamed) — single file, right-click, or **extract-all** to a folder (rebuilds the tree).
 - **File viewing** — render images (ICON0/PIC1), show text, or a hex dump.
 - **PSP EDAT / PGD decryption** — decrypt PSP `\0PSPEDAT` files and bare `\0PGD` files (e.g.
-  DOCINFO.EDAT, DOCUMENT.DAT) via the PSP AMCTRL/KIRK/PGD pipeline. **Fixed-key content only** (no RAP
+  DOCINFO.EDAT) via the PSP AMCTRL/KIRK/PGD pipeline. **Fixed-key content only** (no RAP
   needed); fuse-bound (per-console) content is out of scope. The PGD's built-in BBMac checks make a
   successful decrypt self-verifying — validated against a real PSP minis package. A different format
   from PS3 NPDRM EDAT, auto-detected by magic.
+- **PSP / minis manual (`DOCUMENT.DAT`)** — decrypt an in-game software manual into its PNG pages
+  (`pkglens undoc <DOCUMENT.DAT>`). The per-document DES key is recovered from the sibling
+  `DOCINFO.EDAT` (auto-located; XORed with a fixed constant), integrity-checked by SHA-1 HMACs, and
+  each page's PNG is extracted. Verified against a real minis manual (produces genuine PNG images).
+  All keys public; nothing is re-encrypted.
+- **PSP PBP container (`EBOOT.PBP`)** — split a PBP into its parts (`pkglens unpbp`): PARAM.SFO, icons,
+  `DATA.PSP` (the executable), and `DATA.PSAR` (the game payload — often an encrypted `NPUMDIMG` UMD
+  image). The container is keyless; the inner executable/UMD have their own encryption layers.
 - **EDAT / SDAT decryption** — decrypt NPDRM data files: SDAT with no key, EDAT with its RAP
   (or the free key). Viewer decrypts EDATs automatically; `pkglens decrypt` on the CLI. **Compressed**
   EDATs are supported too (LZ decompressor ported from RPCS3); the decrypt/metadata pipeline is verified
@@ -200,6 +208,7 @@ pkglens patch <eboot> [--sdk-version 4.00] [--find HEX --replace HEX] [--at OFF=
 pkglens folderinfo <folder> [--json]        # report on an extracted content folder
 pkglens scan  <dir> [--recursive] [--json | --csv]   # catalog a folder of .pkg files, one row each
 pkglens unpbp <EBOOT.PBP> [--out DIR] [--list]       # split a PSP PBP into its parts (SFO/icons/DATA.PSP/DATA.PSAR)
+pkglens undoc <DOCUMENT.DAT> [--docinfo FILE] [--out DIR]   # decrypt a PSP/minis manual to PNG pages
 pkglens pack  <folder> [--out FILE] [--resign [--rap FILE]]   # build a .pkg (optionally resign EBOOT)
 pkglens keys  import|status|where           # manage an optional override retail key
 ```

@@ -48,6 +48,10 @@ if (command == "scan")
 if (command == "unpbp")
     return UnpbpCommand.Run(args.AsSpan(1));
 
+// The `undoc` command decrypts a PSP DOCUMENT.DAT manual into PNG pages.
+if (command == "undoc")
+    return UndocCommand.Run(args.AsSpan(1));
+
 // The `patch` command applies magic patches to an EBOOT/ELF.
 if (command == "patch")
     return PatchCommand.Run(args.AsSpan(1));

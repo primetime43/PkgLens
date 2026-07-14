@@ -71,6 +71,7 @@ public static class PspEdatFile
     }
 
     /// <summary>Decrypts the PSP EDAT to its plaintext payload.</summary>
+    /// <summary>Decrypts a PSP EDAT / PGD fully into memory (used for small payloads, e.g. a DOCINFO.EDAT key).</summary>
     public static byte[] DecryptToArray(Stream source)
     {
         ArgumentNullException.ThrowIfNull(source);
