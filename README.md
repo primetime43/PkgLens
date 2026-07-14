@@ -11,8 +11,6 @@ app, both built on one dependency-free parsing core.
 > **PkgLens never forges Sony signatures.** Repacked and fake-signed files target jailbroken (CFW)
 > consoles, never stock retail. See [Scope](#scope).
 
-Design notes and format details live in [`pkgview-ng.md`](pkgview-ng.md).
-
 ## Install & run
 
 Build the solution, then run either front end:
