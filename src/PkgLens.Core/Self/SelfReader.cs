@@ -98,6 +98,7 @@ public static class SelfReader
             Segments = segments,
             ControlBlocks = control.Blocks,
             ControlFlags = control.ControlFlags,
+            FirmwareVersion = control.FirmwareVersion,
         };
     }
 
@@ -171,6 +172,7 @@ public static class SelfReader
         public IReadOnlyList<SelfControlBlock> Blocks { get; init; }
         public SelfNpdrmInfo? Npdrm { get; init; }
         public byte[]? ControlFlags { get; init; }
+        public ulong FirmwareVersion { get; init; }
     }
 
     /// <summary>
@@ -182,9 +184,10 @@ public static class SelfReader
         var blocks = new List<SelfControlBlock>();
         SelfNpdrmInfo? npdrm = null;
         byte[]? controlFlags = null;
+        ulong firmwareVersion = 0;
 
         if (offset == 0 || size == 0 || offset + size > (ulong)want)
-            return new ControlInfo { Blocks = blocks, Npdrm = null, ControlFlags = null };
+            return new ControlInfo { Blocks = blocks };
 
         int pos = (int)offset;
         int end = (int)(offset + size);
@@ -202,6 +205,11 @@ public static class SelfReader
             if (type == 1 && controlFlags is null && p + 0x20 <= want) // control flags
             {
                 controlFlags = buf.AsSpan(p, 0x20).ToArray();
+            }
+            else if (type == 2 && firmwareVersion == 0 && blockSize >= 0x40 && p + 0x30 <= want) // digest (0x40)
+            {
+                // ci_data_digest_40: digest1[0x14] + digest2[0x14] + fw_version (decimal, big-endian).
+                firmwareVersion = BinaryPrimitives.ReadUInt64BigEndian(buf.AsSpan(p + 0x28));
             }
             else if (type == 3 && npdrm is null) // NPDRM
             {
@@ -225,7 +233,13 @@ public static class SelfReader
             pos += (int)blockSize;
         }
 
-        return new ControlInfo { Blocks = blocks, Npdrm = npdrm, ControlFlags = controlFlags };
+        return new ControlInfo
+        {
+            Blocks = blocks,
+            Npdrm = npdrm,
+            ControlFlags = controlFlags,
+            FirmwareVersion = firmwareVersion,
+        };
     }
 
     private static ulong ReadU64(byte[] buf, int offset, string what)

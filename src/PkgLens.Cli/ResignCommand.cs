@@ -42,6 +42,14 @@ internal static class ResignCommand
                 case "--content-id":
                     if (i + 1 >= args.Length) { Console.Error.WriteLine("error: --content-id requires a value."); return ExitCode.Usage; }
                     opts.ContentId = args[++i]; break;
+                case "--fw-version":
+                    if (i + 1 >= args.Length) { Console.Error.WriteLine("error: --fw-version requires a value, e.g. 4.46."); return ExitCode.Usage; }
+                    if (!TryParseFirmware(args[++i], out ulong fw)) { Console.Error.WriteLine($"error: --fw-version '{args[i]}' is not a M.NN version."); return ExitCode.Usage; }
+                    opts.FirmwareVersion = fw; break;
+                case "--control-flags":
+                    if (i + 1 >= args.Length) { Console.Error.WriteLine("error: --control-flags requires 32 hex bytes."); return ExitCode.Usage; }
+                    if (!TryParseHex(args[++i], 0x20, out byte[] flags)) { Console.Error.WriteLine("error: --control-flags must be 64 hex chars (0x20 bytes)."); return ExitCode.Usage; }
+                    opts.ControlFlags = flags; break;
 
                 default:
                     if (a.StartsWith("--", StringComparison.Ordinal))
@@ -60,6 +68,7 @@ internal static class ResignCommand
             Console.Error.WriteLine("error: an <elf> file to resign is required.");
             Console.Error.WriteLine("usage: pkglens resign <elf> [--out FILE] [--npdrm]");
             Console.Error.WriteLine("       custom sign: [--auth-id HEX] [--vendor-id HEX] [--app-version HEX] [--type N] [--content-id CID]");
+            Console.Error.WriteLine("                    [--fw-version M.NN] [--control-flags 64-HEX]");
             return ExitCode.Usage;
         }
         if (!File.Exists(input))
@@ -109,5 +118,30 @@ internal static class ResignCommand
         if (v > uint.MaxValue) { Console.Error.WriteLine($"error: {flag} value is too large (max 0xFFFFFFFF)."); return false; }
         value = (uint)v;
         return true;
+    }
+
+    /// <summary>Parses a firmware version "M.NN" (e.g. 4.46) into scetool's decimal form (major*10000 + minor*100).</summary>
+    private static bool TryParseFirmware(string text, out ulong decver)
+    {
+        decver = 0;
+        string[] parts = text.Trim().Split('.');
+        if (parts.Length != 2 ||
+            !uint.TryParse(parts[0], out uint major) ||
+            !uint.TryParse(parts[1], out uint minor) || minor >= 100)
+            return false;
+        decver = major * 10000UL + minor * 100UL;
+        return true;
+    }
+
+    /// <summary>Parses exactly <paramref name="byteLen"/> bytes of hex (optional 0x / whitespace).</summary>
+    private static bool TryParseHex(string text, int byteLen, out byte[] bytes)
+    {
+        bytes = Array.Empty<byte>();
+        string t = text.Trim();
+        if (t.StartsWith("0x", StringComparison.OrdinalIgnoreCase)) t = t[2..];
+        t = new string(t.Where(c => !char.IsWhiteSpace(c)).ToArray());
+        if (t.Length != byteLen * 2) return false;
+        try { bytes = Convert.FromHexString(t); return true; }
+        catch (FormatException) { return false; }
     }
 }

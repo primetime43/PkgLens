@@ -274,7 +274,7 @@
             </StackPanel>
 
             <Expander x:Name="FselfCustomExpander" Header="Custom sign fields (optional)">
-              <Grid ColumnDefinitions="92,10,*" RowDefinitions="Auto,6,Auto,6,Auto,6,Auto" Margin="0,4">
+              <Grid ColumnDefinitions="92,10,*" RowDefinitions="Auto,6,Auto,6,Auto,6,Auto,6,Auto,6,Auto" Margin="0,4">
                 <TextBlock Grid.Row="0" Grid.Column="0" Text="Auth ID" VerticalAlignment="Center" />
                 <TextBox   Grid.Row="0" Grid.Column="2" x:Name="FselfAuthIdBox"
                            Watermark="0x1010000001000003" FontFamily="Consolas,monospace" />
@@ -284,8 +284,14 @@
                 <TextBlock Grid.Row="4" Grid.Column="0" Text="App version" VerticalAlignment="Center" />
                 <TextBox   Grid.Row="4" Grid.Column="2" x:Name="FselfAppVerBox"
                            Watermark="0x0001000000000000" FontFamily="Consolas,monospace" />
-                <TextBlock Grid.Row="6" Grid.Column="0" Text="Content ID" VerticalAlignment="Center" />
-                <TextBox   Grid.Row="6" Grid.Column="2" x:Name="FselfContentIdBox"
+                <TextBlock Grid.Row="6" Grid.Column="0" Text="FW version" VerticalAlignment="Center" />
+                <TextBox   Grid.Row="6" Grid.Column="2" x:Name="FselfFwVerBox"
+                           Watermark="e.g. 4.46 (blank = none)" FontFamily="Consolas,monospace" />
+                <TextBlock Grid.Row="8" Grid.Column="0" Text="Ctrl flags" VerticalAlignment="Center" />
+                <TextBox   Grid.Row="8" Grid.Column="2" x:Name="FselfCtrlFlagsBox"
+                           Watermark="64 hex chars (0x20 bytes); blank = none" FontFamily="Consolas,monospace" />
+                <TextBlock Grid.Row="10" Grid.Column="0" Text="Content ID" VerticalAlignment="Center" />
+                <TextBox   Grid.Row="10" Grid.Column="2" x:Name="FselfContentIdBox"
                            Watermark="(NPDRM only) UP0001-NPUB30910_00-EXAMPLE000000001" FontFamily="Consolas,monospace" />
               </Grid>
             </Expander>

@@ -16,7 +16,7 @@ public enum PkgMetadataId : uint
     MakePackageNpdrmRevision = 0x05,
     TitleId = 0x06,
     QaDigest = 0x07,
-    SystemVersion = 0x08,
+    SoftwareRevision = 0x08,
     InstallDirectory = 0x0A,
     PsVitaItemInfo = 0x0E,
     PsVitaSfoInfo = 0x0F,
@@ -87,9 +87,13 @@ public sealed class PkgMetadataEntry
     public PkgMetadataId? Id =>
         Enum.IsDefined(typeof(PkgMetadataId), RawId) ? (PkgMetadataId)RawId : null;
 
-    /// <summary>Interprets the first 4 payload bytes as a big-endian u32, if present.</summary>
+    /// <summary>Interprets the payload as a big-endian u32 only when it is exactly 4 bytes.</summary>
     public uint? AsUInt32() =>
-        Data.Length >= 4 ? BinaryPrimitives.ReadUInt32BigEndian(Data) : null;
+        Data.Length == 4 ? BinaryPrimitives.ReadUInt32BigEndian(Data) : null;
+
+    /// <summary>Interprets the payload as a big-endian u64 only when it is exactly 8 bytes.</summary>
+    public ulong? AsUInt64() =>
+        Data.Length == 8 ? BinaryPrimitives.ReadUInt64BigEndian(Data) : null;
 
     /// <summary>Lower-case hex rendering of the raw payload, for display of unknown entries.</summary>
     public string ToHex() => Convert.ToHexString(Data).ToLowerInvariant();
@@ -115,6 +119,29 @@ public sealed class PkgMetadata
         ContentTypeRaw is uint v && Enum.IsDefined(typeof(PkgContentType), v)
             ? (PkgContentType)v
             : null;
+
+    /// <summary>
+    /// The "software revision" (id 0x08) decoded into firmware / version / app-version, if present.
+    /// The 8-byte payload is <c>unk[1] · firmware[3] · version[2] · app_version[2]</c>, each shown as
+    /// a hex version with a dot after the first byte (matching RPCS3's interpretation).
+    /// </summary>
+    public string? SoftwareRevisionText
+    {
+        get
+        {
+            var e = Find(PkgMetadataId.SoftwareRevision);
+            if (e is null || e.Data.Length < 8) return null;
+            return $"firmware {HexVersion(e.Data, 1, 3)}, version {HexVersion(e.Data, 4, 2)}, " +
+                   $"app {HexVersion(e.Data, 6, 2)}";
+        }
+    }
+
+    /// <summary>Hex-encodes <paramref name="len"/> bytes at <paramref name="offset"/> with a dot after the first byte (e.g. 04 75 00 → "04.7500").</summary>
+    private static string HexVersion(byte[] data, int offset, int len)
+    {
+        string hex = Convert.ToHexString(data, offset, len).ToLowerInvariant();
+        return hex.Length > 2 ? hex.Insert(2, ".") : hex;
+    }
 
     /// <summary>The install directory string (0x0A), if present.</summary>
     public string? InstallDirectory

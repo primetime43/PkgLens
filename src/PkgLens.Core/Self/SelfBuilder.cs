@@ -79,6 +79,18 @@ public static class SelfBuilder
 
         /// <summary>Content id for the NPDRM control block (NPDRM builds only; default is the fake 0x30-byte id).</summary>
         public string? ContentId { get; set; }
+
+        /// <summary>
+        /// Firmware version to record in the type-2 digest control block (scetool <c>-6</c>), as a
+        /// decimal version — <c>major*10000 + minor*100</c> (e.g. 4.46 → 44600). Null leaves it 0.
+        /// </summary>
+        public ulong? FirmwareVersion { get; set; }
+
+        /// <summary>
+        /// A 0x20-byte control-flags payload written as a type-1 control-info block (scetool <c>-8</c>).
+        /// Null omits the block entirely (the fSELF default — matching fself.py).
+        /// </summary>
+        public byte[]? ControlFlags { get; set; }
     }
 
     /// <summary>
@@ -97,6 +109,8 @@ public static class SelfBuilder
         ArgumentNullException.ThrowIfNull(elf);
         ArgumentNullException.ThrowIfNull(options);
         bool npdrm = options.Npdrm;
+        if (options.ControlFlags is { } cf && cf.Length != 0x20)
+            throw new ArgumentException("Control flags must be exactly 0x20 (32) bytes.", nameof(options));
         if (elf.Length < ElfHeaderLen ||
             elf[0] != 0x7F || elf[1] != 0x45 || elf[2] != 0x4C || elf[3] != 0x46)
             throw new PkgFormatException(
@@ -124,7 +138,8 @@ public static class SelfBuilder
         long controlInfoRaw = sectionInfoOff + (long)SectionInfoLen * ePhnum;
         long controlInfoOff = Align(controlInfoRaw, 0x10);
 
-        long controlInfoSize = SubHeaderLen + Type2PayloadLen;       // 0x40 (type-2 block)
+        long controlFlagsSize = options.ControlFlags is not null ? SubHeaderLen + 0x20 : 0; // type-1 block
+        long controlInfoSize = controlFlagsSize + SubHeaderLen + Type2PayloadLen;   // (+ type-1) + type-2 block
         if (npdrm)
             controlInfoSize += SubHeaderLen + 0x70;                  // + NPDRM block (fself.py sizing)
 
@@ -189,8 +204,8 @@ public static class SelfBuilder
         }
         Pad(outMs, controlInfoRaw, 0x10);
 
-        // ---- control info: the type-2 "cap flags" block (+ NPDRM block if requested) ----
-        WriteControlInfo(outMs, npdrm, options.ContentId);
+        // ---- control info: optional type-1 control flags, the type-2 digest block, + NPDRM if requested ----
+        WriteControlInfo(outMs, npdrm, options.ContentId, options.ControlFlags, options.FirmwareVersion);
         Pad(outMs, endOfHeader, 0x80);
 
         // ---- the whole ELF, unencrypted ----
@@ -199,17 +214,33 @@ public static class SelfBuilder
         return outMs.ToArray();
     }
 
-    private static void WriteControlInfo(Stream outMs, bool npdrm, string? contentId)
+    private static void WriteControlInfo(Stream outMs, bool npdrm, string? contentId,
+        byte[]? controlFlags, ulong? firmwareVersion)
     {
-        // Sub-header: type 2, size 0x40, cont = 1 if an NPDRM block follows.
         Span<byte> sub = stackalloc byte[SubHeaderLen];
+
+        // Optional type-1 control-flags block (0x10 header + 0x20 flags). Its "next" is always 1
+        // because the type-2 digest block always follows.
+        if (controlFlags is not null)
+        {
+            BinaryPrimitives.WriteUInt32BigEndian(sub[0x00..], 1);
+            BinaryPrimitives.WriteUInt32BigEndian(sub[0x04..], 0x30);
+            BinaryPrimitives.WriteUInt64BigEndian(sub[0x08..], 1);
+            outMs.Write(sub);
+            outMs.Write(controlFlags, 0, 0x20);
+        }
+
+        // Type-2 digest block: type 2, size 0x40, next = 1 if an NPDRM block follows. The 0x30 payload
+        // is the ci_data_digest_40 struct: digest1 (0x14 magic) + digest2 (0x14, left 0) + fw_version.
         BinaryPrimitives.WriteUInt32BigEndian(sub[0x00..], 2);
         BinaryPrimitives.WriteUInt32BigEndian(sub[0x04..], 0x40);
         BinaryPrimitives.WriteUInt64BigEndian(sub[0x08..], npdrm ? 1u : 0u);
         outMs.Write(sub);
 
         Span<byte> type2 = stackalloc byte[Type2PayloadLen];
-        Type2MagicBits.CopyTo(type2);      // 0x14 magic + 0x14 digest(zero) + 0x08 pad(zero)
+        Type2MagicBits.CopyTo(type2);      // digest1: 0x14 magic + digest2: 0x14 (zero)
+        if (firmwareVersion is { } fw)
+            BinaryPrimitives.WriteUInt64BigEndian(type2[0x28..], fw);   // fw_version at struct offset 0x28
         outMs.Write(type2);
 
         if (!npdrm) return;

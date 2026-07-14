@@ -172,6 +172,9 @@ internal static class Render
         if (self.ControlFlags is { } cf)
             Console.WriteLine($"Ctrl flags : {Convert.ToHexString(cf)}");
 
+        if (self.FirmwareVersionText is { } fw)
+            Console.WriteLine($"FW version : {fw}");
+
         if (self.Segments.Count > 0)
         {
             Console.WriteLine($"Segments   : {self.Segments.Count}");

@@ -248,14 +248,18 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
         var rows = new List<MetadataRow>();
         foreach (var e in metadata.Entries)
         {
-            string value = e.AsUInt32() is uint u
-                ? $"{u} (0x{u:X})"
-                : e.Data.Length <= 32 ? e.ToHex() : $"{e.Data.Length} bytes";
-
-            if (e.Id == PkgMetadataId.ContentType && metadata.ContentType is { } ct)
-                value = $"{(uint)ct} ({ct})";
-            else if (e.Id == PkgMetadataId.DrmType && e.AsUInt32() is uint drm)
-                value = $"{drm} ({DrmType.Name(drm)})";
+            // Render each entry by what it actually is — several fields are u64, a 24-byte digest, or
+            // a decoded version, not the 4-byte int the display used to assume for everything.
+            string value = e.Id switch
+            {
+                PkgMetadataId.ContentType when metadata.ContentType is { } ct => $"{(uint)ct} ({ct})",
+                PkgMetadataId.DrmType when e.AsUInt32() is uint drm => $"{drm} ({DrmType.Name(drm)})",
+                PkgMetadataId.SoftwareRevision when metadata.SoftwareRevisionText is { } sr => sr,
+                PkgMetadataId.QaDigest => e.ToHex(),
+                _ => e.AsUInt32() is uint u ? $"{u} (0x{u:X})"
+                   : e.AsUInt64() is ulong u64 ? $"{u64} (0x{u64:X})"
+                   : e.Data.Length <= 32 ? e.ToHex() : $"{e.Data.Length} bytes",
+            };
 
             rows.Add(new MetadataRow { Label = e.Label, Value = value });
         }

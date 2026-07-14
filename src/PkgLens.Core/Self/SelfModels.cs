@@ -138,6 +138,17 @@ public sealed class SelfInfo
     /// <summary>The 0x20-byte control-flags payload (control-info block type 1), if present.</summary>
     public byte[]? ControlFlags { get; init; }
 
+    /// <summary>
+    /// Firmware version recorded in the type-2 digest control block, as a decimal value
+    /// (<c>major*10000 + minor*100</c>). 0 when unset.
+    /// </summary>
+    public ulong FirmwareVersion { get; init; }
+
+    /// <summary>The firmware version as "M.NN" (e.g. 44600 → "4.46"), or null when unset.</summary>
+    public string? FirmwareVersionText => FirmwareVersion == 0
+        ? null
+        : $"{FirmwareVersion / 10000}.{FirmwareVersion % 10000 / 100:D2}";
+
     public SelfProgramType? ProgramType =>
         Enum.IsDefined(typeof(SelfProgramType), RawProgramType) ? (SelfProgramType)RawProgramType : null;
 

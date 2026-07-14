@@ -804,6 +804,30 @@ public partial class MainWindow : Window
         if (!TryHexU64(this.FindControl<TextBox>("FselfAppVerBox")!.Text, "App version", out var ver, out error)) return false;
         if (ver is not null) opts.AppVersion = ver;
 
+        string fw = (this.FindControl<TextBox>("FselfFwVerBox")!.Text ?? string.Empty).Trim();
+        if (fw.Length > 0)
+        {
+            string[] parts = fw.Split('.');
+            if (parts.Length != 2 || !uint.TryParse(parts[0], out uint major) ||
+                !uint.TryParse(parts[1], out uint minor) || minor >= 100)
+            {
+                error = "FW version must be M.NN (e.g. 4.46).";
+                return false;
+            }
+            opts.FirmwareVersion = major * 10000UL + minor * 100UL;
+        }
+
+        string flagsText = (this.FindControl<TextBox>("FselfCtrlFlagsBox")!.Text ?? string.Empty).Trim();
+        if (flagsText.Length > 0)
+        {
+            if (flagsText.StartsWith("0x", StringComparison.OrdinalIgnoreCase)) flagsText = flagsText[2..];
+            flagsText = new string(flagsText.Where(c => !char.IsWhiteSpace(c)).ToArray());
+            byte[]? flags = null;
+            if (flagsText.Length == 0x40) { try { flags = Convert.FromHexString(flagsText); } catch (FormatException) { } }
+            if (flags is null) { error = "Control flags must be 64 hex characters (0x20 bytes)."; return false; }
+            opts.ControlFlags = flags;
+        }
+
         string cid = (this.FindControl<TextBox>("FselfContentIdBox")!.Text ?? string.Empty).Trim();
         if (cid.Length > 0) opts.ContentId = cid;
         return true;
@@ -918,6 +942,18 @@ public partial class MainWindow : Window
         sb.AppendLine($"ELF size   : {s.DataLength:n0} bytes (decrypted)");
         if (s.Elf is { } elf)
             sb.AppendLine($"ELF        : {(elf.Is64Bit ? "64-bit" : "32-bit")} {(elf.IsBigEndian ? "big-endian" : "little-endian")}, {elf.TypeText}");
+        if (s.ControlBlocks.Count > 0)
+            sb.AppendLine($"Control    : {string.Join(", ", s.ControlBlocks.Select(b => b.TypeText))}");
+        if (s.ControlFlags is { } cf)
+            sb.AppendLine($"Ctrl flags : {Convert.ToHexString(cf)}");
+        if (s.FirmwareVersionText is { } fw)
+            sb.AppendLine($"FW version : {fw}");
+        if (s.Segments.Count > 0)
+        {
+            sb.AppendLine($"Segments   : {s.Segments.Count}");
+            foreach (var seg in s.Segments)
+                sb.AppendLine($"  [{seg.Index}] offset 0x{seg.Offset:X}  size {seg.Size:n0}  {seg.CompressedText}, {seg.EncryptedText}");
+        }
         if (s.Npdrm is { } npd)
         {
             sb.AppendLine($"Content ID : {npd.ContentId}");

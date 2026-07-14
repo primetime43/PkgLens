@@ -38,14 +38,17 @@ Core, CLI, and a first GUI are implemented and tested (spec §11 steps 1–5, pl
   truncation, corruption, and modified/repacked headers. ECDSA signature check is not yet included.
 - **SELF inspector** — read an `EBOOT.BIN` / `.self` / `.sprx` header (`pkglens self <eboot>`): program
   type, key revision, the embedded ELF header, the **segment table** (offset / size / compressed /
-  encrypted per segment), the **control-info blocks** (control flags, file digest, NPDRM), and NPDRM
-  content id — all no keys needed.
+  encrypted per segment), the **control-info blocks** (control flags, file digest, NPDRM), the
+  **firmware version**, and NPDRM content id — all no keys needed.
 - **Resign (ELF → fSELF)** — fake-sign a plaintext ELF into a SELF (`pkglens resign <elf>`) that boots on
   a jailbroken (CFW) PS3. No keys; the ELF is stored unencrypted with key revision `0x8000`, so it runs
   where signature checks are patched (CFW) — never on stock retail. **Custom Sign** lets you override the
-  `app_info` fields — auth id, vendor id, app/firmware version, program type — and the NPDRM content id
-  (`--auth-id`, `--vendor-id`, `--app-version`, `--type`, `--content-id`, or the Pack/Resign page's
-  *Custom sign fields* panel); unset fields use the fSELF defaults.
+  `app_info` fields — auth id, vendor id, app version, program type — plus the **firmware version** (in the
+  type-2 digest control block) and the 32-byte **control flags** (a type-1 control-info block), and the
+  NPDRM content id (`--auth-id`, `--vendor-id`, `--app-version`, `--type`, `--fw-version M.NN`,
+  `--control-flags 64-HEX`, `--content-id`, or the Pack/Resign page's *Custom sign fields* panel); unset
+  fields use the fSELF defaults. (Capability flags and NPDRM real-filename aren't settable: they live in
+  the encrypted-metadata / real-signature path a keyless fSELF doesn't have.)
 - **Resign-on-pack** — pack a content folder with `--resign` (or the Pack page's *Resign EBOOT.BIN as it
   packs* checkbox) and PkgLens fake-signs the folder's `EBOOT.BIN` to an fSELF as it builds, so the packaged
   game boots on CFW without its license. A licensed EBOOT needs its RAP (`--rap` / the RAP picker) to decrypt
@@ -115,7 +118,7 @@ Legend: ✅ covered · 🟡 partial · ⛔ out of scope (needs signing keys) · 
 | 10 | Decrypt DEX EBOOT (fSELF) | ✅ | `unself` handles fake-signed / debug SELFs |
 | 11 | Resign to NON-DRM EBOOT — DEX/OFW | ⛔ | OFW signature check needs debug signing keys |
 | 12 | Resign to NPDRM EBOOT — DEX/OFW | ⛔ | Same — signing keys, out of scope |
-| O | Output Method *(switch)* | 🟡 | One fSELF profile; no firmware-target selector |
+| O | Output Method *(switch)* | 🟡 | fSELF profile with settable fw-version + control flags; cap flags need signing |
 | D | Compress Data *(switch)* | ⬜ | fSELF segments are stored uncompressed |
 
 **Beyond TrueAncestor**, PkgLens also has a full package-inspector GUI (tree + list + image/text/hex viewer),

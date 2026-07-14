@@ -124,6 +124,53 @@ public class SelfBuilderTests
     }
 
     [Fact]
+    public void MakeFakeSelf_CustomSign_WritesFirmwareVersionAndControlFlags()
+    {
+        byte[] elf = BuildElf(new (uint, byte[])[] { (1u, new byte[] { 1, 2, 3, 4 }) });
+        byte[] flags = new byte[0x20];
+        for (int i = 0; i < flags.Length; i++) flags[i] = (byte)(0xA0 + i);
+
+        byte[] fself = SelfBuilder.MakeFakeSelf(elf, new SelfBuilder.FakeSelfOptions
+        {
+            FirmwareVersion = 44600, // 4.46
+            ControlFlags = flags,
+        });
+
+        var info = SelfReader.ParseInfo(new MemoryStream(fself));
+        Assert.Equal(44600UL, info.FirmwareVersion);
+        Assert.Equal("4.46", info.FirmwareVersionText);
+        Assert.Equal(flags, info.ControlFlags);
+        Assert.Contains(info.ControlBlocks, b => b.RawType == 1); // type-1 control-flags block added
+        Assert.Contains(info.ControlBlocks, b => b.RawType == 2); // type-2 digest block still present
+
+        // Adding a control-flags block must not break the appended-ELF round-trip.
+        int at = (int)info.HeaderLength;
+        Assert.Equal(elf, fself[at..(at + elf.Length)]);
+    }
+
+    [Fact]
+    public void MakeFakeSelf_FirmwareVersionOnly_FitsExistingDigestBlock()
+    {
+        byte[] elf = BuildElf(new (uint, byte[])[] { (1u, new byte[] { 5, 5, 5, 5 }) });
+
+        byte[] def = SelfBuilder.MakeFakeSelf(elf, new SelfBuilder.FakeSelfOptions());
+        byte[] withFw = SelfBuilder.MakeFakeSelf(elf, new SelfBuilder.FakeSelfOptions { FirmwareVersion = 40000 });
+
+        // fw_version occupies the existing digest block's slot — no layout/size change.
+        Assert.Equal(def.Length, withFw.Length);
+        Assert.Equal("4.00", SelfReader.ParseInfo(new MemoryStream(withFw)).FirmwareVersionText);
+        Assert.Null(SelfReader.ParseInfo(new MemoryStream(def)).FirmwareVersionText); // default: none
+    }
+
+    [Fact]
+    public void MakeFakeSelf_RejectsWrongLengthControlFlags()
+    {
+        byte[] elf = BuildElf(new (uint, byte[])[] { (1u, new byte[] { 1, 2, 3, 4 }) });
+        Assert.Throws<ArgumentException>(() =>
+            SelfBuilder.MakeFakeSelf(elf, new SelfBuilder.FakeSelfOptions { ControlFlags = new byte[16] }));
+    }
+
+    [Fact]
     public void MakeFakeSelf_CustomSign_DefaultsMatchLegacyOverload()
     {
         byte[] elf = BuildElf(new (uint, byte[])[] { (1u, new byte[] { 9, 8, 7, 6 }) });
