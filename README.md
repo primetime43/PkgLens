@@ -39,8 +39,13 @@ Core, CLI, and a first GUI are implemented and tested (spec §11 steps 1–5, pl
   each page's PNG is extracted. Verified against a real minis manual (produces genuine PNG images).
   All keys public; nothing is re-encrypted.
 - **PSP PBP container (`EBOOT.PBP`)** — split a PBP into its parts (`pkglens unpbp`): PARAM.SFO, icons,
-  `DATA.PSP` (the executable), and `DATA.PSAR` (the game payload — often an encrypted `NPUMDIMG` UMD
-  image). The container is keyless; the inner executable/UMD have their own encryption layers.
+  `DATA.PSP` (the executable), and `DATA.PSAR` (the game payload).
+- **PSP minis / remaster ISO (`NPUMDIMG`)** — decrypt a minis game's `DATA.PSAR` back to a plain,
+  mountable PSP `.iso` (`pkglens psar decrypt <DATA.PSAR>`, or the GUI's *Extract PSP ISO…* on an
+  `EBOOT.PBP`). **Keyless — no RAP or license needed**: the version key is recovered from the image's
+  own BBMac (AMCTRL `bbmac_getkey`), then the header, block table, and each LZRC-compressed block are
+  decrypted. Verified byte-exact against a real minis (produces a valid ISO9660 "PSP GAME" image). This
+  also validates the shared LZRC/EDAT range-coder against real Sony-compressed data.
 - **EDAT / SDAT decryption** — decrypt NPDRM data files: SDAT with no key, EDAT with its RAP
   (or the free key). Viewer decrypts EDATs automatically; `pkglens decrypt` on the CLI. **Compressed**
   EDATs are supported too (LZ decompressor ported from RPCS3); the decrypt/metadata pipeline is verified
@@ -212,6 +217,7 @@ pkglens folderinfo <folder> [--json]        # report on an extracted content fol
 pkglens scan  <dir> [--recursive] [--json | --csv]   # catalog a folder of .pkg files, one row each
 pkglens unpbp <EBOOT.PBP> [--out DIR] [--list]       # split a PSP PBP into its parts (SFO/icons/DATA.PSP/DATA.PSAR)
 pkglens undoc <DOCUMENT.DAT> [--docinfo FILE] [--out DIR]   # decrypt a PSP/minis manual to PNG pages
+pkglens psar  decrypt <DATA.PSAR> [--out FILE]       # decrypt a PSP NPUMDIMG (minis) to .iso (keyless)
 pkglens pack  <folder> [--out FILE] [--resign [--rap FILE]]   # build a .pkg (optionally resign EBOOT)
 pkglens keys  import|status|where           # manage an optional override retail key
 ```

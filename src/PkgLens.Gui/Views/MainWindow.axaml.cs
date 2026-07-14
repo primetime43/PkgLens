@@ -1300,6 +1300,37 @@ public partial class MainWindow : Window
         }
     }
 
+    private async void OnExtractPspIso(object? sender, RoutedEventArgs e)
+    {
+        if (Vm.Package is not { SelectedIsPbp: true } package)
+        {
+            Vm.Status = "Select an EBOOT.PBP file first.";
+            return;
+        }
+
+        string baseName = Path.GetFileNameWithoutExtension(package.SelectedItem?.Name ?? "GAME");
+        var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "Save the decrypted PSP ISO as…",
+            SuggestedFileName = (package.TitleId is { Length: > 0 } tid ? tid : baseName) + ".iso",
+            DefaultExtension = "iso",
+            FileTypeChoices = new[] { new FilePickerFileType("PSP ISO") { Patterns = new[] { "*.iso" } } },
+        });
+        if (file?.TryGetLocalPath() is not { } dest)
+            return;
+
+        try
+        {
+            Vm.Status = "Decrypting PSP ISO (this can take a minute)…";
+            await Task.Run(() => package.ExtractSelectedPspIsoTo(dest));
+            Vm.Status = $"Decrypted PSP ISO → {dest}";
+        }
+        catch (Exception ex)
+        {
+            Vm.Status = $"ISO extract failed: {ex.Message}";
+        }
+    }
+
     private void OnEditSfoClick(object? sender, RoutedEventArgs e) => EditSfo();
 
     private async void EditSfo()

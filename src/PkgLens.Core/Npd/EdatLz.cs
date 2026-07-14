@@ -8,9 +8,10 @@ namespace PkgLens.Core.Npd;
 /// under-run).
 ///
 /// The stored-block (<c>head &gt; 0x80</c>) branch intentionally returns the copied length instead of
-/// the reference's 0 (which truncates output — see below). NOTE: a runtime check of the range-coded
-/// path against a real Sony-compressed EDAT block is still pending a sample (no public compressor
-/// exists to synthesize one).
+/// the reference's 0 (which truncates output — see below). The <paramref name="size"/> argument is the
+/// <em>decompressed</em> (output) length, not the compressed input length. The range-coded path is now
+/// verified against real Sony-compressed data: this same decoder decompresses PSP NPUMDIMG blocks (LZRC)
+/// to a byte-exact ISO (see <see cref="Psp.NpumdImg"/>).
 /// </summary>
 internal static class EdatLz
 {

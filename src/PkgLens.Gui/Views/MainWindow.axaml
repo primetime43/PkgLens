@@ -201,6 +201,8 @@
                                 IsVisible="{Binding SelectedIsDocument}" />
                       <MenuItem Header="Unpack PBP…" Click="OnUnpackPbp"
                                 IsVisible="{Binding SelectedIsPbp}" />
+                      <MenuItem Header="Extract PSP ISO…" Click="OnExtractPspIso"
+                                IsVisible="{Binding SelectedIsPbp}" />
                     </ContextMenu>
                   </DataGrid.ContextMenu>
                   <DataGrid.Columns>

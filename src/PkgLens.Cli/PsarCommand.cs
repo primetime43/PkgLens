@@ -15,20 +15,18 @@ internal static class PsarCommand
     {
         if (args.Length == 0 || args[0] is "-h" or "--help")
         {
-            Console.Error.WriteLine("usage: pkglens psar info <DATA.PSAR> [--rap FILE | --klic HEX]");
-            Console.Error.WriteLine("       pkglens psar decrypt <DATA.PSAR> [--rap FILE | --klic HEX] [--out FILE]");
+            Console.Error.WriteLine("usage: pkglens psar info <DATA.PSAR>");
+            Console.Error.WriteLine("       pkglens psar decrypt <DATA.PSAR> [--out FILE]");
             return ExitCode.Usage;
         }
 
         string sub = args[0].ToLowerInvariant();
-        string? input = null, rap = null, klicHex = null, outPath = null;
+        string? input = null, outPath = null;
         for (int i = 1; i < args.Length; i++)
         {
             string a = args[i];
             switch (a)
             {
-                case "--rap": if (++i >= args.Length) { return Missing("--rap"); } rap = args[i]; break;
-                case "--klic": case "--klicensee": if (++i >= args.Length) { return Missing(a); } klicHex = args[i]; break;
                 case "--out": if (++i >= args.Length) { return Missing("--out"); } outPath = args[i]; break;
                 default:
                     if (a.StartsWith("--", StringComparison.Ordinal)) { Console.Error.WriteLine($"error: unknown option '{a}'."); return ExitCode.Usage; }
@@ -41,10 +39,6 @@ internal static class PsarCommand
         if (input is null) { Console.Error.WriteLine("error: a <DATA.PSAR> file is required."); return ExitCode.Usage; }
         if (!File.Exists(input)) { Console.Error.WriteLine($"error: file not found: {input}"); return ExitCode.Usage; }
 
-        byte[]? klic;
-        try { klic = ResolveKlic(rap, klicHex); }
-        catch (Exception ex) { Console.Error.WriteLine($"error: {ex.Message}"); return ExitCode.Usage; }
-
         try
         {
             using var src = File.OpenRead(input);
@@ -53,16 +47,16 @@ internal static class PsarCommand
             {
                 var head = new byte[0x100];
                 src.ReadExactly(head, 0, head.Length);
-                var info = NpumdImg.ParseHeader(head, klic);
+                var info = NpumdImg.ParseHeader(head);
                 Console.WriteLine($"Content ID : {info.ContentId}");
                 Console.WriteLine($"Disc ID    : {info.DiscId}");
-                Console.WriteLine($"NP flags   : 0x{info.NpFlags:X}  ({(info.NeedsKlicensee ? "RAP-licensed" : "fixed-key")})");
+                Console.WriteLine($"NP flags   : 0x{info.NpFlags:X}");
                 Console.WriteLine($"Sector size: 0x{info.SectorSize:X}");
                 Console.WriteLine($"Block basis: {info.BlockBasis} sectors ({info.BlockSize:n0} bytes/block)");
                 Console.WriteLine($"Sectors    : {info.TotalSectors:n0}");
                 Console.WriteLine($"Blocks     : {info.BlockCount:n0}");
                 Console.WriteLine($"ISO size   : {info.IsoSize:n0} bytes");
-                Console.WriteLine($"Header     : {(info.HeaderValid ? "decrypted OK (klicensee correct)" : "INVALID — wrong klicensee/RAP")}");
+                Console.WriteLine($"Header     : {(info.HeaderValid ? "decrypted OK (version key recovered)" : "INVALID (corrupt/unsupported)")}");
                 return info.HeaderValid ? ExitCode.Ok : ExitCode.KeyOrDecryptError;
             }
 
@@ -70,7 +64,7 @@ internal static class PsarCommand
             {
                 string dest = outPath ?? Path.ChangeExtension(input, ".iso");
                 using (var dst = File.Create(dest))
-                    NpumdImg.DecryptToIso(src, dst, klic);
+                    NpumdImg.DecryptToIso(src, dst);
                 Console.WriteLine($"Decrypted NPUMDIMG → {Path.GetFullPath(dest)} ({new FileInfo(dest).Length:n0} bytes)");
                 return ExitCode.Ok;
             }
@@ -80,17 +74,6 @@ internal static class PsarCommand
         }
         catch (PkgKeyException ex) { Console.Error.WriteLine($"key error: {ex.Message}"); return ExitCode.KeyOrDecryptError; }
         catch (PkgFormatException ex) { Console.Error.WriteLine($"parse error: {ex.Message}"); return ExitCode.ParseError; }
-    }
-
-    private static byte[]? ResolveKlic(string? rap, string? klicHex)
-    {
-        if (klicHex is not null) return NpKlic.ParseHex(klicHex);
-        if (rap is not null)
-        {
-            if (!File.Exists(rap)) throw new FileNotFoundException($"RAP not found: {rap}");
-            return NpKlic.FromRapFile(rap);
-        }
-        return null;
     }
 
     private static int Missing(string flag)

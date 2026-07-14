@@ -6,9 +6,10 @@ using Xunit;
 namespace PkgLens.Core.Tests;
 
 /// <summary>
-/// Covers NPUMDIMG detection and the safety gates. The full ISO decrypt is not yet exercised: the
-/// version-key derivation from the RAP for PSP NPUMDIMG is still being pinned down, and the decryptor
-/// deliberately refuses to emit an ISO until the header validates (so it never produces garbage).
+/// Covers NPUMDIMG detection and the license-free header handling. The version key is recovered from
+/// the header itself (AMCTRL bbmac_getkey) — no RAP. The full ISO decrypt is verified against a real
+/// minis image during development (documented, not committed). The decryptor's HeaderValid gate keeps
+/// it from emitting a garbage ISO for a corrupt/unsupported header.
 /// </summary>
 public class NpumdImgTests
 {
@@ -29,15 +30,17 @@ public class NpumdImgTests
     }
 
     [Fact]
-    public void ParseHeader_RapLicensed_WithoutKlic_ThrowsKeyError()
+    public void ParseHeader_SyntheticHeader_RecoversKeyThenReportsInvalidLayout()
     {
-        // np_flags bit 1 set → RAP-licensed; no klicensee supplied must be a key error, not a crash.
-        Assert.Throws<PkgKeyException>(() => NpumdImg.ParseHeader(Header(2), null));
+        // Version-key recovery runs with no license; a synthetic (zero-body) header simply reports an
+        // invalid layout rather than throwing — and never needs a RAP.
+        var info = NpumdImg.ParseHeader(Header(2));
+        Assert.False(info.HeaderValid);
     }
 
     [Fact]
     public void ParseHeader_NotNpumdImg_ThrowsFormat()
     {
-        Assert.Throws<PkgFormatException>(() => NpumdImg.ParseHeader(new byte[0x100], null));
+        Assert.Throws<PkgFormatException>(() => NpumdImg.ParseHeader(new byte[0x100]));
     }
 }

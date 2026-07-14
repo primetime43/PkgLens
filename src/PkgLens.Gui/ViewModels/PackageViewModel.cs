@@ -306,6 +306,49 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
         }
     }
 
+    /// <summary>
+    /// Extracts the selected EBOOT.PBP, unpacks its DATA.PSAR (an NPUMDIMG), and decrypts it to a PSP
+    /// ISO at <paramref name="isoPath"/> — no RAP/license needed. Throws if there's no NPUMDIMG inside.
+    /// </summary>
+    public void ExtractSelectedPspIsoTo(string isoPath)
+    {
+        if (SelectedItem is not { IsDirectory: false, Entry: { } entry })
+            throw new InvalidOperationException("Select an EBOOT.PBP file.");
+
+        string dir = Path.GetDirectoryName(isoPath) ?? ".";
+        string pbpTmp = Path.Combine(dir, "~" + entry.Name + ".tmp");
+        string psarTmp = Path.Combine(dir, "~DATA.PSAR.tmp");
+        try
+        {
+            using (var d = File.Create(pbpTmp))
+                PkgReader.ExtractEntry(_stream, _header, entry, d, _keys);
+
+            using (var src = File.OpenRead(pbpTmp))
+            {
+                var pbp = PbpArchive.Parse(src);
+                var psar = pbp.Entries.FirstOrDefault(e => e.Name.Equals("DATA.PSAR", StringComparison.OrdinalIgnoreCase))
+                    ?? throw new InvalidOperationException("This PBP has no DATA.PSAR.");
+                using var dst = File.Create(psarTmp);
+                PbpArchive.Extract(src, psar, dst);
+            }
+
+            using var psarStream = File.OpenRead(psarTmp);
+            var head = new byte[0x100];
+            psarStream.ReadExactly(head, 0, head.Length);
+            if (!NpumdImg.IsNpumdImg(head))
+                throw new InvalidOperationException("DATA.PSAR is not an NPUMDIMG (this game isn't a UMD/minis image).");
+            psarStream.Position = 0;
+
+            using var iso = File.Create(isoPath);
+            NpumdImg.DecryptToIso(psarStream, iso);
+        }
+        finally
+        {
+            try { File.Delete(pbpTmp); } catch { /* best-effort */ }
+            try { File.Delete(psarTmp); } catch { /* best-effort */ }
+        }
+    }
+
     /// <summary>Reads a decrypted sibling entry (same folder as the selection) by leaf name, or null if absent.</summary>
     private byte[]? ReadSiblingBytes(string leafName)
     {

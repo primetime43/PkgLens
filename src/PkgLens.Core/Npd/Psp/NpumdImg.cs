@@ -14,7 +14,7 @@ public sealed class NpumdImgInfo
     public required int BlockCount { get; init; }
     public required string DiscId { get; init; }
 
-    /// <summary>Whether the header body decrypted to sane values (the klicensee is correct).</summary>
+    /// <summary>Whether the header decrypted to a sane layout (the recovered version key is correct).</summary>
     public bool HeaderValid => SectorSize == 0x800 && BlockEntryOffset == 0x100;
 
     /// <summary>Offset of the block table (always 0x100 for a valid image).</summary>
@@ -25,18 +25,16 @@ public sealed class NpumdImgInfo
 
     /// <summary>Padded ISO size (block_count × block_size); the mountable image is this size.</summary>
     public long IsoSize => (long)BlockCount * BlockSize;
-
-    /// <summary>True when the version key is the klicensee (retail / RAP-licensed content).</summary>
-    public bool NeedsKlicensee => (NpFlags & 2) != 0;
 }
 
 /// <summary>
 /// Decrypts a PSP NPUMDIMG image (the <c>DATA.PSAR</c> inside a minis / PSP-remaster <c>EBOOT.PBP</c>)
-/// back to a plain PSP <c>.iso</c>. The version key is the klicensee (from the package's RAP) for
-/// RAP-licensed content. The header body and each data block are AMCTRL BBCipher-encrypted with the
+/// back to a plain PSP <c>.iso</c> — <b>no license or RAP required</b>. The version key is recovered
+/// from the header's own BBMac via AMCTRL <c>bbmac_getkey</c> (the key-recovery step npdrm_free uses to
+/// run content license-free). The header body and each data block are AMCTRL BBCipher-encrypted with the
 /// (plaintext) header key + version key; blocks may be LZRC-compressed (the same range coder as EDAT,
-/// <see cref="EdatLz"/>). The block table is a keyless XOR scramble. Faithful inverse of hykem's
-/// sign_np; all keys public, nothing is re-signed.
+/// <see cref="EdatLz"/>). The block table is a keyless self-inverse XOR scramble. Layout is the inverse
+/// of hykem's sign_np; all keys public, nothing is re-signed.
 /// </summary>
 public static class NpumdImg
 {
@@ -47,8 +45,8 @@ public static class NpumdImg
     public static bool IsNpumdImg(ReadOnlySpan<byte> data) =>
         data.Length >= 8 && data[..8].SequenceEqual(Magic);
 
-    /// <summary>Parses and opens the header, returning the disc metadata. Requires the klicensee for RAP content.</summary>
-    public static NpumdImgInfo ParseHeader(ReadOnlySpan<byte> header, byte[]? klicensee)
+    /// <summary>Parses and opens the header, returning the disc metadata. No license/RAP needed.</summary>
+    public static NpumdImgInfo ParseHeader(ReadOnlySpan<byte> header)
     {
         if (header.Length < HeaderSize || !IsNpumdImg(header))
             throw new PkgFormatException("Not an NPUMDIMG image (bad magic or short header).");
@@ -58,12 +56,12 @@ public static class NpumdImg
         int blockBasis = (int)BinaryPrimitives.ReadUInt32LittleEndian(header[0x0C..]);
         string contentId = System.Text.Encoding.ASCII.GetString(header.Slice(0x10, 0x30)).TrimEnd('\0');
 
-        byte[] versionKey = ResolveVersionKey(npFlags, klicensee);
+        var amctrl = new PspAmctrl();
+        byte[] versionKey = RecoverVersionKey(header, amctrl);
         byte[] headerKey = header.Slice(0xA0, 0x10).ToArray();
 
         // Decrypt the 0x60-byte body at 0x40 (BBCipher, seed 0) to reveal the disc layout.
         var body = header.Slice(0x40, 0x60).ToArray();
-        var amctrl = new PspAmctrl();
         var ckey = new CipherKey();
         amctrl.BBCipherInit(ckey, 1, headerKey, 0, versionKey, 0);
         amctrl.BBCipherUpdate(ckey, body, 0, body.Length);
@@ -91,10 +89,10 @@ public static class NpumdImg
 
     /// <summary>
     /// Decrypts the whole NPUMDIMG in <paramref name="source"/> to a PSP ISO on
-    /// <paramref name="destination"/>. <paramref name="klicensee"/> is the 16-byte key from the RAP
-    /// (required for RAP-licensed images). Streams block-by-block; the source must be seekable.
+    /// <paramref name="destination"/>. No license/RAP is needed — the version key is recovered from
+    /// the header itself (AMCTRL bbmac_getkey). Streams block-by-block; the source must be seekable.
     /// </summary>
-    public static void DecryptToIso(Stream source, Stream destination, byte[]? klicensee)
+    public static void DecryptToIso(Stream source, Stream destination)
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(destination);
@@ -102,11 +100,12 @@ public static class NpumdImg
         var header = new byte[HeaderSize];
         source.Position = 0;
         source.ReadExactly(header, 0, HeaderSize);
-        var info = ParseHeader(header, klicensee);
+        var info = ParseHeader(header);
         if (!info.HeaderValid)
-            throw new PkgKeyException("NPUMDIMG header did not decrypt to a valid layout — wrong klicensee/RAP.");
+            throw new PkgKeyException("NPUMDIMG header did not decrypt to a valid layout (corrupt or unsupported).");
 
-        byte[] versionKey = ResolveVersionKey(info.NpFlags, klicensee);
+        var amctrl = new PspAmctrl();
+        byte[] versionKey = RecoverVersionKey(header, amctrl);
         byte[] headerKey = header.AsSpan(0xA0, 0x10).ToArray();
 
         // Read and XOR-descramble the block table.
@@ -115,8 +114,8 @@ public static class NpumdImg
         source.Position = info.BlockEntryOffset;
         source.ReadExactly(table, 0, table.Length);
 
-        var amctrl = new PspAmctrl();
         int blockSize = (int)info.BlockSize;
+        long isoSize = (long)info.TotalSectors * info.SectorSize;
         var blockBuf = new byte[blockSize + 0x10];
         var outBuf = new byte[blockSize];
 
@@ -137,24 +136,26 @@ public static class NpumdImg
             amctrl.BBCipherInit(ckey, 1, headerKey, 0, versionKey, offset >> 4);
             amctrl.BBCipherUpdate(ckey, blockBuf, 0, aligned);
 
+            // Expected decompressed size for this block (block_size, or the remainder for the last block).
+            int expected = (int)Math.Min(blockSize, isoSize - (long)i * blockSize);
             int outLen;
             if (size >= blockSize)
             {
-                // Stored uncompressed (a full block).
-                outLen = blockSize;
-                Array.Copy(blockBuf, outBuf, blockSize);
+                // Stored uncompressed.
+                outLen = expected;
+                Array.Copy(blockBuf, outBuf, outLen);
             }
             else
             {
-                // Smaller than a block → LZRC-compressed (fall back to raw if it isn't).
-                int n = EdatLz.Decompress(outBuf, blockBuf, (int)size);
+                // Smaller than a block → LZRC-compressed; EdatLz's size arg is the OUTPUT length.
+                int n = EdatLz.Decompress(outBuf, blockBuf, expected);
                 if (n > 0)
                 {
                     outLen = n;
                 }
                 else
                 {
-                    outLen = (int)size;
+                    outLen = Math.Min((int)size, expected);
                     Array.Copy(blockBuf, outBuf, outLen);
                 }
             }
@@ -183,16 +184,19 @@ public static class NpumdImg
         BinaryPrimitives.WriteUInt32LittleEndian(at, v);
     }
 
-    private static byte[] ResolveVersionKey(uint npFlags, byte[]? klicensee)
+    /// <summary>
+    /// Recovers the version key from the header's own BBMac (header_hash at 0xC0) via AMCTRL
+    /// <c>bbmac_getkey</c> — the same key-recovery step npdrm_free uses to run content without a
+    /// license. No RAP / klicensee is required.
+    /// </summary>
+    private static byte[] RecoverVersionKey(ReadOnlySpan<byte> header, PspAmctrl amctrl)
     {
-        if ((npFlags & 2) != 0)
-        {
-            if (klicensee is not { Length: 16 })
-                throw new PkgKeyException(
-                    "This NPUMDIMG is RAP-licensed — supply the 16-byte klicensee (from the package's RAP).");
-            return klicensee;
-        }
-        throw new PkgKeyException(
-            "This NPUMDIMG uses a content-derived fixed key (sceNpDrmGetFixedKey), which is not yet supported.");
+        var hdr = header[..0x100].ToArray();
+        var mkey = new MacKey();
+        amctrl.BBMacInit(mkey, 3);
+        amctrl.BBMacUpdate(mkey, hdr, 0, 0xC0);
+        var versionKey = new byte[16];
+        amctrl.BBMacGetKey(mkey, hdr, 0xC0, versionKey);
+        return versionKey;
     }
 }
