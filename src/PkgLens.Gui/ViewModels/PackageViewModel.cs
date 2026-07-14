@@ -34,6 +34,9 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
 
     public Bitmap? Icon { get; }
 
+    /// <summary>True when an ICON0.PNG was decoded — drives the header-strip thumbnail's visibility.</summary>
+    public bool HasIcon => Icon is not null;
+
     /// <summary>Single synthetic root shown at the top of the left navigation tree.</summary>
     public ObservableCollection<EntryNode> FolderRoots { get; }
     public EntryNode RootFolder { get; }
@@ -76,10 +79,31 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
         SelectedItem = null;
     }
 
-    partial void OnSelectedItemChanged(EntryNode? value) =>
+    partial void OnSelectedItemChanged(EntryNode? value)
+    {
         OnPropertyChanged(nameof(HasSelectedFile));
+        OnPropertyChanged(nameof(SelectedFileDetail));
+    }
 
     public bool HasSelectedFile => SelectedItem is { IsDirectory: false, Entry: not null };
+
+    /// <summary>One-line detail for the selected file (size, offset, encryption, PSP flag), for the footer.</summary>
+    public string SelectedFileDetail
+    {
+        get
+        {
+            if (SelectedItem is not { IsDirectory: false, Entry: { } e })
+                return "";
+            var parts = new List<string>
+            {
+                $"{e.FileSize:n0} bytes",
+                $"offset 0x{e.FileOffset:X}",
+                e.IsEncrypted ? "encrypted" : "stored",
+            };
+            if (e.IsPsp) parts.Add("PSP-encrypted");
+            return $"{SelectedItem.Name}   {string.Join("  ·  ", parts)}";
+        }
+    }
 
     /// <summary>Files larger than this are not loaded into memory for preview (use Extract instead).</summary>
     public const long MaxPreviewBytes = 32L * 1024 * 1024;
