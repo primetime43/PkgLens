@@ -39,6 +39,15 @@ public sealed class PkgEntry
     public bool IsFile => !IsDirectory;
 
     /// <summary>
+    /// True when the record carries the PSP flag (<see cref="FlagPsp"/>): its name and data are
+    /// encrypted with the PSP AES key, not the PS3 gpkg key. In a PSP/PSVita package the reader
+    /// resolves this per-entry, so the name decodes correctly; in a <em>PS3</em> package such an
+    /// entry is embedded PSP content (a Mini / PSP Remaster) whose name/data the PS3 key can't decode
+    /// — surfacing this stops those entries reading as silent mojibake in a listing.
+    /// </summary>
+    public bool IsPsp => (RawType & FlagPsp) != 0;
+
+    /// <summary>
     /// PS3 PKG file data is always stored inside the encrypted data region, so every real file
     /// entry is encrypted. Directories carry no data.
     /// </summary>

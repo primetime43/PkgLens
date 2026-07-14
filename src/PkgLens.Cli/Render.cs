@@ -106,20 +106,29 @@ internal static class Render
                 kind = e.Kind.ToString(),
                 isDirectory = e.IsDirectory,
                 encrypted = e.IsEncrypted,
+                psp = e.IsPsp,
                 size = e.FileSize,
                 offset = e.FileOffset,
             }));
             return;
         }
 
+        // In a PS3 package a PSP-flagged entry's name was decrypted with the wrong key, so it may
+        // look like garbage — annotate it so that isn't mistaken for corruption.
+        bool ps3Host = info.Header.IsPs3;
+
         Console.WriteLine($"{"TYPE",-4} {"SIZE",14}  NAME");
         foreach (var e in info.Entries)
         {
             string type = e.IsDirectory ? "DIR" : "FILE";
             string size = e.IsDirectory ? "-" : e.FileSize.ToString("n0");
-            Console.WriteLine($"{type,-4} {size,14}  {e.Name}");
+            string tag = e.IsPsp ? (ps3Host ? "  [PSP-encrypted — name not decodable with the PS3 key]" : "  [PSP]") : "";
+            Console.WriteLine($"{type,-4} {size,14}  {e.Name}{tag}");
         }
-        Console.WriteLine($"\n{info.FileCount} files, {info.DirectoryCount} directories.");
+
+        int psp = info.Entries.Count(e => e.IsPsp);
+        Console.WriteLine($"\n{info.FileCount} files, {info.DirectoryCount} directories" +
+                          (psp > 0 ? $", {psp} PSP-encrypted" : "") + ".");
     }
 
     public static void Verify(PkgVerificationReport report, Options o)

@@ -166,6 +166,11 @@
                           <StackPanel Orientation="Horizontal" Spacing="6" Margin="6,0">
                             <TextBlock Text="{Binding Icon}" />
                             <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                            <Border IsVisible="{Binding HasBadge}" VerticalAlignment="Center"
+                                    Background="{DynamicResource SystemAccentColor}" CornerRadius="3" Padding="4,1"
+                                    ToolTip.Tip="PSP-encrypted entry — its data uses the PSP AES key, not the PS3 key.">
+                              <TextBlock Text="{Binding Badge}" FontSize="10" FontWeight="SemiBold" Foreground="White" />
+                            </Border>
                           </StackPanel>
                         </DataTemplate>
                       </DataGridTemplateColumn.CellTemplate>

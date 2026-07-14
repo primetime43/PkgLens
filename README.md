@@ -17,7 +17,9 @@ Core, CLI, and a first GUI are implemented and tested (spec §11 steps 1–5, pl
   packages additionally select a **per-entry** key — content marked type `0x90` uses the PSP key, other
   entries (PARAM.SFO, ICON0.PNG, …) use the PS3 gpkg key — matching pkg2zip. Verified end-to-end against
   a real PSP minis package (`info` / `list` / `sfo` / `extract` all work; extracted PNG/SFO/EDAT files
-  carry correct magic).
+  carry correct magic). PSP-keyed entries are flagged in listings (`[PSP]` in `list`, a `psp` field in
+  `--json`, a badge in the GUI file list) so an embedded PSP entry in a PS3 package isn't mistaken for
+  corruption when the PS3 key can't decode its name.
 - **Content id** decode → region / title-id / variant / name.
 - **Metadata** block → typed model, unknown ids preserved as raw hex.
 - **Decryptors** behind `IKeyProvider`: retail AES-128-CTR and debug SHA-1 keystream.

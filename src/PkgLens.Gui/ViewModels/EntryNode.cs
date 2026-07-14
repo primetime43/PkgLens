@@ -13,6 +13,9 @@ public sealed class EntryNode
     public bool IsDirectory { get; init; }
     public ulong Size { get; init; }
 
+    /// <summary>True when the file's data uses the PSP AES key (embedded Mini / PSP Remaster content).</summary>
+    public bool IsPsp { get; init; }
+
     /// <summary>The underlying package entry for files (null for synthesized directory nodes).</summary>
     public PkgEntry? Entry { get; init; }
 
@@ -29,6 +32,10 @@ public sealed class EntryNode
 
     public string Icon => IsDirectory ? "📁" : "📄";
     public string SizeDisplay => IsDirectory ? "" : FormatSize(Size);
+
+    /// <summary>Short badge shown after the name in the file list; empty unless the entry is PSP-encrypted.</summary>
+    public string Badge => IsPsp ? "PSP" : "";
+    public bool HasBadge => IsPsp;
 
     public static string FormatSize(ulong bytes)
     {
@@ -77,6 +84,7 @@ public sealed class EntryNode
                         FullPath = accumulated,
                         IsDirectory = false,
                         Size = entry.FileSize,
+                        IsPsp = entry.IsPsp,
                         Entry = entry,
                     };
                     InsertSorted(currentChildren, fileNode);

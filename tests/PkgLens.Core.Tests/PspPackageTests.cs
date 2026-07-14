@@ -71,6 +71,19 @@ public class PspPackageTests
     }
 
     [Fact]
+    public void Read_PspPackage_FlagsPspEntries()
+    {
+        byte[] pkg = PspPackage().Build();
+        using var s = new MemoryStream(pkg);
+        var info = PkgReader.Read(s, new FileKeyProvider());
+
+        // type-0x90 entries (0x80 overwrite | 0x10 PSP) carry the PSP flag; gpkg-keyed (0x00) don't.
+        Assert.True(info.Entries.Single(e => e.Name == "USRDIR/CONTENT/EBOOT.PBP").IsPsp);
+        Assert.False(info.Entries.Single(e => e.Name == "PARAM.SFO").IsPsp);
+        Assert.False(info.Entries.Single(e => e.Name == "ICON0.PNG").IsPsp);
+    }
+
+    [Fact]
     public void Extract_PspPackage_RecoversContentForBothKeys()
     {
         byte[] pkg = PspPackage().Build();
