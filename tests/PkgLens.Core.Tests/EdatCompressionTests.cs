@@ -54,6 +54,18 @@ public class EdatCompressionTests
         Assert.Equal(payload, got);
     }
 
+    [Fact]
+    public void Decrypt_CompressedBlock_InvalidLength_FailsCleanly()
+    {
+        // A wrong RAP produces garbage per-block metadata. A block length beyond the block size must
+        // raise a clear key error, not an OverflowException from `new byte[negative]`.
+        byte[] edat = BuildCompressedStoredSdat(Enumerable.Range(0, 20).Select(i => (byte)i).ToArray());
+        // len field (v1, direct) sits at metadataOffset + 0x18.
+        BinaryPrimitives.WriteInt32BigEndian(edat.AsSpan(0x100 + 0x18), 0x7FFFFFFF);
+
+        Assert.Throws<PkgKeyException>(() => EdatFile.DecryptToArray(new MemoryStream(edat)));
+    }
+
     /// <summary>
     /// Builds a minimal <b>compressed</b> SDAT (version 1, self-keyed, data cipher disabled via flag
     /// 0x02) whose single block is an LZ "stored" block — so the compressed metadata path and the LZ

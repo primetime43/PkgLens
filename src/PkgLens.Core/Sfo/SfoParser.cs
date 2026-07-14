@@ -74,6 +74,7 @@ public static class SfoParser
 
             string value;
             uint? intValue = null;
+            byte[]? rawValue = null;
             if (format == SfoFormat.Int32)
             {
                 intValue = valueBytes.Length >= 4
@@ -83,14 +84,17 @@ public static class SfoParser
             }
             else
             {
+                // Value is a (possibly lossy) UTF-8 view for display; RawValue keeps the exact bytes so
+                // an unedited entry — including a binary Utf8Special or unknown-format payload — round-trips.
                 value = Encoding.UTF8.GetString(valueBytes).TrimEnd('\0');
+                rawValue = valueBytes.ToArray();
             }
 
             // Clamp the allocated field size to the blob itself. A real data_max_len is a few bytes;
             // an attacker-supplied 0x7FFFFFFF would drive the writer to pad a ~2 GB field on re-save.
             uint maxLength = Math.Min(dataMaxLen, (uint)data.Length);
 
-            entries.Add(new SfoEntry { Key = key, Format = format, Value = value, IntValue = intValue, MaxLength = maxLength });
+            entries.Add(new SfoEntry { Key = key, Format = format, Value = value, IntValue = intValue, MaxLength = maxLength, RawValue = rawValue });
         }
 
         return new SfoTable(entries);

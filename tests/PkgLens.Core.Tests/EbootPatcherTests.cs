@@ -57,6 +57,25 @@ public class EbootPatcherTests
         Assert.Equal(expected, EbootPatcher.FindSdkVersion(elf)!.Value);
     }
 
+    [Theory]
+    [InlineData(0x00446001u, "4.46")] // ones digit lives in the next byte's high nibble
+    [InlineData(0x00488001u, "4.88")]
+    [InlineData(0x00400001u, "4.00")]
+    public void Display_DecodesBothMinorDigits(uint value, string expected) =>
+        Assert.Equal(expected, EbootPatcher.FindSdkVersion(WithProcessParam(value))!.Display);
+
+    [Fact]
+    public void SetFirmwareVersion_NonMultipleOfTenMinor_EncodesOnesDigit()
+    {
+        byte[] elf = WithProcessParam(0x00990001);
+
+        EbootPatcher.SetFirmwareVersion(elf, 4, 46); // must not silently drop the "6"
+
+        var v = EbootPatcher.FindSdkVersion(elf)!;
+        Assert.Equal("4.46", v.Display);
+        Assert.Equal(0x00446001u, v.Value); // low revision byte (0x01) preserved
+    }
+
     [Fact]
     public void SetSdkVersionRaw_WritesVerbatim()
     {

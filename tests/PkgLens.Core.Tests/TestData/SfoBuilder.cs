@@ -24,6 +24,13 @@ public sealed class SfoBuilder
         return this;
     }
 
+    /// <summary>Adds a raw Utf8Special (0x0004) value verbatim — used to test binary round-tripping.</summary>
+    public SfoBuilder AddSpecial(string key, byte[] raw)
+    {
+        _entries.Add((key, SfoFormat.Utf8Special, raw));
+        return this;
+    }
+
     public byte[] Build()
     {
         const int headerSize = 0x14;

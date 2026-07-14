@@ -46,6 +46,11 @@ public static class SelfKeyset
 
     private static SelfKey K(string erk, string riv) => new() { Erk = Hex(erk), Riv = Hex(riv) };
 
+    // Both tables intentionally have gaps — those revisions have no distinct public keyset in the
+    // reference (APP skips 0x12/0x15; NPDRM skips every third from 0x05: 0x05/0x08/0x0B/0x0E/0x11/
+    // 0x14/0x17/0x1A). Verified against RPCS3 key_vault.cpp. Do NOT fill them with invented keys — a
+    // missing pair correctly yields a clear "no keyset" error rather than silently wrong plaintext.
+
     /// <summary>Retail application (non-NPDRM) SELF keysets, by key revision. From RPCS3 key_vault.cpp.</summary>
     private static readonly IReadOnlyDictionary<ushort, SelfKey> App = new Dictionary<ushort, SelfKey>
     {

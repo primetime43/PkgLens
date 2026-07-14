@@ -157,6 +157,13 @@ public static class EdatFile
                        BinaryPrimitives.ReadInt32BigEndian(meta.AsSpan(0x18)),
                        BinaryPrimitives.ReadInt32BigEndian(meta.AsSpan(0x1C)))
                     : DecSection(meta);
+                // off/len come from the per-block metadata; a wrong RAP/klicensee yields garbage here.
+                // Validate before allocating/reading so we fail with a clear message rather than an
+                // OverflowException on `new byte[negative]` or a wild seek.
+                if (len < 0 || len > npd.BlockSize || off < 0 || off > source.Length)
+                    throw new PkgKeyException(
+                        $"EDAT block {i} metadata is invalid (offset 0x{off:X}, length 0x{len:X}) — " +
+                        "likely a wrong or missing RAP/klicensee.");
                 dataOffset = off;
                 payloadLen = len;
                 readLen = (len + 15) & ~15;

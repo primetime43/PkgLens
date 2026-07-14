@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace PkgLens.Core.Sfo;
 
 /// <summary>Format of an SFO value, from the index-entry <c>data_fmt</c> field.</summary>
@@ -28,9 +30,18 @@ public sealed class SfoEntry
     /// <summary>The allocated field size (<c>data_max_len</c>). Preserved so edits keep the layout.</summary>
     public uint MaxLength { get; init; }
 
+    /// <summary>
+    /// The exact original value bytes for non-int formats. Preserved so an unedited entry re-serializes
+    /// byte-for-byte — <see cref="Value"/> is a possibly-lossy UTF-8 view (binary <c>Utf8Special</c>
+    /// payloads decode with U+FFFD). Null for edited entries (the writer then re-encodes from
+    /// <see cref="Value"/>) and for <see cref="SfoFormat.Int32"/>.
+    /// </summary>
+    public byte[]? RawValue { get; init; }
+
     public bool IsInt => Format == SfoFormat.Int32;
 
     /// <summary>Returns a copy with a new value (string entries) — used by the SFO editor.</summary>
+    /// <remarks>Drops <see cref="RawValue"/>: the value changed, so the writer re-encodes from the string.</remarks>
     public SfoEntry WithValue(string value) =>
         new() { Key = Key, Format = Format, Value = value, IntValue = IntValue, MaxLength = MaxLength };
 
@@ -54,7 +65,7 @@ public sealed class SfoTable
             _byKey[e.Key] = e;
     }
 
-    public bool TryGet(string key, out SfoEntry entry) => _byKey.TryGetValue(key, out entry!);
+    public bool TryGet(string key, [MaybeNullWhen(false)] out SfoEntry entry) => _byKey.TryGetValue(key, out entry);
 
     public string? GetString(string key) => _byKey.TryGetValue(key, out var e) ? e.Value : null;
 

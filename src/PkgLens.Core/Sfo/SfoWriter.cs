@@ -76,6 +76,9 @@ public static class SfoWriter
         // Index entries.
         for (int i = 0; i < entries.Count; i++)
         {
+            if (keyOffsets[i] > ushort.MaxValue)
+                throw new PkgFormatException(
+                    $"PARAM.SFO key table is too large: key '{entries[i].Key}' is at offset 0x{keyOffsets[i]:X}, exceeding the u16 limit.");
             U16((ushort)keyOffsets[i]);
             U16((ushort)entries[i].Format);
             U32((uint)values[i].Length); // data_len (used)
@@ -97,6 +100,11 @@ public static class SfoWriter
             BinaryPrimitives.WriteUInt32LittleEndian(b, v);
             return b;
         }
+
+        // Unedited entry: emit the exact original bytes so binary Utf8Special / unknown-format values
+        // (which the lossy UTF-8 Value view can't reproduce) round-trip byte-for-byte.
+        if (e.RawValue is not null)
+            return e.RawValue;
 
         var text = Encoding.UTF8.GetBytes(e.Value);
         if (e.Format == SfoFormat.Utf8) // null-terminated

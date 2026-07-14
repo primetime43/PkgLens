@@ -5,11 +5,17 @@ namespace PkgLens.Core.Self;
 /// <summary>The firmware SDK version an ELF requires, found in its <c>sys_process_param</c> structure.</summary>
 public sealed record SdkVersion(int Offset, uint Value)
 {
-    /// <summary>The version byte (third byte of the field), e.g. 0x44 for firmware 4.40.</summary>
+    /// <summary>
+    /// The version byte (bits 16–23), e.g. 0x44 for firmware 4.4x. High nibble = major, low nibble =
+    /// tens of minor. The minor's ones digit lives in the high nibble of the next byte (bits 12–15),
+    /// so 0x00446001 = 4.46 and 0x00440001 = 4.40.
+    /// </summary>
     public byte VersionByte => (byte)((Value >> 16) & 0xFF);
 
-    /// <summary>A friendly firmware string, e.g. "4.40" (assumes the common M.N0 form).</summary>
-    public string Display => $"{VersionByte >> 4}.{VersionByte & 0xF}0";
+    private int MinorOnes => (int)((Value >> 12) & 0xF);
+
+    /// <summary>A friendly firmware string, e.g. "4.46" — both minor digits decoded, not just the tens.</summary>
+    public string Display => $"{VersionByte >> 4}.{VersionByte & 0xF}{MinorOnes}";
 }
 
 /// <summary>
@@ -43,9 +49,10 @@ public static class EbootPatcher
     }
 
     /// <summary>
-    /// Sets the required firmware to <paramref name="major"/>.<paramref name="minor"/> (e.g. 4, 0 → "4.00"),
-    /// preserving the field's low 16 bits. Returns the previous version, or null if the ELF has no
-    /// <c>sys_process_param</c> to patch.
+    /// Sets the required firmware to <paramref name="major"/>.<paramref name="minor"/> (e.g. 4, 46 → "4.46").
+    /// Encodes both minor digits: the tens into the version byte's low nibble (bits 16–19) and the ones
+    /// into the next byte's high nibble (bits 12–15); all other bits (revision etc.) are preserved.
+    /// Returns the previous version, or null if the ELF has no <c>sys_process_param</c> to patch.
     /// </summary>
     public static SdkVersion? SetFirmwareVersion(byte[] elf, int major, int minor)
     {
@@ -55,9 +62,10 @@ public static class EbootPatcher
         var current = FindSdkVersion(elf);
         if (current is null) return null;
 
-        // Version byte: high nibble = major, low nibble = tens of minor (the common M.N0 encoding).
-        byte versionByte = (byte)((major << 4) | (minor / 10));
-        uint patched = (current.Value & 0xFF00FFFFu) | ((uint)versionByte << 16);
+        int tens = minor / 10, ones = minor % 10;
+        byte versionByte = (byte)((major << 4) | tens);
+        // Clear bits 12–23 (version byte + minor-ones nibble), keep everything else.
+        uint patched = (current.Value & 0xFF000FFFu) | ((uint)versionByte << 16) | ((uint)ones << 12);
         BinaryPrimitives.WriteUInt32BigEndian(elf.AsSpan(current.Offset), patched);
         return current;
     }

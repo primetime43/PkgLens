@@ -25,6 +25,33 @@ public class SfoWriterTests
     }
 
     [Fact]
+    public void Write_RoundTripsBinarySpecialValue_ByteForByte()
+    {
+        // A Utf8Special value holding non-UTF-8 bytes must survive parse→write unchanged; the lossy
+        // UTF-8 Value view would corrupt it (U+FFFD), so the writer must emit RawValue verbatim.
+        byte[] binary = { 0x00, 0xFF, 0xC0, 0x80, 0x01, 0xFE, 0x7F };
+        byte[] blob = new SfoBuilder().AddString("TITLE", "T").AddSpecial("DATA", binary).Build();
+
+        var table = SfoParser.Parse(blob);
+        byte[] rewritten = SfoWriter.Write(table.Entries);
+        var reparsed = SfoParser.Parse(rewritten);
+
+        Assert.Equal(binary, reparsed.Entries.Single(e => e.Key == "DATA").RawValue);
+    }
+
+    [Fact]
+    public void Write_KeyTableExceedingU16Offset_ThrowsInsteadOfTruncating()
+    {
+        // A key offset beyond 65535 would silently wrap to a u16 and corrupt the index.
+        var entries = new[]
+        {
+            new SfoEntry { Key = new string('A', 70000), Format = SfoFormat.Utf8, Value = "x" },
+            new SfoEntry { Key = "B", Format = SfoFormat.Utf8, Value = "y" },
+        };
+        Assert.Throws<PkgLens.Core.PkgFormatException>(() => SfoWriter.Write(entries));
+    }
+
+    [Fact]
     public void Parse_ValueOffsetOverflow_ThrowsInsteadOfReadingWrongBytes()
     {
         // dataTableStart + dataOffset must be widened before the bounds check, or a huge dataOffset
