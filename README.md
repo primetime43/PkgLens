@@ -11,7 +11,22 @@ app, both built on one dependency-free parsing core.
 > **PkgLens never forges Sony signatures.** Repacked and fake-signed files target jailbroken (CFW)
 > consoles, never stock retail. See [Scope](#scope).
 
-**Jump to:** [Install & run](#install--run) · [What it does](#what-it-does) · [CLI](#cli) · [Coverage vs TrueAncestor](#feature-coverage-vs-trueancestor) · [Keys](#keys) · [Scope](#scope) · [Layout](#project-layout) · [Build & test](#build--test)
+## Contents
+
+- [Install & run](#install--run)
+- [What it does](#what-it-does)
+  - [Inspect](#inspect)
+  - [Extract & decrypt](#extract--decrypt)
+  - [PSP / minis](#psp--minis)
+  - [Pack & repack](#pack--repack)
+  - [Patch & verify](#patch--verify)
+- [CLI](#cli)
+- [Feature coverage vs TrueAncestor](#feature-coverage-vs-trueancestor)
+- [Keys](#keys)
+- [Scope](#scope)
+- [Project layout](#project-layout)
+- [Build & test](#build--test)
+- [License](#license)
 
 ## Install & run
 
