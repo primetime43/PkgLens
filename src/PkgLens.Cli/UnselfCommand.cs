@@ -87,7 +87,7 @@ internal static class UnselfCommand
         catch (PkgFormatException ex)
         {
             Console.Error.WriteLine($"unself error: {ex.Message}");
-            return ExitCode.KeyOrDecryptError;
+            return ExitCode.ParseError;
         }
     }
 

@@ -3,6 +3,15 @@ using PkgLens.Core.Keys;
 using PkgLens.Core.Models;
 using PkgLens.Cli;
 
+// UTF-8 output so ✓ / · / ⚠ render instead of mojibake; ignore when the console is redirected/absent.
+try { Console.OutputEncoding = new System.Text.UTF8Encoding(false); }
+catch { /* no console or output redirected */ }
+
+// One top-level handler so every subcommand maps failures to a documented exit code (never a raw
+// stack trace). Command-specific catches still run first; this catches whatever escapes them.
+try
+{
+
 if (args.Length == 0 || args[0] is "-h" or "--help" or "help")
 {
     CliHelp.PrintUsage();
@@ -209,6 +218,34 @@ catch (PkgFormatException ex)
 {
     Console.Error.WriteLine($"parse error: {ex.Message}");
     return ExitCode.ParseError;
+}
+
+}
+// Domain exceptions map to their documented codes even if a subcommand let one escape.
+catch (PkgKeyException ex)
+{
+    Console.Error.WriteLine($"key error: {ex.Message}");
+    return ExitCode.KeyOrDecryptError;
+}
+catch (PkgFormatException ex)
+{
+    Console.Error.WriteLine($"parse error: {ex.Message}");
+    return ExitCode.ParseError;
+}
+catch (IOException ex)
+{
+    Console.Error.WriteLine($"i/o error: {ex.Message}");
+    return ExitCode.Usage;
+}
+catch (UnauthorizedAccessException ex)
+{
+    Console.Error.WriteLine($"access error: {ex.Message}");
+    return ExitCode.Usage;
+}
+catch (Exception ex)
+{
+    Console.Error.WriteLine($"error: {ex.Message}");
+    return ExitCode.Usage;
 }
 
 static string StripNpdExtension(string path)
