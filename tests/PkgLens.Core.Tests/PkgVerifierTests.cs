@@ -28,6 +28,7 @@ public class PkgVerifierTests
         Assert.True(report.Passed);
         Assert.Equal(PkgCheckStatus.Pass, Check(report, "Header SHA-1").Status);
         Assert.Equal(PkgCheckStatus.Skipped, Check(report, "Header CMAC").Status); // debug: no CMAC
+        Assert.Equal(PkgCheckStatus.Skipped, Check(report, "Header ECDSA").Status); // synthetic: no signature
         Assert.Equal(PkgCheckStatus.Pass, Check(report, "Item table").Status);
     }
 

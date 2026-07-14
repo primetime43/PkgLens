@@ -47,9 +47,12 @@ Core, CLI, and a first GUI are implemented and tested (spec §11 steps 1–5, pl
   doesn't care about (its patches skip the signature check), but stock retail consoles won't take it.
   Use `--debug` for a self-contained non-finalized package (RPCS3 / dev consoles, no key). PkgLens
   never forges signatures.
-- **Integrity `verify`** — structural bounds, the header **SHA-1** digest, and the header **CMAC**
-  (`AES-CMAC(gpkg_key, header[0x00:0x80])`, algorithm confirmed against real packages). Detects
-  truncation, corruption, and modified/repacked headers. ECDSA signature check is not yet included.
+- **Integrity `verify`** — structural bounds, the header **SHA-1** digest, the header **CMAC**
+  (`AES-CMAC(gpkg_key, header[0x00:0x80])`), and the header **ECDSA signature** — the NPDRM signature
+  checked against Sony's *public* NPDRM key (VSH curve #2), read-only, confirmed against real retail
+  PS3 and PSP packages. A genuine retail package verifies; a repacked, fake-signed, altered, or
+  truncated one is flagged (a fake-signed/homebrew package simply has no signature and is skipped).
+  This is verification only — PkgLens never forges or re-signs.
 - **SELF inspector** — read an `EBOOT.BIN` / `.self` / `.sprx` header (`pkglens self <eboot>`): program
   type, key revision, the embedded ELF header, the **segment table** (offset / size / compressed /
   encrypted per segment), the **control-info blocks** (control flags, file digest, NPDRM), the
@@ -144,7 +147,7 @@ Legend: ✅ covered · 🟡 partial · ⛔ out of scope (needs signing keys) · 
 | D | Compress Data *(switch)* | ⬜ | fSELF segments are stored uncompressed |
 
 **Beyond TrueAncestor**, PkgLens also has a full package-inspector GUI (tree + list + image/text/hex viewer),
-integrity `verify` (SHA-1 + AES-CMAC), EDAT/SDAT decryption (incl. compressed), SELF-header inspect,
+integrity `verify` (SHA-1 + AES-CMAC + read-only ECDSA signature check), EDAT/SDAT decryption (incl. compressed), SELF-header inspect,
 batch **`scan`** to catalog a whole library (`--json` / `--csv`), `--json` output, and runs cross-platform.
 
 ## Layout

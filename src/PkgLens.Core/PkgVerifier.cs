@@ -26,9 +26,11 @@ public sealed class PkgVerificationReport
 ///   <item>structural bounds — magic, total_size vs file length, data/metadata region ranges,</item>
 ///   <item>header SHA-1 digest — last 8 bytes of <c>SHA1(header[0x00:0x80])</c> at 0xB8 (no key),</item>
 ///   <item>header CMAC — <c>AES-CMAC(gpkg_key, header[0x00:0x80])</c> at 0x80 (retail; needs the key),</item>
+///   <item>header ECDSA — the NPDRM signature at 0x90 verified against Sony's public key (no key needed),</item>
 ///   <item>item table — decrypts and all entry offsets/sizes lie within the data region.</item>
 /// </list>
-/// The ECDSA signature is not yet checked. Nothing here forges or re-signs anything.
+/// The ECDSA check uses Sony's <em>public</em> NPDRM key (see <see cref="NpdrmSignature"/>) — it can
+/// tell a genuine retail signature from a repacked/fake-signed one, but never forges or re-signs.
 /// </summary>
 public static class PkgVerifier
 {
@@ -113,6 +115,20 @@ public static class PkgVerifier
                     ? new PkgCheck("Header CMAC", PkgCheckStatus.Pass, "matches (AES-CMAC with gpkg key)")
                     : new PkgCheck("Header CMAC", PkgCheckStatus.Fail, "mismatch — header tampered or corrupted"));
             }
+
+            // Header ECDSA (NPDRM) signature — public-key verification, no secret involved. A fake-signed
+            // or homebrew package leaves this blank (Skipped); a repacked/altered retail package fails it.
+            checks.Add(NpdrmSignature.VerifyHeader(head) switch
+            {
+                PkgSignatureResult.Valid => new PkgCheck("Header ECDSA", PkgCheckStatus.Pass,
+                    "valid — genuine retail signature (Sony's NPDRM key)"),
+                PkgSignatureResult.Invalid => new PkgCheck("Header ECDSA", PkgCheckStatus.Fail,
+                    "signature present but does not verify — repacked, fake-signed, or altered"),
+                PkgSignatureResult.Unsupported => new PkgCheck("Header ECDSA", PkgCheckStatus.Skipped,
+                    "explicit-curve ECDSA unavailable on this platform"),
+                _ => new PkgCheck("Header ECDSA", PkgCheckStatus.Skipped,
+                    "no signature present (fake-signed / homebrew)"),
+            });
         }
 
         // Item table: decrypt and confirm every entry lies within the data region. The reader only
