@@ -205,8 +205,8 @@ public partial class MainWindow : Window
             byte[] data = await Task.Run(package.ReadSelectedBytes);
             string title = node.Name;
 
-            // If it's an EDAT/SDAT, decrypt it so the viewer shows the real contents.
-            if (PkgLens.Core.Npd.EdatFile.IsEdat(data))
+            // If it's an EDAT/SDAT (PS3 NPDRM or PSP EDAT/PGD), decrypt it so the viewer shows the real contents.
+            if (PkgLens.Core.Npd.EdatFile.IsEdat(data) || PkgLens.Core.Npd.Psp.PspEdatFile.IsPspEncrypted(data))
                 (data, title) = await DecryptEdatForView(data, node.Name);
 
             await new FileViewerDialog(title, data).ShowDialog(this);
@@ -220,6 +220,22 @@ public partial class MainWindow : Window
     /// <summary>Decrypts an EDAT/SDAT for viewing (SDAT/free automatic; licensed resolves a RAP).</summary>
     private async Task<(byte[] data, string title)> DecryptEdatForView(byte[] data, string name)
     {
+        // PSP EDAT ("\0PSPEDAT") / bare PGD ("\0PGD") decrypt via the PSP path (fixed key, no RAP).
+        if (PkgLens.Core.Npd.Psp.PspEdatFile.IsPspEncrypted(data))
+        {
+            try
+            {
+                byte[] pspPlain = await Task.Run(() => PkgLens.Core.Npd.Psp.PspEdatFile.DecryptToArray(new MemoryStream(data)));
+                Vm.Status = $"Decrypted PSP EDAT ({data.Length:n0} → {pspPlain.Length:n0} bytes)";
+                return (pspPlain, $"{name}  ·  decrypted PSP EDAT");
+            }
+            catch (Exception ex)
+            {
+                Vm.Status = $"PSP EDAT decrypt failed: {ex.Message}";
+                return (data, name);
+            }
+        }
+
         var npd = PkgLens.Core.Npd.EdatFile.ParseHeader(new MemoryStream(data));
 
         byte[]? klic = null;
@@ -562,6 +578,28 @@ public partial class MainWindow : Window
         try
         {
             byte[] bytes = await File.ReadAllBytesAsync(_decryptFile);
+
+            // PSP EDAT / bare PGD: decrypt via the PSP path (fixed key, no RAP).
+            if (PkgLens.Core.Npd.Psp.PspEdatFile.IsPspEncrypted(bytes))
+            {
+                var pspSave = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+                {
+                    Title = "Save decrypted PSP EDAT as…",
+                    SuggestedFileName = Path.GetFileNameWithoutExtension(_decryptFile),
+                });
+                if (pspSave?.TryGetLocalPath() is not { } pspDest)
+                    return;
+                string pspSrc = _decryptFile;
+                await Task.Run(() =>
+                {
+                    using var input = File.OpenRead(pspSrc);
+                    using var output = File.Create(pspDest);
+                    PkgLens.Core.Npd.Psp.PspEdatFile.Decrypt(input, output);
+                });
+                Vm.Status = $"Decrypted PSP EDAT → {Path.GetFileName(pspDest)}";
+                return;
+            }
+
             var npd = PkgLens.Core.Npd.EdatFile.ParseHeader(new MemoryStream(bytes));
 
             byte[]? klic = null;

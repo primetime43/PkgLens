@@ -124,6 +124,27 @@ if (command == "decrypt")
     try
     {
         using var src = File.OpenRead(parsed.Path);
+
+        // PSP EDAT ("\0PSPEDAT") and bare PGD ("\0PGD") decrypt via the PSP AMCTRL/PGD path (no RAP).
+        if (PkgLens.Core.Npd.Psp.PspEdatFile.IsPspEncrypted(src))
+        {
+            byte[] allBytes = File.ReadAllBytes(parsed.Path);
+            if (PkgLens.Core.Npd.Psp.PspEdatFile.IsPspEdat(allBytes))
+            {
+                var pspInfo = PkgLens.Core.Npd.Psp.PspEdatFile.ParseHeader(allBytes);
+                Console.WriteLine($"{pspInfo.ContentId}  (PSP EDAT, DRM {pspInfo.DrmType})");
+            }
+            else
+            {
+                Console.WriteLine("(bare PSP PGD)");
+            }
+            string pspOut = parsed.OutDir ?? StripNpdExtension(parsed.Path);
+            using (var dst = File.Create(pspOut))
+                PkgLens.Core.Npd.Psp.PspEdatFile.Decrypt(src, dst);
+            Console.WriteLine($"Decrypted → {pspOut}");
+            return ExitCode.Ok;
+        }
+
         var npd = PkgLens.Core.Npd.EdatFile.ParseHeader(src);
         Console.WriteLine($"{npd.ContentId}  (v{npd.Version}, DRM {npd.LicenseText}{(npd.IsSdat ? ", SDAT" : "")})");
 

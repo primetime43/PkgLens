@@ -26,6 +26,11 @@ Core, CLI, and a first GUI are implemented and tested (spec §11 steps 1–5, pl
   values, then Save As repacks with the patched PARAM.SFO).
 - **Extraction** (streamed) — single file, right-click, or **extract-all** to a folder (rebuilds the tree).
 - **File viewing** — render images (ICON0/PIC1), show text, or a hex dump.
+- **PSP EDAT / PGD decryption** — decrypt PSP `\0PSPEDAT` files and bare `\0PGD` files (e.g.
+  DOCINFO.EDAT, DOCUMENT.DAT) via the PSP AMCTRL/KIRK/PGD pipeline. **Fixed-key content only** (no RAP
+  needed); fuse-bound (per-console) content is out of scope. The PGD's built-in BBMac checks make a
+  successful decrypt self-verifying — validated against a real PSP minis package. A different format
+  from PS3 NPDRM EDAT, auto-detected by magic.
 - **EDAT / SDAT decryption** — decrypt NPDRM data files: SDAT with no key, EDAT with its RAP
   (or the free key). Viewer decrypts EDATs automatically; `pkglens decrypt` on the CLI. **Compressed**
   EDATs are supported too (LZ decompressor ported from RPCS3); the decrypt/metadata pipeline is verified

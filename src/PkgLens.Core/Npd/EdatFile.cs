@@ -68,7 +68,15 @@ public static class EdatFile
     {
         var head = ReadAt(source, 0, NpdSize + EdatSize);
         if (BinaryPrimitives.ReadUInt32BigEndian(head) != Magic)
+        {
+            // PSP EDATs ("\0PSPEDAT") share the .edat extension but are a different DRM format (PSP
+            // AMCTRL/PGD, not PS3 NPDRM) that this decryptor does not handle — say so specifically.
+            if (head[0] == 0x00 && Encoding.ASCII.GetString(head, 1, 7) == "PSPEDAT")
+                throw new PkgFormatException(
+                    "This is a PSP EDAT ('\\0PSPEDAT'), a different DRM format from the PS3 NPDRM EDAT/SDAT " +
+                    "this tool decrypts. PSP EDAT decryption is not supported.");
             throw new PkgFormatException("Not an NPD/EDAT/SDAT file (bad magic).");
+        }
 
         int blockSize = (int)BinaryPrimitives.ReadUInt32BigEndian(head.AsSpan(0x84));
         long fileSize = (long)BinaryPrimitives.ReadUInt64BigEndian(head.AsSpan(0x88));
@@ -106,6 +114,14 @@ public static class EdatFile
     /// <summary>Decrypts the file, writing the plaintext to <paramref name="destination"/>.</summary>
     public static void Decrypt(Stream source, Stream destination, byte[]? klicensee = null)
     {
+        // PSP EDATs ("\0PSPEDAT") and bare PGDs ("\0PGD") are a different DRM format — route them to the
+        // PSP decryptor (fixed-key AMCTRL/PGD, no RAP needed) rather than the PS3 NPDRM path below.
+        if (Psp.PspEdatFile.IsPspEncrypted(source))
+        {
+            Psp.PspEdatFile.Decrypt(source, destination);
+            return;
+        }
+
         var npd = ParseHeader(source);
 
         // Select the crypt key.
