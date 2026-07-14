@@ -96,10 +96,12 @@ public static class PkgVerifier
             else
                 checks.Add(new PkgCheck("Header SHA-1", PkgCheckStatus.Fail, "mismatch — header corrupted or altered"));
 
-            // Header CMAC (retail only; needs the gpkg key).
+            // Header CMAC (PS3 retail only; needs the gpkg key). PSP/PSVita use a different scheme.
             var cmacField = head.AsSpan(0x80, 0x10);
             if (header.Finalization != PkgFinalization.Retail)
                 checks.Add(new PkgCheck("Header CMAC", PkgCheckStatus.Skipped, "non-finalized (debug) package"));
+            else if (!header.IsPs3)
+                checks.Add(new PkgCheck("Header CMAC", PkgCheckStatus.Skipped, "PSP/PSVita package (gpkg CMAC not applicable)"));
             else if (AllZero(cmacField))
                 checks.Add(new PkgCheck("Header CMAC", PkgCheckStatus.Skipped, "no CMAC present"));
             else if (!keys.TryResolve(header, out var ctx, out string? reason) || !ctx.TryGetHeaderCmacKey(out var macKey))

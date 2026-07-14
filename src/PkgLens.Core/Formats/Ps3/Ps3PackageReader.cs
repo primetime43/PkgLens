@@ -8,7 +8,9 @@ using PkgLens.Core.Sfo;
 namespace PkgLens.Core.Formats.Ps3;
 
 /// <summary>
-/// Reads a PS3 PKG from a seekable stream. Streaming and memory-light: only the header, the
+/// Reads a PS3 / PSP / PSVita PKG from a seekable stream. These share one container format (header,
+/// metadata TLV, item table, PARAM.SFO) and differ only in the data key, which the key provider
+/// resolves from the platform and key_type. Streaming and memory-light: only the header, the
 /// metadata block, the item table, and the (small) entry-name and PARAM.SFO regions are read —
 /// never the bulk file data. Actual file extraction decrypts entry ranges lazily elsewhere.
 /// </summary>
@@ -41,13 +43,17 @@ public sealed class Ps3PackageReader : IPackageReader
         if (!stream.CanSeek)
             throw new PkgFormatException("A seekable stream is required to read a PKG.");
 
-        // 1. Header.
-        var headerBytes = ReadAt(stream, 0, PkgHeader.MinLength, "header");
+        // 1. Header. Read the extended header when the file is large enough so the PSP/PSVita key_type
+        //    byte (0xE7) is available; PkgHeader.Parse only requires the first 0x80.
+        int headerLen = (int)Math.Min(PkgHeader.ExtendedLength, stream.Length);
+        var headerBytes = ReadAt(stream, 0, headerLen, "header");
         var header = PkgHeader.Parse(headerBytes);
 
-        if (!header.IsPs3)
+        // PS3 and PSP/PSVita share this container format; only the data key differs (resolved via the
+        // key provider). Reject only genuinely unknown platforms.
+        if (header.Platform == PkgPlatform.Unknown)
             throw new PkgFormatException(
-                $"Not a PS3 package (platform raw 0x{header.RawPlatform:X4}). PSP/PSVita is not yet supported.");
+                $"Unknown package platform (raw 0x{header.RawPlatform:X4}); only PS3 and PSP/PSVita are supported.");
 
         // 2. Metadata block.
         var metadata = ReadMetadata(stream, header);
@@ -64,28 +70,22 @@ public sealed class Ps3PackageReader : IPackageReader
             };
         }
 
-        var decryptor = context.CreateDecryptor();
-        try
-        {
-            // 4. Item table + names.
-            var entries = ReadEntries(stream, header, decryptor);
+        using var decryptors = context.CreateDecryptorSet();
 
-            // 5. PARAM.SFO enrichment.
-            var sfo = ReadSfo(stream, header, decryptor, entries);
+        // 4. Item table + names.
+        var entries = ReadEntries(stream, header, decryptors);
 
-            return new PkgInfo
-            {
-                Header = header,
-                Metadata = metadata,
-                Entries = entries,
-                Sfo = sfo,
-                IsDecrypted = true,
-            };
-        }
-        finally
+        // 5. PARAM.SFO enrichment.
+        var sfo = ReadSfo(stream, header, decryptors, entries);
+
+        return new PkgInfo
         {
-            (decryptor as IDisposable)?.Dispose();
-        }
+            Header = header,
+            Metadata = metadata,
+            Entries = entries,
+            Sfo = sfo,
+            IsDecrypted = true,
+        };
     }
 
     private static PkgMetadata ReadMetadata(Stream stream, PkgHeader header)
@@ -100,7 +100,7 @@ public sealed class Ps3PackageReader : IPackageReader
         return PkgMetadata.Parse(block, header.MetadataCount);
     }
 
-    private static List<PkgEntry> ReadEntries(Stream stream, PkgHeader header, IPkgDecryptor decryptor)
+    private static List<PkgEntry> ReadEntries(Stream stream, PkgHeader header, PkgDecryptorSet decryptors)
     {
         long tableBytes = (long)header.ItemCount * PkgEntry.RecordSize;
         if (tableBytes == 0)
@@ -108,9 +108,10 @@ public sealed class Ps3PackageReader : IPackageReader
         if (tableBytes > MaxReasonableRegion)
             throw new PkgFormatException($"Item table ({tableBytes} bytes) is implausibly large.");
 
-        // The item table lives at the very start of the encrypted data region (region offset 0).
+        // The item table lives at the very start of the encrypted data region (region offset 0),
+        // always under the primary key (the PSP key for PSP/PSX packages).
         byte[] table = ReadDataRegion(stream, header, regionOffset: 0, length: (int)tableBytes);
-        decryptor.DecryptInPlace(table, 0);
+        decryptors.Table.DecryptInPlace(table, 0);
 
         var entries = new List<PkgEntry>((int)header.ItemCount);
         for (int i = 0; i < header.ItemCount; i++)
@@ -119,8 +120,20 @@ public sealed class Ps3PackageReader : IPackageReader
             entries.Add(rec);
         }
 
-        // Entry names sit contiguously between the item table and the file data. Read that whole
-        // span once and decrypt it, then slice each name out (avoids one seek per entry).
+        if (decryptors.PerEntry)
+            ReadNamesPerEntry(stream, header, decryptors, entries);
+        else
+            ReadNamesBulk(stream, header, decryptors.Table, entries);
+
+        return entries;
+    }
+
+    /// <summary>
+    /// Uniform-key packages (PS3, PSVita): entry names sit contiguously between the item table and the
+    /// file data. Read that whole span once and decrypt it with the single key, then slice each name out.
+    /// </summary>
+    private static void ReadNamesBulk(Stream stream, PkgHeader header, IPkgDecryptor decryptor, List<PkgEntry> entries)
+    {
         long nameStart = long.MaxValue, nameEnd = 0;
         foreach (var e in entries)
         {
@@ -129,29 +142,46 @@ public sealed class Ps3PackageReader : IPackageReader
             nameEnd = Math.Max(nameEnd, (long)e.NameOffset + e.NameSize);
         }
 
-        if (nameEnd > nameStart)
+        if (nameEnd <= nameStart) return;
+
+        long span = nameEnd - nameStart;
+        if (span > MaxReasonableRegion)
+            throw new PkgFormatException($"Entry-name region ({span} bytes) is implausibly large.");
+        if (nameEnd > (long)header.DataSize)
+            throw new PkgFormatException("An entry name extends beyond the data region.");
+
+        byte[] names = ReadDataRegion(stream, header, nameStart, (int)span);
+        decryptor.DecryptInPlace(names, nameStart);
+
+        foreach (var e in entries)
         {
-            long span = nameEnd - nameStart;
-            if (span > MaxReasonableRegion)
-                throw new PkgFormatException($"Entry-name region ({span} bytes) is implausibly large.");
-            if (nameEnd > (long)header.DataSize)
-                throw new PkgFormatException("An entry name extends beyond the data region.");
-
-            byte[] names = ReadDataRegion(stream, header, nameStart, (int)span);
-            decryptor.DecryptInPlace(names, nameStart);
-
-            foreach (var e in entries)
-            {
-                if (e.NameSize == 0) continue;
-                int rel = (int)(e.NameOffset - nameStart);
-                e.Name = Encoding.UTF8.GetString(names, rel, (int)e.NameSize).TrimEnd('\0');
-            }
+            if (e.NameSize == 0) continue;
+            int rel = (int)(e.NameOffset - nameStart);
+            e.Name = Encoding.UTF8.GetString(names, rel, (int)e.NameSize).TrimEnd('\0');
         }
-
-        return entries;
     }
 
-    private static SfoTable? ReadSfo(Stream stream, PkgHeader header, IPkgDecryptor decryptor, List<PkgEntry> entries)
+    /// <summary>
+    /// PSP/PSX packages: each entry's name is decrypted with that entry's own key (PSP key for
+    /// type-0x90 entries, the gpkg key otherwise), so names are read and decrypted one at a time.
+    /// </summary>
+    private static void ReadNamesPerEntry(Stream stream, PkgHeader header, PkgDecryptorSet decryptors, List<PkgEntry> entries)
+    {
+        foreach (var e in entries)
+        {
+            if (e.NameSize == 0) continue;
+            if (e.NameSize > MaxReasonableRegion)
+                throw new PkgFormatException($"Entry name ({e.NameSize} bytes) is implausibly large.");
+            if ((long)e.NameOffset + e.NameSize > (long)header.DataSize)
+                throw new PkgFormatException("An entry name extends beyond the data region.");
+
+            byte[] name = ReadDataRegion(stream, header, e.NameOffset, (int)e.NameSize);
+            decryptors.For(e).DecryptInPlace(name, e.NameOffset);
+            e.Name = Encoding.UTF8.GetString(name, 0, name.Length).TrimEnd('\0');
+        }
+    }
+
+    private static SfoTable? ReadSfo(Stream stream, PkgHeader header, PkgDecryptorSet decryptors, List<PkgEntry> entries)
     {
         var sfoEntry = entries.FirstOrDefault(e =>
             e.IsFile && e.FileSize > 0 &&
@@ -164,7 +194,7 @@ public sealed class Ps3PackageReader : IPackageReader
             return null;
 
         byte[] data = ReadDataRegion(stream, header, (long)sfoEntry.FileOffset, (int)sfoEntry.FileSize);
-        decryptor.DecryptInPlace(data, (long)sfoEntry.FileOffset);
+        decryptors.For(sfoEntry).DecryptInPlace(data, (long)sfoEntry.FileOffset);
 
         try
         {

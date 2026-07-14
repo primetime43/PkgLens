@@ -31,7 +31,16 @@ public sealed class PkgHeader
     /// <summary>Number of header bytes we require before attempting a parse (through data_riv).</summary>
     public const int MinLength = 0x80;
 
-    /// <summary>Offset at which the (encrypted) item table + file data begin.</summary>
+    /// <summary>
+    /// Header bytes worth reading when available: covers the PSP/PSVita key-type byte at 0xE7. Only
+    /// <see cref="MinLength"/> is required; the rest is optional and parsed opportunistically.
+    /// </summary>
+    public const int ExtendedLength = 0x100;
+
+    /// <summary>Offset of the PSP/PSVita key-selection byte (low 3 bits choose the key). pkg2zip: <c>header[0xE7] &amp; 7</c>.</summary>
+    private const int PspKeyTypeOffset = 0xE7;
+
+    /// <summary>Length of the content-id field.</summary>
     public const int ContentIdLength = 0x24;
 
     public uint RawMagic { get; init; }
@@ -57,8 +66,23 @@ public sealed class PkgHeader
     /// <summary>16-byte data RIV / klicensee at 0x70. Retail AES-CTR counter seed.</summary>
     public byte[] DataRiv { get; init; } = new byte[0x10];
 
+    /// <summary>
+    /// PSP/PSVita key selector (<c>header[0xE7] &amp; 7</c>): 1 = PSP, 2/3/4 = PSVita key revisions.
+    /// 0 when unknown or when the parse buffer didn't reach 0xE7 (only meaningful for platform 0x0002).
+    /// </summary>
+    public byte PspKeyType { get; init; }
+
     public bool IsPs3 => Platform == PkgPlatform.Ps3;
+    public bool IsPspPsVita => Platform == PkgPlatform.PspPsVita;
     public bool IsRetail => Finalization == PkgFinalization.Retail;
+
+    /// <summary>Friendly platform name, distinguishing PSP from PSVita via the key type when possible.</summary>
+    public string PlatformDisplay => Platform switch
+    {
+        PkgPlatform.Ps3 => "PS3",
+        PkgPlatform.PspPsVita => PspKeyType == 1 ? "PSP" : "PSVita",
+        _ => $"Unknown (0x{RawPlatform:X4})",
+    };
 
     /// <summary>
     /// Parses a header from at least <see cref="MinLength"/> bytes. Throws
@@ -78,6 +102,9 @@ public sealed class PkgHeader
 
         ushort rawFin = BinaryPrimitives.ReadUInt16BigEndian(data[0x04..]);
         ushort rawPlat = BinaryPrimitives.ReadUInt16BigEndian(data[0x06..]);
+
+        // key_type sits past the 0x80 minimum header; read it only if the caller supplied enough bytes.
+        byte pspKeyType = data.Length > PspKeyTypeOffset ? (byte)(data[PspKeyTypeOffset] & 0x07) : (byte)0;
 
         var contentIdBytes = data.Slice(0x30, ContentIdLength);
         string contentIdRaw = Encoding.ASCII.GetString(contentIdBytes).TrimEnd('\0');
@@ -109,6 +136,7 @@ public sealed class PkgHeader
             ContentId = ContentId.Parse(contentIdRaw),
             QaDigest = data.Slice(0x60, 0x10).ToArray(),
             DataRiv = data.Slice(0x70, 0x10).ToArray(),
+            PspKeyType = pspKeyType,
         };
     }
 }

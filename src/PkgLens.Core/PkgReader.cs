@@ -33,29 +33,15 @@ public static class PkgReader
     /// </summary>
     public static byte[] ExtractEntryBytes(Stream stream, PkgHeader header, PkgEntry entry, IKeyProvider keys)
     {
-        var decryptor = ResolveDecryptor(header, keys);
-        try
-        {
-            return Ps3PackageReader.ReadEntry(stream, header, decryptor, entry);
-        }
-        finally
-        {
-            (decryptor as IDisposable)?.Dispose();
-        }
+        using var decryptors = ResolveDecryptorSet(header, keys);
+        return Ps3PackageReader.ReadEntry(stream, header, decryptors.For(entry), entry);
     }
 
     /// <summary>Streams a single entry's decrypted data to <paramref name="destination"/>.</summary>
     public static void ExtractEntry(Stream stream, PkgHeader header, PkgEntry entry, Stream destination, IKeyProvider keys)
     {
-        var decryptor = ResolveDecryptor(header, keys);
-        try
-        {
-            Ps3PackageReader.CopyEntryTo(stream, header, decryptor, entry, destination);
-        }
-        finally
-        {
-            (decryptor as IDisposable)?.Dispose();
-        }
+        using var decryptors = ResolveDecryptorSet(header, keys);
+        Ps3PackageReader.CopyEntryTo(stream, header, decryptors.For(entry), entry, destination);
     }
 
     /// <summary>
@@ -77,33 +63,26 @@ public static class PkgReader
         Directory.CreateDirectory(root);
         string rootWithSep = root.EndsWith(Path.DirectorySeparatorChar) ? root : root + Path.DirectorySeparatorChar;
 
-        var decryptor = ResolveDecryptor(info.Header, keys);
-        try
+        using var decryptors = ResolveDecryptorSet(info.Header, keys);
+        int count = 0;
+        foreach (var entry in info.Entries)
         {
-            int count = 0;
-            foreach (var entry in info.Entries)
+            if (filter is not null && !filter(entry)) continue;
+
+            string dest = SafeCombine(rootWithSep, entry.Name);
+            if (entry.IsDirectory)
             {
-                if (filter is not null && !filter(entry)) continue;
-
-                string dest = SafeCombine(rootWithSep, entry.Name);
-                if (entry.IsDirectory)
-                {
-                    Directory.CreateDirectory(dest);
-                    continue;
-                }
-
-                Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
-                using (var fs = File.Create(dest))
-                    Ps3PackageReader.CopyEntryTo(stream, info.Header, decryptor, entry, fs);
-                onExtracted?.Invoke(entry);
-                count++;
+                Directory.CreateDirectory(dest);
+                continue;
             }
-            return count;
+
+            Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
+            using (var fs = File.Create(dest))
+                Ps3PackageReader.CopyEntryTo(stream, info.Header, decryptors.For(entry), entry, fs);
+            onExtracted?.Invoke(entry);
+            count++;
         }
-        finally
-        {
-            (decryptor as IDisposable)?.Dispose();
-        }
+        return count;
     }
 
     private static string SafeCombine(string rootWithSep, string relative)
@@ -116,11 +95,11 @@ public static class PkgReader
         return full;
     }
 
-    private static Crypto.IPkgDecryptor ResolveDecryptor(PkgHeader header, IKeyProvider keys)
+    private static PkgDecryptorSet ResolveDecryptorSet(PkgHeader header, IKeyProvider keys)
     {
         if (!keys.TryResolve(header, out var ctx, out string? reason))
             throw new PkgKeyException(reason ?? "No decryptor could be resolved for this package.");
-        return ctx.CreateDecryptor();
+        return ctx.CreateDecryptorSet();
     }
 
     private static IPackageReader SelectReader(Stream stream)

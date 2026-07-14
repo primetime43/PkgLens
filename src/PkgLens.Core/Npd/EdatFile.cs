@@ -34,8 +34,8 @@ public sealed class NpdInfo
 /// Decrypts PS3 NPDRM data files: <b>SDAT</b> (self-keyed, no license) and <b>EDAT</b> (needs the
 /// content's klicensee, from a RAP or the free key). Algorithm ported from make_npdata (GPL) and
 /// verified byte-for-byte against a real retail EDAT. Compressed EDATs are supported via
-/// <see cref="EdatLz"/> (a faithful RPCS3 port; the LZ core is not yet verified against a real
-/// compressed sample here — see its remarks).
+/// <see cref="EdatLz"/> (audited line-for-line against RPCS3's lz.cpp; a runtime check of the
+/// range-coded path against a real compressed sample is still pending — see its remarks).
 /// </summary>
 public static class EdatFile
 {

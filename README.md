@@ -11,6 +11,13 @@ See [`pkgview-ng.md`](pkgview-ng.md) for the full design spec.
 Core, CLI, and a first GUI are implemented and tested (spec §11 steps 1–5, plus v0.2 items):
 
 - **Header** parsing (big-endian), with friendly errors on bad magic / truncation.
+- **PSP / PSVita packages** (platform 0x0002) read and extract alongside PS3. These share the PS3
+  container; only the data key differs — resolved from the header key_type (`header[0xE7] & 7`): PSP/PSX
+  use the bundled PSP key, PSVita derives its key from the data_riv (bundled Vita keys 2/3/4). PSP/PSX
+  packages additionally select a **per-entry** key — content marked type `0x90` uses the PSP key, other
+  entries (PARAM.SFO, ICON0.PNG, …) use the PS3 gpkg key — matching pkg2zip. Verified end-to-end against
+  a real PSP minis package (`info` / `list` / `sfo` / `extract` all work; extracted PNG/SFO/EDAT files
+  carry correct magic).
 - **Content id** decode → region / title-id / variant / name.
 - **Metadata** block → typed model, unknown ids preserved as raw hex.
 - **Decryptors** behind `IKeyProvider`: retail AES-128-CTR and debug SHA-1 keystream.

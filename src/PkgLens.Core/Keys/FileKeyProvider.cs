@@ -52,6 +52,17 @@ public sealed class FileKeyProvider : IKeyProvider
             return false;
         }
 
+        // PSP / PSVita packages use their own bundled keys, selected by the header key_type.
+        if (header.IsPspPsVita)
+            return TryResolvePspVita(header, out context, out reason);
+
+        if (!header.IsPs3)
+        {
+            context = null!;
+            reason = $"Unsupported package platform (raw 0x{header.RawPlatform:X4}).";
+            return false;
+        }
+
         byte[]? key = LoadKey(out string? loadError);
         if (key is null)
         {
@@ -64,6 +75,35 @@ public sealed class FileKeyProvider : IKeyProvider
 
         context = DecryptionContext.ForRetail(header, key);
         return true;
+    }
+
+    /// <summary>
+    /// Resolves a PSP/PSVita decryptor from the bundled keys. key_type 1 = PSP (key used directly);
+    /// 2/3/4 = PSVita (the CTR key is derived from the data_riv). These keys are public and always
+    /// present, so PSP/PSVita packages decrypt out of the box like retail PS3 packages.
+    /// </summary>
+    private static bool TryResolvePspVita(PkgHeader header, out DecryptionContext context, out string? reason)
+    {
+        reason = null;
+        switch (header.PspKeyType)
+        {
+            case 1:
+                context = DecryptionContext.ForPsp(header, BundledKeys.PspPkgAesKey);
+                return true;
+            case 2:
+                context = DecryptionContext.ForVita(header, BundledKeys.VitaPkgAesKey2);
+                return true;
+            case 3:
+                context = DecryptionContext.ForVita(header, BundledKeys.VitaPkgAesKey3);
+                return true;
+            case 4:
+                context = DecryptionContext.ForVita(header, BundledKeys.VitaPkgAesKey4);
+                return true;
+            default:
+                context = null!;
+                reason = $"Unsupported PSP/PSVita key type {header.PspKeyType} (header[0xE7] & 7).";
+                return false;
+        }
     }
 
     /// <summary>

@@ -7,9 +7,13 @@ namespace PkgLens.Core.Npd;
 /// <paramref name="output"/>, or a negative value on error (malformed stream / buffer over- or
 /// under-run) — it fails loudly rather than emitting corrupt data.
 ///
-/// NOTE: this core is a faithful port of the proven reference, but — unlike the rest of the EDAT
-/// pipeline — it has not yet been checked byte-for-byte against a real compressed EDAT in this repo
-/// (no compressed sample was available). Treat its output as unverified until such a check is run.
+/// VERIFICATION: audited line-for-line against RPCS3's <c>lz.cpp</c> (2026-07). Every context offset
+/// (0xB68, 0x7F1, 0xBA8, 0x928, +0x18/+0x8/+0x10, +4/+1/+2), the index ladders, the probability-table
+/// init (0xCA8 of 0xCC8 bytes set to 0x80), and the range/code arithmetic match the reference exactly.
+/// The single intentional deviation is the stored-block (<c>head &gt; 0x80</c>) return value, which
+/// returns the copied length instead of the reference's 0 (a truncation bug — see below). The stored
+/// branch is covered by tests; a runtime byte-for-byte check of the range-coded path against a real
+/// Sony-compressed EDAT block remains pending a sample (no public compressor exists to synthesize one).
 /// </summary>
 internal static class EdatLz
 {

@@ -68,7 +68,7 @@ internal static class Render
         if (cid.TitleId is not null) Console.WriteLine($"  Title ID : {cid.TitleId}");
         if (cid.Variant is not null) Console.WriteLine($"  Variant  : {cid.Variant}");
         if (cid.Name is not null) Console.WriteLine($"  Name     : {cid.Name}");
-        Console.WriteLine($"Platform   : {h.Platform}");
+        Console.WriteLine($"Platform   : {h.PlatformDisplay}");
         Console.WriteLine($"Finalized  : {h.Finalization} (0x{h.RawFinalization:X4})");
         Console.WriteLine($"Total size : {h.TotalSize:n0} bytes");
         Console.WriteLine($"Data       : offset 0x{h.DataOffset:X}, size {h.DataSize:n0} bytes");

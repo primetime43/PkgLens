@@ -12,7 +12,7 @@ namespace PkgLens.Core.Tests.TestData;
 /// </summary>
 public sealed class SyntheticPkgBuilder
 {
-    private sealed record Item(string Name, byte[] Content, bool IsDirectory);
+    private sealed record Item(string Name, byte[] Content, bool IsDirectory, byte PspTypeHigh);
 
     private readonly List<Item> _items = new();
     private readonly List<(uint Id, byte[] Data)> _metadata = new();
@@ -26,15 +26,21 @@ public sealed class SyntheticPkgBuilder
     public byte[] RetailAesKey { get; set; } =
         Enumerable.Range(0, 16).Select(i => (byte)(0xA0 + i)).ToArray();
 
-    public SyntheticPkgBuilder AddDirectory(string name)
+    /// <summary>Build a PSP/PSX package (platform 0x0002) with per-entry key selection instead of PS3.</summary>
+    public bool Psp { get; set; }
+
+    /// <summary>The PSP key_type written at header[0xE7] (1 = PSP). Only used when <see cref="Psp"/> is set.</summary>
+    public byte PspKeyType { get; set; } = 1;
+
+    public SyntheticPkgBuilder AddDirectory(string name, byte pspTypeHigh = 0x90)
     {
-        _items.Add(new Item(name, Array.Empty<byte>(), true));
+        _items.Add(new Item(name, Array.Empty<byte>(), true, pspTypeHigh));
         return this;
     }
 
-    public SyntheticPkgBuilder AddFile(string name, byte[] content)
+    public SyntheticPkgBuilder AddFile(string name, byte[] content, byte pspTypeHigh = 0x90)
     {
-        _items.Add(new Item(name, content, false));
+        _items.Add(new Item(name, content, false, pspTypeHigh));
         return this;
     }
 
@@ -100,16 +106,23 @@ public sealed class SyntheticPkgBuilder
             BinaryPrimitives.WriteUInt32BigEndian(rec[0x04..], (uint)nameSizes[i]);
             BinaryPrimitives.WriteUInt64BigEndian(rec[0x08..], (ulong)fileOffsets[i]);
             BinaryPrimitives.WriteUInt64BigEndian(rec[0x10..], (ulong)_items[i].Content.Length);
-            uint type = _items[i].IsDirectory ? (uint)PkgEntryType.Folder : (uint)PkgEntryType.Regular;
+            uint kind = _items[i].IsDirectory ? (uint)PkgEntryType.Folder : (uint)PkgEntryType.Regular;
+            // PSP encodes the per-entry key selector in the type high byte; PS3 leaves it zero.
+            uint type = Psp ? ((uint)_items[i].PspTypeHigh << 24) | kind : kind;
             BinaryPrimitives.WriteUInt32BigEndian(rec[0x18..], type);
         }
         names.GetBuffer().AsSpan(0, namesLen).CopyTo(data.AsSpan(tableLen));
         files.GetBuffer().AsSpan(0, filesLen).CopyTo(data.AsSpan(tableLen + namesLen));
 
-        // Encrypt the whole data region in place (region offset 0).
-        var cipher = CreateCipher();
-        cipher.DecryptInPlace(data, 0); // XOR keystream — symmetric
-        (cipher as IDisposable)?.Dispose();
+        // Encrypt the data region in place (XOR keystream — symmetric).
+        if (Psp)
+            EncryptPspRegion(data, tableLen, nameOffsets, nameSizes, fileOffsets);
+        else
+        {
+            var cipher = CreateCipher();
+            cipher.DecryptInPlace(data, 0);
+            (cipher as IDisposable)?.Dispose();
+        }
 
         // Metadata block (plaintext).
         var meta = new MemoryStream();
@@ -123,8 +136,9 @@ public sealed class SyntheticPkgBuilder
         }
         byte[] metaBlock = meta.ToArray();
 
-        // Fixed layout: header 0xC0, then metadata, then (16-aligned) data region.
-        const int headerSize = 0xC0;
+        // Layout: header (0x100 for PSP so key_type at 0xE7 is inside it, else 0xC0), then metadata,
+        // then the (16-aligned) data region.
+        int headerSize = Psp ? 0x100 : 0xC0;
         int metadataOffset = headerSize;
         int dataOffset = Align(metadataOffset + metaBlock.Length, 16);
         long totalSize = dataOffset + dataSize;
@@ -134,7 +148,7 @@ public sealed class SyntheticPkgBuilder
 
         BinaryPrimitives.WriteUInt32BigEndian(header[0x00..], PkgHeader.Magic);
         BinaryPrimitives.WriteUInt16BigEndian(header[0x04..], Finalization == PkgFinalization.Retail ? (ushort)0x8000 : (ushort)0x0000);
-        BinaryPrimitives.WriteUInt16BigEndian(header[0x06..], 0x0001); // PS3
+        BinaryPrimitives.WriteUInt16BigEndian(header[0x06..], Psp ? (ushort)0x0002 : (ushort)0x0001);
         BinaryPrimitives.WriteUInt32BigEndian(header[0x08..], (uint)metadataOffset);
         BinaryPrimitives.WriteUInt32BigEndian(header[0x0C..], (uint)_metadata.Count);
         BinaryPrimitives.WriteUInt32BigEndian(header[0x10..], (uint)metaBlock.Length);
@@ -147,17 +161,42 @@ public sealed class SyntheticPkgBuilder
         cid.AsSpan(0, Math.Min(cid.Length, PkgHeader.ContentIdLength)).CopyTo(header[0x30..]);
         QaDigest.AsSpan(0, 16).CopyTo(header[0x60..]);
         DataRiv.AsSpan(0, 16).CopyTo(header[0x70..]);
+        if (Psp) header[0xE7] = PspKeyType; // key_type selector (header[0xE7] & 7)
 
-        // Header digest area: SHA-1 (last 8 bytes) at 0xB8, and — for retail — the AES-CMAC at 0x80,
-        // both over header[0x00:0x80], matching the confirmed real-package algorithm.
+        // Header digest area: SHA-1 (last 8 bytes) at 0xB8, and — for PS3 retail — the AES-CMAC at 0x80,
+        // both over header[0x00:0x80], matching the confirmed real-package algorithm. (PSP uses a
+        // different header-auth scheme, so no gpkg CMAC is written for PSP fixtures.)
         var sha = System.Security.Cryptography.SHA1.HashData(header[0x00..0x80].ToArray());
         sha.AsSpan(12, 8).CopyTo(header[0xB8..]);
-        if (Finalization == PkgFinalization.Retail)
+        if (Finalization == PkgFinalization.Retail && !Psp)
             PkgLens.Core.Crypto.AesCmac.Compute(RetailAesKey, header[0x00..0x80]).CopyTo(header[0x80..]);
 
         metaBlock.CopyTo(output.AsSpan(metadataOffset));
         data.CopyTo(output.AsSpan(dataOffset));
         return output;
+    }
+
+    /// <summary>
+    /// Encrypts a PSP data region: the item table with the PSP key, then each entry's name and data
+    /// with its per-entry key (PSP key for type-0x90 entries, the PS3 gpkg key otherwise) — the inverse
+    /// of the reader's per-entry selection.
+    /// </summary>
+    private void EncryptPspRegion(byte[] data, int tableLen, int[] nameOffsets, int[] nameSizes, int[] fileOffsets)
+    {
+        using var psp = new RetailAesCtrDecryptor(PkgLens.Core.Keys.BundledKeys.PspPkgAesKey, DataRiv);
+        using var gpkg = new RetailAesCtrDecryptor(PkgLens.Core.Keys.BundledKeys.Ps3GpkgAesKey, DataRiv);
+
+        psp.DecryptInPlace(data.AsSpan(0, tableLen), 0); // item table always uses the PSP key
+
+        for (int i = 0; i < _items.Count; i++)
+        {
+            var cipher = _items[i].PspTypeHigh == 0x90 ? psp : gpkg;
+            if (nameSizes[i] > 0)
+                cipher.DecryptInPlace(data.AsSpan(nameOffsets[i], nameSizes[i]), nameOffsets[i]);
+            int contentLen = _items[i].Content.Length;
+            if (contentLen > 0)
+                cipher.DecryptInPlace(data.AsSpan(fileOffsets[i], contentLen), fileOffsets[i]);
+        }
     }
 
     private static int Align(int value, int alignment) =>

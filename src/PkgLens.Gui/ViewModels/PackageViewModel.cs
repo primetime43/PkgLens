@@ -156,7 +156,7 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
         Title = info.Sfo?.Title ?? info.ContentId.Name ?? info.ContentId.Raw;
         TitleId = info.Sfo?.TitleId ?? info.ContentId.TitleId ?? "";
         VersionText = info.Sfo?.AppVersion ?? info.Sfo?.Version ?? "";
-        PlatformText = info.Header.Platform.ToString();
+        PlatformText = info.Header.PlatformDisplay;
         FinalizationText = info.Header.Finalization.ToString();
         IsRetail = info.Header.IsRetail;
 
