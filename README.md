@@ -199,6 +199,7 @@ pkglens resign <elf> [--out FILE] [--npdrm] # ELF → fake-signed SELF (fSELF) f
 pkglens patch <eboot> [--sdk-version 4.00] [--find HEX --replace HEX] [--at OFF=HEX]  # magic-patch an EBOOT
 pkglens folderinfo <folder> [--json]        # report on an extracted content folder
 pkglens scan  <dir> [--recursive] [--json | --csv]   # catalog a folder of .pkg files, one row each
+pkglens unpbp <EBOOT.PBP> [--out DIR] [--list]       # split a PSP PBP into its parts (SFO/icons/DATA.PSP/DATA.PSAR)
 pkglens pack  <folder> [--out FILE] [--resign [--rap FILE]]   # build a .pkg (optionally resign EBOOT)
 pkglens keys  import|status|where           # manage an optional override retail key
 ```

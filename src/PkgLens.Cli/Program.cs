@@ -44,6 +44,10 @@ if (command == "folderinfo")
 if (command == "scan")
     return ScanCommand.Run(args.AsSpan(1));
 
+// The `unpbp` command splits a PSP PBP container (EBOOT.PBP) into its parts.
+if (command == "unpbp")
+    return UnpbpCommand.Run(args.AsSpan(1));
+
 // The `patch` command applies magic patches to an EBOOT/ELF.
 if (command == "patch")
     return PatchCommand.Run(args.AsSpan(1));

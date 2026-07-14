@@ -123,6 +123,7 @@ internal static class CliHelp
                        magic-patch an EBOOT/ELF (e.g. lower the firmware requirement: --sdk-version 4.00)
               pkglens folderinfo <folder> [--json]           report on an extracted content folder
               pkglens scan    <dir> [--recursive] [--json | --csv] [--keys DIR]   catalog a folder of .pkg files
+              pkglens unpbp   <EBOOT.PBP> [--out DIR] [--list]   split a PSP PBP into its parts (SFO/icons/DATA.PSP/DATA.PSAR)
               pkglens pack    <folder> [--out FILE] [options]   build a .pkg from a content folder
               pkglens keys    import|status|where           manage an optional override retail key
 
