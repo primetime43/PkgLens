@@ -1,13 +1,14 @@
 # Keys
 
-PkgLens bundles the **public** PS3 decryption keys it needs, so packages open with no setup. The
-only material you ever supply yourself is per-purchase license data (a **RAP** for a licensed
-EDAT/EBOOT) — that is tied to your account, so it can't be bundled.
+PkgLens bundles the public PS3 decryption keys it needs, so packages open with no setup. The only
+thing you supply yourself is a **RAP** for licensed EDAT/EBOOT content — that's tied to your
+account, so it can't be bundled.
 
 ## What's built in
 
-These are universal, symmetric **decryption** keys — public for well over a decade and embedded by
-every PS3 package tool (RPCS3, scetool, make_npdata, …). None is a private/signing key.
+These are universal, symmetric decryption keys. All are public and have been for over a decade,
+embedded by every PS3 package tool (RPCS3, scetool, make_npdata, and others). None is a
+private or signing key.
 
 | Key | Used for | Source in code |
 |---|---|---|
@@ -22,11 +23,11 @@ QA digest.
 ## What you still supply
 
 - **RAP files** — a licensed (non-free) EDAT or EBOOT is encrypted with a klicensee derived from the
-  RAP that came with *your* purchase. Pass it per operation: `--rap FILE` on the CLI
-  (`decrypt`, `unself`, `pack --resign`), or the RAP picker in the GUI. PkgLens converts the RAP to
-  the klicensee itself; it is never stored in the repo.
-- **Per-console secrets (IDPS / EID)** are **out of scope** and are never needed by any PkgLens
-  feature. If a workflow would require them, it isn't something PkgLens does.
+  RAP that came with your purchase. Pass it per operation: `--rap FILE` on the CLI (`decrypt`,
+  `unself`, `pack --resign`), or the RAP picker in the GUI. PkgLens derives the klicensee itself and
+  never stores the RAP in the repo.
+- **Per-console secrets (IDPS / EID)** are out of scope and never needed by any PkgLens feature. A
+  workflow that would require them isn't something PkgLens does.
 
 ## Overriding the bundled PKG key
 
