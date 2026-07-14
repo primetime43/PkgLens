@@ -68,8 +68,14 @@ Core, CLI, and a first GUI are implemented and tested (spec §11 steps 1–5, pl
   game boots on CFW without its license. A licensed EBOOT needs its RAP (`--rap` / the RAP picker) to decrypt
   first; free-license, debug, plain-ELF and already-fSELF EBOOTs need nothing.
 - **Game folder info** — a read-only report on an extracted content folder (`pkglens folderinfo <folder>`,
-  or the Pack page's *Show folder info…* button): content id / title from `PARAM.SFO`, file counts and size,
-  the EBOOT's sign state (encrypted / fake-signed / plain ELF), and any EDAT/SDAT files with their license.
+  or the Tools → *Folder info…* menu / Pack page's *Show folder info…* button): content id / title from
+  `PARAM.SFO`, file counts and size, the EBOOT's sign state (encrypted / fake-signed / plain ELF), and any
+  EDAT/SDAT files with their license.
+- **Batch scan / catalog** — walk a folder of packages and emit one row each
+  (`pkglens scan <dir> [--recursive] [--json | --csv]`): content id, title, title id, version, size,
+  platform (PS3 / PSP / PSVita), retail-or-debug, and whether it decrypted. A package that won't parse
+  becomes an error row rather than aborting the scan — the whole thing is read-only and streams headers
+  only. Use `--csv` to import a library into a spreadsheet, `--json` to pipe it into other tooling.
 - **Magic Patch** — apply static byte edits to an EBOOT/ELF so a game boots on CFW (`pkglens patch <eboot>`,
   or the Resign page's *Magic patch* section). The headline patch **lowers the firmware/SDK version** the
   executable demands (`--sdk-version 4.00`) — stored in the ELF's `sys_process_param` block — so a title built
@@ -83,7 +89,7 @@ Core, CLI, and a first GUI are implemented and tested (spec §11 steps 1–5, pl
   (key version 0x80 / 0xC0) — the ELF is stored in the clear, so no keys are needed. Verified
   **byte-for-byte** against a real retail `EBOOT.BIN → EBOOT.ELF` pair *and* on the fSELF round-trip.
   No signing keys are involved — the output is a plaintext ELF, not a resigned file.
-- **CLI**: `pkglens info | list | sfo | verify | extract | decrypt | self | unself | resign | patch | pack | folderinfo | keys`, with `--json`, `--keys`, `--out`, `--filter`, `--rap`, `--klic`.
+- **CLI**: `pkglens info | list | sfo | verify | extract | decrypt | self | unself | resign | patch | pack | folderinfo | scan | keys`, with `--json`, `--csv`, `--keys`, `--out`, `--filter`, `--rap`, `--klic`.
 - **GUI** (Avalonia): classic menu/toolbar, folder tree + Name/Size list, viewer, Package-info dialog,
   drag-and-drop, light/dark theme, replace + Save-As (repack), and **Pack folder → .pkg** (File menu /
   toolbar) to build a package from a content folder.
@@ -136,8 +142,8 @@ Legend: ✅ covered · 🟡 partial · ⛔ out of scope (needs signing keys) · 
 | D | Compress Data *(switch)* | ⬜ | fSELF segments are stored uncompressed |
 
 **Beyond TrueAncestor**, PkgLens also has a full package-inspector GUI (tree + list + image/text/hex viewer),
-integrity `verify` (SHA-1 + AES-CMAC), EDAT/SDAT decryption (incl. compressed), SELF-header inspect, `--json`
-output, and runs cross-platform.
+integrity `verify` (SHA-1 + AES-CMAC), EDAT/SDAT decryption (incl. compressed), SELF-header inspect,
+batch **`scan`** to catalog a whole library (`--json` / `--csv`), `--json` output, and runs cross-platform.
 
 ## Layout
 
@@ -187,6 +193,7 @@ pkglens unself <eboot> [--rap FILE | --klic HEX] [--out FILE]  # decrypt a SELF 
 pkglens resign <elf> [--out FILE] [--npdrm] # ELF → fake-signed SELF (fSELF) for CFW
 pkglens patch <eboot> [--sdk-version 4.00] [--find HEX --replace HEX] [--at OFF=HEX]  # magic-patch an EBOOT
 pkglens folderinfo <folder> [--json]        # report on an extracted content folder
+pkglens scan  <dir> [--recursive] [--json | --csv]   # catalog a folder of .pkg files, one row each
 pkglens pack  <folder> [--out FILE] [--resign [--rap FILE]]   # build a .pkg (optionally resign EBOOT)
 pkglens keys  import|status|where           # manage an optional override retail key
 ```

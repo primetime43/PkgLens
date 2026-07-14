@@ -40,6 +40,10 @@ if (command == "unself")
 if (command == "folderinfo")
     return FolderInfoCommand.Run(args.AsSpan(1));
 
+// The `scan` command catalogs a <dir> of .pkg files, not a single <pkg>.
+if (command == "scan")
+    return ScanCommand.Run(args.AsSpan(1));
+
 // The `patch` command applies magic patches to an EBOOT/ELF.
 if (command == "patch")
     return PatchCommand.Run(args.AsSpan(1));
