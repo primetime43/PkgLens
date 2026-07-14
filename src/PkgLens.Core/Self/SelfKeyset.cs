@@ -8,11 +8,9 @@ public sealed class SelfKey
 }
 
 /// <summary>
-/// Public SELF decryption keysets (appldr/NPDRM erk+riv, indexed by key revision) and the NPDRM
-/// klicensee constants. These are <b>decryption</b> constants — the same category as the EDAT keys
-/// already embedded (<see cref="Npd.NpdKeys"/>) and required to decrypt a SELF the user owns. They
-/// are published for years; no private/signing keys are involved. Values transcribed verbatim from
-/// RPCS3's <c>key_vault.cpp</c> (APP + NPDRM tables), which match the local keys reference.
+/// SELF decryption keysets (appldr/NPDRM erk+riv, indexed by key revision) and the NPDRM klicensee
+/// constants — decryption keys only, no signing keys. Transcribed from RPCS3's <c>key_vault.cpp</c>
+/// (APP + NPDRM tables).
 /// </summary>
 public static class SelfKeyset
 {

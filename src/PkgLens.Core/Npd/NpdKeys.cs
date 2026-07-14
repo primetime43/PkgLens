@@ -3,9 +3,7 @@ using System.Security.Cryptography;
 namespace PkgLens.Core.Npd;
 
 /// <summary>
-/// Public NPDRM/EDAT decryption constants and the RAP→klicensee conversion. These are decryption
-/// (not signing) constants, published for years and required for EDAT/SDAT decryption; embedding
-/// them is consistent with "decrypt content you own." Algorithm ported from make_npdata (GPL) and
+/// NPDRM/EDAT decryption constants and the RAP→klicensee conversion. Ported from make_npdata and
 /// verified byte-for-byte against a real retail EDAT.
 /// </summary>
 public static class NpdKeys

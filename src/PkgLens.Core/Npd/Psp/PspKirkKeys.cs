@@ -1,11 +1,10 @@
 namespace PkgLens.Core.Npd.Psp;
 
 /// <summary>
-/// Public PSP KIRK / AMCTRL decryption constants used by the PSP EDAT → PGD decryptor. These are the
-/// same category as the other bundled keys (public for over a decade, embedded in every PSP tool —
-/// values from tpunix's <c>kirk_engine</c> / <c>amctrl</c>). Only the subset needed to decrypt a
-/// fixed-key PGD (KIRK keyseeds 0x38/0x39/0x63, the DNAS fixed key, and the AMCTRL scramble
-/// constants) is included — no private/signing keys and no per-console fuse secrets.
+/// PSP KIRK / AMCTRL decryption constants for the PSP EDAT → PGD decryptor (from tpunix's
+/// <c>kirk_engine</c> / <c>amctrl</c>). Only the subset needed to decrypt a fixed-key PGD is here:
+/// KIRK keyseeds 0x38/0x39/0x63, the DNAS fixed keys, and the AMCTRL scramble constants — no
+/// signing keys and no per-console fuse secrets.
 /// </summary>
 internal static class PspKirkKeys
 {

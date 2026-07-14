@@ -1,13 +1,9 @@
 namespace PkgLens.Core.Keys;
 
 /// <summary>
-/// Public PS3 package-decryption keys shipped with PkgLens. These are the <b>NPDRM PKG AES keys</b> —
-/// universal, symmetric <em>decryption</em> constants published for well over a decade and embedded by
-/// every PS3 package tool (RPCS3, scetool, make_npdata, …). They are the same category as the SELF
-/// keysets (<see cref="Self.SelfKeyset"/>) and EDAT keys (<see cref="Npd.NpdKeys"/>) already bundled:
-/// none is a private/signing key, a per-console secret (IDPS/EID), or a per-purchase license (RAP).
-/// Bundling them lets retail packages decrypt out of the box, so the user only ever supplies material
-/// that is genuinely theirs (a RAP for a licensed EDAT/EBOOT).
+/// Bundled PS3/PSP/PSVita package-decryption AES keys. Symmetric decryption constants only — no
+/// private/signing key, per-console secret (IDPS/EID), or per-purchase license (RAP), which the user
+/// still supplies. Bundling lets retail packages decrypt out of the box.
 /// </summary>
 public static class BundledKeys
 {
@@ -27,9 +23,8 @@ public static class BundledKeys
     public static readonly byte[] Ps3IduAesKey = Hex("5DB911E6B7E50A7D321538FD7C66F17B");
 
     // ---- PSP / PSVita package keys (platform 0x0002) ----
-    // Same category as the PS3 key: public, symmetric decryption constants, embedded by every PSP/Vita
-    // package tool (pkg2zip, PSNdler, …). Selected by key_type = header[0xE7] & 7. The PSP key is used
-    // directly (AES-128-CTR); the Vita keys derive the per-package key via AES-ECB(key, data_riv).
+    // Selected by key_type = header[0xE7] & 7. The PSP key is used directly (AES-128-CTR); the Vita
+    // keys derive the per-package key via AES-ECB(key, data_riv).
 
     /// <summary>PSP / PSX package key (key_type 1). Used directly as the AES-128-CTR key.</summary>
     public static readonly byte[] PspPkgAesKey = Hex("07F2C68290B50D2C33818D709B60E62B");
