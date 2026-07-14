@@ -670,7 +670,56 @@ public partial class MainWindow : Window
         notes.IsVisible = !string.IsNullOrEmpty(text);
     }
 
-    // ==================== Resign page (inspector for now) ====================
+    // ==================== Resign page ====================
+
+    // Detail panels keyed by the card Tag that reveals them.
+    private static readonly (string Key, string Panel)[] ResignOps =
+    {
+        ("inspect",  "ResignOpInspect"),
+        ("fakesign", "ResignOpFakeSign"),
+        ("decrypt",  "ResignOpDecrypt"),
+        ("magic",    "ResignOpMagic"),
+        ("byte",     "ResignOpByte"),
+    };
+
+    /// <summary>A card was clicked: hide the menu and show just that operation's controls.</summary>
+    private void OnResignCardClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Control { Tag: string key })
+            ShowResignOp(key);
+    }
+
+    /// <summary>Back link: return to the card menu.</summary>
+    private void OnResignBack(object? sender, RoutedEventArgs e)
+    {
+        this.FindControl<Control>("ResignMenu")!.IsVisible = true;
+        this.FindControl<Control>("ResignDetail")!.IsVisible = false;
+    }
+
+    private void ShowResignOp(string key)
+    {
+        this.FindControl<Control>("ResignMenu")!.IsVisible = false;
+        this.FindControl<Control>("ResignDetail")!.IsVisible = true;
+        foreach (var (opKey, panel) in ResignOps)
+            this.FindControl<Control>(panel)!.IsVisible = opKey == key;
+    }
+
+    // ==================== Home page (main menu) ====================
+
+    private void OnHomeOpenPkg(object? sender, RoutedEventArgs e) => OnOpenClick(sender, e);
+    private void OnHomeScan(object? sender, RoutedEventArgs e) => OnScanFolderClick(sender, e);
+    private void OnHomeFolderInfo(object? sender, RoutedEventArgs e) => OnFolderInfoClick(sender, e);
+    private void OnHomePack(object? sender, RoutedEventArgs e) => Vm.ActiveTool = ToolPage.Pack;
+    private void OnHomeDecrypt(object? sender, RoutedEventArgs e) => Vm.ActiveTool = ToolPage.Decrypt;
+    private void OnHomeKeys(object? sender, RoutedEventArgs e) => Vm.ActiveTool = ToolPage.Keys;
+
+    /// <summary>A Home "SELF / EBOOT" card: open the Resign page focused on that operation.</summary>
+    private void OnHomeResign(object? sender, RoutedEventArgs e)
+    {
+        Vm.ActiveTool = ToolPage.Resign;
+        if (sender is Control { Tag: string key })
+            ShowResignOp(key);
+    }
 
     private async void OnSelfBrowse(object? sender, RoutedEventArgs e)
     {

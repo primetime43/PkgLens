@@ -102,6 +102,7 @@
         <ListBox x:Name="ToolRail" Background="Transparent"
                  BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="0,0,1,0"
                  SelectedIndex="{Binding SelectedToolIndex, Mode=TwoWay}">
+          <ListBoxItem Content="Home" />
           <ListBoxItem Content="Package" />
           <ListBoxItem Content="Pack" />
           <ListBoxItem Content="Resign" />
@@ -112,6 +113,220 @@
 
       <!-- Content host: one panel per page -->
       <Grid Grid.Column="1">
+
+        <!-- ===== Home page (main menu of tasks) ===== -->
+        <ScrollViewer IsVisible="{Binding IsHomeTool}">
+          <StackPanel Margin="24,20" Spacing="18" MaxWidth="900" HorizontalAlignment="Left">
+            <StackPanel Spacing="3">
+              <TextBlock Classes="pagetitle" Text="PkgLens" />
+              <TextBlock Classes="pagesubtitle"
+                         Text="Keyless PS3 / PSP / PSVita package and EBOOT tools. Each tool is tagged below with the file it works on and where its output runs." />
+            </StackPanel>
+
+            <!-- Legend: what the tags mean -->
+            <Border BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="1"
+                    CornerRadius="6" Padding="14,11" MaxWidth="900" HorizontalAlignment="Left">
+              <StackPanel Spacing="7">
+                <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,6,Auto,6,Auto">
+                  <Border Grid.Row="0" Grid.Column="0" Classes="chip cfw" HorizontalAlignment="Left"><TextBlock Text="CEX · CFW" /></Border>
+                  <TextBlock Grid.Row="0" Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Center" FontSize="12" Opacity="0.85"
+                             TextWrapping="Wrap" Text="Output runs on a console with custom firmware / HEN (jailbroken) — the usual retail (CEX) target." />
+                  <Border Grid.Row="2" Grid.Column="0" Classes="chip debug" HorizontalAlignment="Left"><TextBlock Text="DEX · OFW" /></Border>
+                  <TextBlock Grid.Row="2" Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Center" FontSize="12" Opacity="0.85"
+                             TextWrapping="Wrap" Text="Output runs on debug / reference (DEX) consoles on official debug firmware, and in RPCS3 — currently the debug .pkg only." />
+                  <Border Grid.Row="4" Grid.Column="0" Classes="chip" HorizontalAlignment="Left"><TextBlock Text="READ-ONLY" /></Border>
+                  <TextBlock Grid.Row="4" Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Center" FontSize="12" Opacity="0.85"
+                             TextWrapping="Wrap" Text="Inspects or decrypts to a plaintext file — nothing is signed or installed." />
+                </Grid>
+                <Border Height="1" Background="{DynamicResource SystemControlForegroundBaseLowBrush}" Margin="0,1" />
+                <TextBlock TextWrapping="Wrap" FontSize="11" Opacity="0.6"
+                           Text="A retail console on stock OFW needs a forged Sony signature, which PkgLens never does — so that target is out of scope.  Glossary:  CEX = retail console · DEX = debug/dev console · OFW = official firmware · CFW/HEN = jailbroken." />
+              </StackPanel>
+            </Border>
+
+            <!-- Packages (.pkg) -->
+            <StackPanel Spacing="8">
+              <TextBlock Classes="sectionhead" Text="PACKAGES  ·  .PKG" />
+              <Border Classes="panel" Padding="4">
+                <StackPanel>
+                  <Button Classes="row" Click="OnHomeOpenPkg">
+                    <Grid ColumnDefinitions="34,*,Auto">
+                      <TextBlock Grid.Column="0" Text="📂" FontSize="17" VerticalAlignment="Center" />
+                      <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
+                        <TextBlock Classes="rowtitle" Text="Open a .pkg…" />
+                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="Browse, list and extract a package." />
+                      </StackPanel>
+                      <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Border Classes="chip"><TextBlock Text="PKG" /></Border>
+                        <Border Classes="chip"><TextBlock Text="READ-ONLY" /></Border>
+                      </StackPanel>
+                    </Grid>
+                  </Button>
+                  <Button Classes="row" Click="OnHomeScan">
+                    <Grid ColumnDefinitions="34,*,Auto">
+                      <TextBlock Grid.Column="0" Text="🗂" FontSize="17" VerticalAlignment="Center" />
+                      <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
+                        <TextBlock Classes="rowtitle" Text="Scan a folder…" />
+                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="Catalog every .pkg in a directory." />
+                      </StackPanel>
+                      <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Border Classes="chip"><TextBlock Text="PKG" /></Border>
+                        <Border Classes="chip"><TextBlock Text="READ-ONLY" /></Border>
+                      </StackPanel>
+                    </Grid>
+                  </Button>
+                  <Button Classes="row" Click="OnHomeFolderInfo">
+                    <Grid ColumnDefinitions="34,*,Auto">
+                      <TextBlock Grid.Column="0" Text="📁" FontSize="17" VerticalAlignment="Center" />
+                      <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
+                        <TextBlock Classes="rowtitle" Text="Game folder info…" />
+                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="Read a content folder's PARAM.SFO / EBOOTs." />
+                      </StackPanel>
+                      <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Border Classes="chip"><TextBlock Text="FOLDER" /></Border>
+                        <Border Classes="chip"><TextBlock Text="READ-ONLY" /></Border>
+                      </StackPanel>
+                    </Grid>
+                  </Button>
+                  <Button Classes="row" Click="OnHomePack">
+                    <Grid ColumnDefinitions="34,*,Auto">
+                      <TextBlock Grid.Column="0" Text="📦" FontSize="17" VerticalAlignment="Center" />
+                      <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
+                        <TextBlock Classes="rowtitle" Text="Pack folder → .pkg" />
+                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="Build a package from a content folder." />
+                      </StackPanel>
+                      <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Border Classes="chip cfw"><TextBlock Text="CEX · CFW" /></Border>
+                        <Border Classes="chip debug"><TextBlock Text="DEX · OFW" /></Border>
+                      </StackPanel>
+                    </Grid>
+                  </Button>
+                </StackPanel>
+              </Border>
+            </StackPanel>
+
+            <!-- SELF / EBOOT executables — grouped by console/firmware target -->
+            <StackPanel Spacing="8">
+              <TextBlock Classes="sectionhead" Text="SELF / EBOOT EXECUTABLES  ·  PS3" />
+
+              <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,2,0,0">
+                <Border Classes="chip cfw"><TextBlock Text="CEX · CFW" /></Border>
+                <TextBlock Text="retail console · custom firmware" FontSize="11" Opacity="0.6" VerticalAlignment="Center" />
+              </StackPanel>
+              <Border Classes="panel" Padding="4">
+                <StackPanel>
+                  <Button Classes="row" Tag="inspect" Click="OnHomeResign">
+                    <Grid ColumnDefinitions="34,*,Auto">
+                      <TextBlock Grid.Column="0" Text="🔍" FontSize="17" VerticalAlignment="Center" />
+                      <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
+                        <TextBlock Classes="rowtitle" Text="Inspect SELF / EBOOT" />
+                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="Header — type, key rev, segments." />
+                      </StackPanel>
+                      <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Border Classes="chip"><TextBlock Text="EBOOT" /></Border>
+                        <Border Classes="chip"><TextBlock Text="READ-ONLY" /></Border>
+                      </StackPanel>
+                    </Grid>
+                  </Button>
+                  <Button Classes="row" Tag="decrypt" Click="OnHomeResign">
+                    <Grid ColumnDefinitions="34,*,Auto">
+                      <TextBlock Grid.Column="0" Text="🔓" FontSize="17" VerticalAlignment="Center" />
+                      <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
+                        <TextBlock Classes="rowtitle" Text="Decrypt SELF → ELF" />
+                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="EBOOT.BIN / .self to a plaintext ELF." />
+                      </StackPanel>
+                      <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Border Classes="chip"><TextBlock Text="EBOOT" /></Border>
+                        <Border Classes="chip"><TextBlock Text="READ-ONLY" /></Border>
+                      </StackPanel>
+                    </Grid>
+                  </Button>
+                  <Button Classes="row" Tag="fakesign" Click="OnHomeResign">
+                    <Grid ColumnDefinitions="34,*,Auto">
+                      <TextBlock Grid.Column="0" Text="✍️" FontSize="17" VerticalAlignment="Center" />
+                      <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
+                        <TextBlock Classes="rowtitle" Text="Fake-sign ELF → fSELF" />
+                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="A CFW-ready fSELF from a plain ELF." />
+                      </StackPanel>
+                      <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Border Classes="chip"><TextBlock Text="EBOOT" /></Border>
+                        <Border Classes="chip cfw"><TextBlock Text="CFW" /></Border>
+                      </StackPanel>
+                    </Grid>
+                  </Button>
+                  <Button Classes="row" Tag="magic" Click="OnHomeResign">
+                    <Grid ColumnDefinitions="34,*,Auto">
+                      <TextBlock Grid.Column="0" Text="⬇️" FontSize="17" VerticalAlignment="Center" />
+                      <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
+                        <TextBlock Classes="rowtitle" Text="Magic-patch firmware" />
+                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="Lower the firmware an EBOOT requires." />
+                      </StackPanel>
+                      <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Border Classes="chip"><TextBlock Text="EBOOT" /></Border>
+                        <Border Classes="chip cfw"><TextBlock Text="CFW" /></Border>
+                      </StackPanel>
+                    </Grid>
+                  </Button>
+                  <Button Classes="row" Tag="byte" Click="OnHomeResign">
+                    <Grid ColumnDefinitions="34,*,Auto">
+                      <TextBlock Grid.Column="0" Text="✂️" FontSize="17" VerticalAlignment="Center" />
+                      <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
+                        <TextBlock Classes="rowtitle" Text="Byte-patch EBOOT" />
+                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="Hex find/replace or at-offset edit." />
+                      </StackPanel>
+                      <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Border Classes="chip"><TextBlock Text="EBOOT" /></Border>
+                        <Border Classes="chip cfw"><TextBlock Text="CFW" /></Border>
+                      </StackPanel>
+                    </Grid>
+                  </Button>
+                </StackPanel>
+              </Border>
+
+              <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,4,0,0">
+                <Border Classes="chip debug"><TextBlock Text="DEX · OFW" /></Border>
+                <TextBlock Text="debug console · official firmware" FontSize="11" Opacity="0.6" VerticalAlignment="Center" />
+              </StackPanel>
+              <TextBlock Classes="carddesc" Margin="2,0,0,0"
+                         Text="No DEX OFW resign yet — resigning SELFs for debug (DEX) firmware isn't built. For DEX today, build a debug .pkg from Pack." />
+            </StackPanel>
+
+            <!-- Data files & setup -->
+            <StackPanel Spacing="8">
+              <TextBlock Classes="sectionhead" Text="DATA FILES &amp; SETUP" />
+              <Border Classes="panel" Padding="4">
+                <StackPanel>
+                  <Button Classes="row" Click="OnHomeDecrypt">
+                    <Grid ColumnDefinitions="34,*,Auto">
+                      <TextBlock Grid.Column="0" Text="🔑" FontSize="17" VerticalAlignment="Center" />
+                      <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
+                        <TextBlock Classes="rowtitle" Text="Decrypt EDAT / SDAT" />
+                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="Decrypt an NPDRM data file to plaintext." />
+                      </StackPanel>
+                      <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Border Classes="chip"><TextBlock Text="EDAT" /></Border>
+                        <Border Classes="chip"><TextBlock Text="PS3 / PSP" /></Border>
+                        <Border Classes="chip"><TextBlock Text="READ-ONLY" /></Border>
+                      </StackPanel>
+                    </Grid>
+                  </Button>
+                  <Button Classes="row" Click="OnHomeKeys">
+                    <Grid ColumnDefinitions="34,*,Auto">
+                      <TextBlock Grid.Column="0" Text="⚙️" FontSize="17" VerticalAlignment="Center" />
+                      <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
+                        <TextBlock Classes="rowtitle" Text="Manage keys…" />
+                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="Import an override key or set the folder." />
+                      </StackPanel>
+                      <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Border Classes="chip"><TextBlock Text="SETUP" /></Border>
+                      </StackPanel>
+                    </Grid>
+                  </Button>
+                </StackPanel>
+              </Border>
+            </StackPanel>
+          </StackPanel>
+        </ScrollViewer>
 
         <!-- ===== Package page (inspector) ===== -->
         <Grid IsVisible="{Binding IsPackageTool}">
@@ -234,63 +449,100 @@
 
         <!-- ===== Pack page ===== -->
         <ScrollViewer IsVisible="{Binding IsPackTool}">
-          <StackPanel Margin="18" Spacing="10" MaxWidth="560" HorizontalAlignment="Left">
-            <TextBlock Text="Pack folder → .pkg" FontSize="16" FontWeight="SemiBold" />
-            <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.75"
-                       Text="Build a package from a content folder. Fields are pre-filled from the folder's PARAM.SFO where possible." />
-
-            <Grid ColumnDefinitions="110,10,*" RowDefinitions="Auto,8,Auto,8,Auto,8,Auto,8,Auto">
-              <TextBlock Grid.Row="0" Grid.Column="0" Text="Source folder" VerticalAlignment="Center" />
-              <StackPanel Grid.Row="0" Grid.Column="2" Orientation="Horizontal" Spacing="8">
-                <Button Content="Browse…" Click="OnPackBrowseFolder" />
-                <TextBlock x:Name="PackFolderText" VerticalAlignment="Center" FontSize="12" Opacity="0.8"
-                           TextTrimming="CharacterEllipsis" Text="(none)" />
+          <StackPanel Margin="24,20" Spacing="16" MaxWidth="720" HorizontalAlignment="Left">
+            <StackPanel Spacing="3">
+              <TextBlock Classes="pagetitle" Text="Pack folder → .pkg" />
+              <TextBlock Classes="pagesubtitle"
+                         Text="Build a package from a content folder. Fields are pre-filled from the folder's PARAM.SFO where possible." />
+              <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                <Border Classes="chip"><TextBlock Text="PKG" /></Border>
+                <Border Classes="chip cfw"><TextBlock Text="CEX · CFW" /></Border>
+                <Border Classes="chip debug"><TextBlock Text="DEX · OFW" /></Border>
               </StackPanel>
-
-              <TextBlock Grid.Row="2" Grid.Column="0" Text="Content ID" VerticalAlignment="Center" />
-              <TextBox   Grid.Row="2" Grid.Column="2" x:Name="PackContentIdBox"
-                         Watermark="UP0001-NPUB30910_00-EXAMPLE000000001" FontFamily="Consolas,monospace" />
-
-              <TextBlock Grid.Row="4" Grid.Column="0" Text="Install dir" VerticalAlignment="Center" />
-              <TextBox   Grid.Row="4" Grid.Column="2" x:Name="PackInstallDirBox" Watermark="NPUB30910" />
-
-              <TextBlock Grid.Row="6" Grid.Column="0" Text="Content type" VerticalAlignment="Center" />
-              <ComboBox  Grid.Row="6" Grid.Column="2" x:Name="PackContentTypeBox" HorizontalAlignment="Stretch" />
-
-              <TextBlock Grid.Row="8" Grid.Column="0" Text="DRM type" VerticalAlignment="Center" />
-              <StackPanel Grid.Row="8" Grid.Column="2" Orientation="Horizontal" Spacing="10">
-                <NumericUpDown x:Name="PackDrmBox" Minimum="0" Maximum="255" Increment="1" Value="3"
-                               ValueChanged="OnPackDrmChanged" HorizontalAlignment="Left" Width="110" />
-                <TextBlock x:Name="PackDrmName" VerticalAlignment="Center" FontSize="12" Opacity="0.8" Text="Free" />
-              </StackPanel>
-            </Grid>
-
-            <TextBlock Text="Output type" Margin="0,4,0,0" />
-            <StackPanel Spacing="4" Margin="4,0,0,0">
-              <RadioButton x:Name="PackRetailRadio" GroupName="PackFin" IsChecked="True"
-                           Content="Retail-encrypted — installs on CFW (unsigned; CFW skips the signature check)" />
-              <RadioButton x:Name="PackDebugRadio" GroupName="PackFin"
-                           Content="Non-finalized (debug) — self-contained, opens in RPCS3 / dev consoles" />
             </StackPanel>
 
-            <CheckBox x:Name="PackResignCheck" Margin="0,4,0,0"
-                      Content="Resign EBOOT.BIN as it packs (boots on CFW without its license)" />
-            <StackPanel Orientation="Horizontal" Spacing="8" Margin="20,0,0,0">
-              <Button Content="RAP for licensed EBOOT…" Click="OnPackPickRap" />
-              <TextBlock x:Name="PackRapText" VerticalAlignment="Center" FontSize="12" Opacity="0.8"
-                         TextTrimming="CharacterEllipsis" Text="(none — free/debug EBOOTs need no RAP)" />
-            </StackPanel>
+            <!-- Source -->
+            <Border Classes="panel">
+              <StackPanel Spacing="12">
+                <TextBlock Classes="sectionhead" Text="SOURCE" />
+                <Grid ColumnDefinitions="120,*" RowDefinitions="Auto,10,Auto,10,Auto,10,Auto,10,Auto">
+                  <TextBlock Grid.Row="0" Grid.Column="0" Classes="fieldlabel" Text="Source folder" />
+                  <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                    <Button Content="Browse…" Click="OnPackBrowseFolder" />
+                    <TextBlock x:Name="PackFolderText" VerticalAlignment="Center" FontSize="12" Opacity="0.8"
+                               TextTrimming="CharacterEllipsis" Text="(none)" />
+                  </StackPanel>
 
-            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,4,0,0">
-              <Button Content="Pack…" Click="OnPackBuild" />
+                  <TextBlock Grid.Row="2" Grid.Column="0" Classes="fieldlabel" Text="Content ID" />
+                  <TextBox   Grid.Row="2" Grid.Column="1" x:Name="PackContentIdBox"
+                             Watermark="UP0001-NPUB30910_00-EXAMPLE000000001" FontFamily="Consolas,monospace" />
+
+                  <TextBlock Grid.Row="4" Grid.Column="0" Classes="fieldlabel" Text="Install dir" />
+                  <TextBox   Grid.Row="4" Grid.Column="1" x:Name="PackInstallDirBox" Watermark="NPUB30910" />
+
+                  <TextBlock Grid.Row="6" Grid.Column="0" Classes="fieldlabel" Text="Content type" />
+                  <ComboBox  Grid.Row="6" Grid.Column="1" x:Name="PackContentTypeBox" HorizontalAlignment="Stretch" />
+
+                  <TextBlock Grid.Row="8" Grid.Column="0" Classes="fieldlabel" Text="DRM type" />
+                  <StackPanel Grid.Row="8" Grid.Column="1" Orientation="Horizontal" Spacing="10">
+                    <NumericUpDown x:Name="PackDrmBox" Minimum="0" Maximum="255" Increment="1" Value="3"
+                                   ValueChanged="OnPackDrmChanged" HorizontalAlignment="Left" Width="120" />
+                    <TextBlock x:Name="PackDrmName" VerticalAlignment="Center" FontSize="12" Opacity="0.8" Text="Free" />
+                  </StackPanel>
+                </Grid>
+              </StackPanel>
+            </Border>
+
+            <!-- Output -->
+            <Border Classes="panel">
+              <StackPanel Spacing="12">
+                <TextBlock Classes="sectionhead" Text="OUTPUT" />
+                <StackPanel Spacing="12">
+                  <RadioButton x:Name="PackRetailRadio" GroupName="PackFin" IsChecked="True" VerticalContentAlignment="Top">
+                    <StackPanel Spacing="3" Margin="2,1,0,0">
+                      <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock Text="Retail-encrypted" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center" />
+                        <Border Classes="chip cfw" VerticalAlignment="Center"><TextBlock Text="CEX · CFW" /></Border>
+                      </StackPanel>
+                      <TextBlock Classes="carddesc" MaxWidth="520"
+                                 Text="Installs on jailbroken firmware / HEN. Unsigned — CFW skips the signature check." />
+                    </StackPanel>
+                  </RadioButton>
+                  <RadioButton x:Name="PackDebugRadio" GroupName="PackFin" VerticalContentAlignment="Top">
+                    <StackPanel Spacing="3" Margin="2,1,0,0">
+                      <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock Text="Non-finalized (debug)" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center" />
+                        <Border Classes="chip debug" VerticalAlignment="Center"><TextBlock Text="DEX · OFW" /></Border>
+                      </StackPanel>
+                      <TextBlock Classes="carddesc" MaxWidth="520"
+                                 Text="Self-contained; opens in RPCS3 and debug / reference (DEX) consoles." />
+                    </StackPanel>
+                  </RadioButton>
+                </StackPanel>
+
+                <Border Height="1" Background="{DynamicResource SystemControlForegroundBaseLowBrush}" />
+
+                <StackPanel Spacing="6">
+                  <CheckBox x:Name="PackResignCheck"
+                            Content="Resign EBOOT.BIN as it packs (boots on CFW without its license)" />
+                  <StackPanel Orientation="Horizontal" Spacing="8" Margin="26,0,0,0">
+                    <Button Content="RAP for licensed EBOOT…" Click="OnPackPickRap" />
+                    <TextBlock x:Name="PackRapText" VerticalAlignment="Center" FontSize="12" Opacity="0.8"
+                               TextTrimming="CharacterEllipsis" Text="(none — free/debug EBOOTs need no RAP)" />
+                  </StackPanel>
+                </StackPanel>
+              </StackPanel>
+            </Border>
+
+            <!-- Actions -->
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Button Classes="primary" Content="Pack…" Click="OnPackBuild" />
               <Button Content="Show folder info…" Click="OnPackFolderInfo" />
             </StackPanel>
 
             <TextBlock x:Name="PackNotes" TextWrapping="Wrap" FontSize="12" Opacity="0.7" IsVisible="False" />
 
-            <Border x:Name="FolderInfoBox" IsVisible="False" Margin="0,4,0,0"
-                    BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="1"
-                    CornerRadius="3" Padding="12">
+            <Border x:Name="FolderInfoBox" Classes="panel" IsVisible="False">
               <TextBlock x:Name="FolderInfoText" FontFamily="Consolas,monospace" FontSize="12" TextWrapping="Wrap" />
             </Border>
           </StackPanel>
@@ -298,166 +550,279 @@
 
         <!-- ===== Resign page ===== -->
         <ScrollViewer IsVisible="{Binding IsResignTool}">
-          <StackPanel Margin="18" Spacing="10" MaxWidth="560" HorizontalAlignment="Left">
-            <TextBlock Text="SELF / EBOOT Resigner" FontSize="16" FontWeight="SemiBold" />
-            <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.75"
-                       Text="Inspect a SELF/EBOOT header, or fake-sign a plaintext ELF into a fSELF that boots on a jailbroken (CFW) PS3." />
+          <StackPanel Margin="24,20" Spacing="16" MaxWidth="820" HorizontalAlignment="Left">
+            <TextBlock Classes="pagetitle" Text="SELF / EBOOT Resigner" />
 
-            <TextBlock Text="Inspect" FontWeight="SemiBold" FontSize="12" Margin="0,4,0,0" />
-            <StackPanel Orientation="Horizontal" Spacing="8">
-              <Button Content="Browse SELF / EBOOT…" Click="OnSelfBrowse" />
-              <TextBlock x:Name="SelfFileText" VerticalAlignment="Center" FontSize="12" Opacity="0.8"
-                         TextTrimming="CharacterEllipsis" Text="(none)" />
+            <!-- Menu: a compact list of the tools on this page -->
+            <StackPanel x:Name="ResignMenu" Spacing="10">
+              <TextBlock Classes="pagesubtitle"
+                         Text="Keyless SELF / EBOOT tools, grouped by target — CEX CFW today; DEX OFW resign isn't built yet." />
+
+              <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,2,0,0">
+                <Border Classes="chip cfw"><TextBlock Text="CEX · CFW" /></Border>
+                <TextBlock Text="retail console · custom firmware" FontSize="11" Opacity="0.6" VerticalAlignment="Center" />
+              </StackPanel>
+              <Border Classes="panel" Padding="4">
+                <StackPanel>
+                  <Button Classes="row" Tag="inspect" Click="OnResignCardClick"
+                          ToolTip.Tip="Read a SELF/EBOOT header without decrypting.">
+                    <Grid ColumnDefinitions="34,*,Auto">
+                      <TextBlock Grid.Column="0" Text="🔍" FontSize="17" VerticalAlignment="Center" />
+                      <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
+                        <TextBlock Classes="rowtitle" Text="Inspect SELF / EBOOT" />
+                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="Header — type, key rev, segments." />
+                      </StackPanel>
+                      <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Border Classes="chip"><TextBlock Text="EBOOT" /></Border>
+                        <Border Classes="chip"><TextBlock Text="READ-ONLY" /></Border>
+                      </StackPanel>
+                    </Grid>
+                  </Button>
+                  <Button Classes="row" Tag="decrypt" Click="OnResignCardClick"
+                          ToolTip.Tip="Recover a plaintext ELF from an encrypted EBOOT.BIN / .self.">
+                    <Grid ColumnDefinitions="34,*,Auto">
+                      <TextBlock Grid.Column="0" Text="🔓" FontSize="17" VerticalAlignment="Center" />
+                      <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
+                        <TextBlock Classes="rowtitle" Text="Decrypt SELF → ELF" />
+                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="EBOOT.BIN / .self to a plaintext ELF." />
+                      </StackPanel>
+                      <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Border Classes="chip"><TextBlock Text="EBOOT" /></Border>
+                        <Border Classes="chip"><TextBlock Text="READ-ONLY" /></Border>
+                      </StackPanel>
+                    </Grid>
+                  </Button>
+                  <Button Classes="row" Tag="fakesign" Click="OnResignCardClick"
+                          ToolTip.Tip="Wrap a plaintext ELF as a fake-signed SELF that boots on CFW.">
+                    <Grid ColumnDefinitions="34,*,Auto">
+                      <TextBlock Grid.Column="0" Text="✍️" FontSize="17" VerticalAlignment="Center" />
+                      <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
+                        <TextBlock Classes="rowtitle" Text="Fake-sign ELF → fSELF" />
+                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="A CFW-ready fSELF from a plain ELF." />
+                      </StackPanel>
+                      <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Border Classes="chip"><TextBlock Text="EBOOT" /></Border>
+                        <Border Classes="chip cfw"><TextBlock Text="CFW" /></Border>
+                      </StackPanel>
+                    </Grid>
+                  </Button>
+                  <Button Classes="row" Tag="magic" Click="OnResignCardClick"
+                          ToolTip.Tip="Lower the firmware an EBOOT demands so it boots on a lower CFW.">
+                    <Grid ColumnDefinitions="34,*,Auto">
+                      <TextBlock Grid.Column="0" Text="⬇️" FontSize="17" VerticalAlignment="Center" />
+                      <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
+                        <TextBlock Classes="rowtitle" Text="Magic-patch firmware" />
+                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="Lower the firmware an EBOOT requires." />
+                      </StackPanel>
+                      <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Border Classes="chip"><TextBlock Text="EBOOT" /></Border>
+                        <Border Classes="chip cfw"><TextBlock Text="CFW" /></Border>
+                      </StackPanel>
+                    </Grid>
+                  </Button>
+                  <Button Classes="row" Tag="byte" Click="OnResignCardClick"
+                          ToolTip.Tip="Apply raw hex edits to an EBOOT/ELF.">
+                    <Grid ColumnDefinitions="34,*,Auto">
+                      <TextBlock Grid.Column="0" Text="✂️" FontSize="17" VerticalAlignment="Center" />
+                      <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
+                        <TextBlock Classes="rowtitle" Text="Byte-patch EBOOT" />
+                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="Hex find/replace or at-offset edit." />
+                      </StackPanel>
+                      <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Border Classes="chip"><TextBlock Text="EBOOT" /></Border>
+                        <Border Classes="chip cfw"><TextBlock Text="CFW" /></Border>
+                      </StackPanel>
+                    </Grid>
+                  </Button>
+                </StackPanel>
+              </Border>
+
+              <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,4,0,0">
+                <Border Classes="chip debug"><TextBlock Text="DEX · OFW" /></Border>
+                <TextBlock Text="debug console · official firmware" FontSize="11" Opacity="0.6" VerticalAlignment="Center" />
+              </StackPanel>
+              <TextBlock Classes="carddesc" Margin="2,0,0,0"
+                         Text="No DEX OFW resign yet — resigning SELFs for debug (DEX) firmware isn't built. For DEX today, build a debug .pkg from the Pack page." />
             </StackPanel>
 
-            <Border x:Name="SelfInfoBox" IsVisible="False"
-                    BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="1"
-                    CornerRadius="3" Padding="12">
-              <TextBlock x:Name="SelfInfoText" FontFamily="Consolas,monospace" FontSize="12" TextWrapping="Wrap" />
-            </Border>
+            <!-- Detail: one focused operation at a time -->
+            <StackPanel x:Name="ResignDetail" IsVisible="False" Spacing="10">
+              <Button Classes="back" Content="‹  All resign tools" Click="OnResignBack" />
 
-            <Border Height="1" Background="{DynamicResource SystemControlForegroundBaseLowBrush}" Margin="0,4" />
+              <!-- Inspect -->
+              <StackPanel x:Name="ResignOpInspect" IsVisible="False" Spacing="10">
+                <TextBlock Text="Inspect SELF / EBOOT" FontWeight="SemiBold" FontSize="14" />
+                <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.75"
+                           Text="Read a SELF/EBOOT header — program type, key revision, control blocks and segments. No key needed." />
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <Button Content="Browse SELF / EBOOT…" Click="OnSelfBrowse" />
+                  <TextBlock x:Name="SelfFileText" VerticalAlignment="Center" FontSize="12" Opacity="0.8"
+                             TextTrimming="CharacterEllipsis" Text="(none)" />
+                </StackPanel>
+                <Border x:Name="SelfInfoBox" IsVisible="False"
+                        BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="1"
+                        CornerRadius="3" Padding="12">
+                  <TextBlock x:Name="SelfInfoText" FontFamily="Consolas,monospace" FontSize="12" TextWrapping="Wrap" />
+                </Border>
+              </StackPanel>
 
-            <TextBlock Text="Resign (ELF → fSELF)" FontWeight="SemiBold" FontSize="12" />
-            <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.75"
-                       Text="Pick a decrypted ELF; PkgLens writes a fake-signed NON-DRM SELF (no keys). It runs on CFW — signature checks patched — not on stock retail." />
-            <StackPanel Orientation="Horizontal" Spacing="8">
-              <Button Content="Fake-sign an ELF…" Click="OnMakeFself" />
-              <CheckBox x:Name="FselfNpdrmCheck" Content="NPDRM (app type 8)" VerticalAlignment="Center"
-                        ToolTip.Tip="Tag the fSELF as NPDRM (app type 8) for use inside an NPDRM package, instead of a plain app (type 4)." />
-            </StackPanel>
+              <!-- Fake-sign ELF → fSELF -->
+              <StackPanel x:Name="ResignOpFakeSign" IsVisible="False" Spacing="10">
+                <TextBlock Text="Fake-sign ELF → fSELF" FontWeight="SemiBold" FontSize="14" />
+                <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.75"
+                           Text="Pick a decrypted ELF; PkgLens writes a fake-signed NON-DRM SELF (no keys). It runs on CFW — signature checks patched — not on stock retail." />
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <Button Content="Fake-sign an ELF…" Click="OnMakeFself" />
+                  <CheckBox x:Name="FselfNpdrmCheck" Content="NPDRM (app type 8)" VerticalAlignment="Center"
+                            ToolTip.Tip="Tag the fSELF as NPDRM (app type 8) for use inside an NPDRM package, instead of a plain app (type 4)." />
+                </StackPanel>
+                <Expander x:Name="FselfCustomExpander" Header="Custom sign fields (optional)">
+                  <StackPanel Spacing="8" Margin="0,4">
+                    <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.7"
+                               Text="Advanced — leave every field blank to use the standard fSELF defaults, which is what most repacks want. Each field matches a specific SDK / firmware / console profile; fill only the ones you need. Hover a box for what it does." />
+                    <Grid ColumnDefinitions="100,10,*" RowDefinitions="Auto,6,Auto,6,Auto,6,Auto,6,Auto,6,Auto,6,Auto,6,Auto">
+                      <TextBlock Grid.Row="0" Grid.Column="0" Text="Auth ID" VerticalAlignment="Center" />
+                      <TextBox   Grid.Row="0" Grid.Column="2" x:Name="FselfAuthIdBox"
+                                 Watermark="0x1010000001000003" FontFamily="Consolas,monospace"
+                                 ToolTip.Tip="app_info authentication id (16 hex digits). Blank = the standard fSELF default 0x1010000001000003." />
+                      <TextBlock Grid.Row="2" Grid.Column="0" Text="Vendor ID" VerticalAlignment="Center" />
+                      <TextBox   Grid.Row="2" Grid.Column="2" x:Name="FselfVendorIdBox"
+                                 Watermark="0x01000002" FontFamily="Consolas,monospace"
+                                 ToolTip.Tip="app_info vendor id (up to 8 hex digits). Blank = the default 0x01000002." />
+                      <TextBlock Grid.Row="4" Grid.Column="0" Text="App version" VerticalAlignment="Center" />
+                      <TextBox   Grid.Row="4" Grid.Column="2" x:Name="FselfAppVerBox"
+                                 Watermark="0x0001000000000000" FontFamily="Consolas,monospace"
+                                 ToolTip.Tip="app_info version field (16 hex digits). Blank = the default 0x0001000000000000." />
+                      <TextBlock Grid.Row="6" Grid.Column="0" Text="FW version" VerticalAlignment="Center" />
+                      <TextBox   Grid.Row="6" Grid.Column="2" x:Name="FselfFwVerBox"
+                                 Watermark="e.g. 4.46 (blank = unset)" FontFamily="Consolas,monospace"
+                                 ToolTip.Tip="Minimum firmware the executable claims to need, as M.NN (e.g. 4.46), written into the SELF's digest block. Blank = leave it unset." />
+                      <TextBlock Grid.Row="8" Grid.Column="0" Text="Control flags" VerticalAlignment="Center" />
+                      <TextBox   Grid.Row="8" Grid.Column="2" x:Name="FselfCtrlFlagsBox"
+                                 Watermark="e.g. 0000…0000 — 64 hex chars (blank = omit)" FontFamily="Consolas,monospace"
+                                 ToolTip.Tip="The 32-byte SELF control-flags block, as exactly 64 hex characters. Advanced; blank = omit the block entirely (the default)." />
+                      <TextBlock Grid.Row="10" Grid.Column="0" Text="Content ID" VerticalAlignment="Center" />
+                      <TextBox   Grid.Row="10" Grid.Column="2" x:Name="FselfContentIdBox"
+                                 Watermark="UP0001-NPUB30910_00-EXAMPLE000000001" FontFamily="Consolas,monospace"
+                                 ToolTip.Tip="NPDRM content id (37 chars). Used only with the NPDRM option; blank = the fake default id." />
+                      <TextBlock Grid.Row="12" Grid.Column="0" Text="NP license" VerticalAlignment="Center" />
+                      <TextBox   Grid.Row="12" Grid.Column="2" x:Name="FselfNpLicenseBox"
+                                 Watermark="FREE | LOCAL | NETWORK (blank = default LOCAL)" FontFamily="Consolas,monospace"
+                                 ToolTip.Tip="NPDRM license type written into the control block. NPDRM only; blank = the default (LOCAL)." />
+                      <TextBlock Grid.Row="14" Grid.Column="0" Text="NP app type" VerticalAlignment="Center" />
+                      <TextBox   Grid.Row="14" Grid.Column="2" x:Name="FselfNpAppTypeBox"
+                                 Watermark="SPRX | EXEC | USPRX | UEXEC (blank = default EXEC)" FontFamily="Consolas,monospace"
+                                 ToolTip.Tip="NPDRM app type (U* = update). NPDRM only; blank = the default (EXEC)." />
+                    </Grid>
+                  </StackPanel>
+                </Expander>
+                <TextBlock x:Name="FselfNotes" TextWrapping="Wrap" FontSize="12" Opacity="0.7" IsVisible="False" />
+              </StackPanel>
 
-            <Expander x:Name="FselfCustomExpander" Header="Custom sign fields (optional)">
-              <StackPanel Spacing="8" Margin="0,4">
-                <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.7"
-                           Text="Advanced — leave every field blank to use the standard fSELF defaults, which is what most repacks want. Each field matches a specific SDK / firmware / console profile; fill only the ones you need. Hover a box for what it does." />
-                <Grid ColumnDefinitions="100,10,*" RowDefinitions="Auto,6,Auto,6,Auto,6,Auto,6,Auto,6,Auto,6,Auto,6,Auto">
-                  <TextBlock Grid.Row="0" Grid.Column="0" Text="Auth ID" VerticalAlignment="Center" />
-                  <TextBox   Grid.Row="0" Grid.Column="2" x:Name="FselfAuthIdBox"
-                             Watermark="0x1010000001000003" FontFamily="Consolas,monospace"
-                             ToolTip.Tip="app_info authentication id (16 hex digits). Blank = the standard fSELF default 0x1010000001000003." />
-                  <TextBlock Grid.Row="2" Grid.Column="0" Text="Vendor ID" VerticalAlignment="Center" />
-                  <TextBox   Grid.Row="2" Grid.Column="2" x:Name="FselfVendorIdBox"
-                             Watermark="0x01000002" FontFamily="Consolas,monospace"
-                             ToolTip.Tip="app_info vendor id (up to 8 hex digits). Blank = the default 0x01000002." />
-                  <TextBlock Grid.Row="4" Grid.Column="0" Text="App version" VerticalAlignment="Center" />
-                  <TextBox   Grid.Row="4" Grid.Column="2" x:Name="FselfAppVerBox"
-                             Watermark="0x0001000000000000" FontFamily="Consolas,monospace"
-                             ToolTip.Tip="app_info version field (16 hex digits). Blank = the default 0x0001000000000000." />
-                  <TextBlock Grid.Row="6" Grid.Column="0" Text="FW version" VerticalAlignment="Center" />
-                  <TextBox   Grid.Row="6" Grid.Column="2" x:Name="FselfFwVerBox"
-                             Watermark="e.g. 4.46 (blank = unset)" FontFamily="Consolas,monospace"
-                             ToolTip.Tip="Minimum firmware the executable claims to need, as M.NN (e.g. 4.46), written into the SELF's digest block. Blank = leave it unset." />
-                  <TextBlock Grid.Row="8" Grid.Column="0" Text="Control flags" VerticalAlignment="Center" />
-                  <TextBox   Grid.Row="8" Grid.Column="2" x:Name="FselfCtrlFlagsBox"
-                             Watermark="e.g. 0000…0000 — 64 hex chars (blank = omit)" FontFamily="Consolas,monospace"
-                             ToolTip.Tip="The 32-byte SELF control-flags block, as exactly 64 hex characters. Advanced; blank = omit the block entirely (the default)." />
-                  <TextBlock Grid.Row="10" Grid.Column="0" Text="Content ID" VerticalAlignment="Center" />
-                  <TextBox   Grid.Row="10" Grid.Column="2" x:Name="FselfContentIdBox"
-                             Watermark="UP0001-NPUB30910_00-EXAMPLE000000001" FontFamily="Consolas,monospace"
-                             ToolTip.Tip="NPDRM content id (37 chars). Used only with the NPDRM option; blank = the fake default id." />
-                  <TextBlock Grid.Row="12" Grid.Column="0" Text="NP license" VerticalAlignment="Center" />
-                  <TextBox   Grid.Row="12" Grid.Column="2" x:Name="FselfNpLicenseBox"
-                             Watermark="FREE | LOCAL | NETWORK (blank = default LOCAL)" FontFamily="Consolas,monospace"
-                             ToolTip.Tip="NPDRM license type written into the control block. NPDRM only; blank = the default (LOCAL)." />
-                  <TextBlock Grid.Row="14" Grid.Column="0" Text="NP app type" VerticalAlignment="Center" />
-                  <TextBox   Grid.Row="14" Grid.Column="2" x:Name="FselfNpAppTypeBox"
-                             Watermark="SPRX | EXEC | USPRX | UEXEC (blank = default EXEC)" FontFamily="Consolas,monospace"
-                             ToolTip.Tip="NPDRM app type (U* = update). NPDRM only; blank = the default (EXEC)." />
+              <!-- Decrypt SELF → ELF -->
+              <StackPanel x:Name="ResignOpDecrypt" IsVisible="False" Spacing="10">
+                <TextBlock Text="Decrypt SELF → ELF" FontWeight="SemiBold" FontSize="14" />
+                <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.75"
+                           Text="Decrypt an encrypted EBOOT.BIN / .self back to a plaintext ELF. Free-license and debug SELFs need no key; a licensed SELF needs its RAP." />
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <Button Content="Decrypt EBOOT.BIN → ELF…" Click="OnUnself" />
+                  <CheckBox x:Name="UnselfThenResignCheck" Content="then fake-sign to fSELF" VerticalAlignment="Center" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <Button Content="RAP for licensed SELF…" Click="OnPickRap" />
+                  <TextBlock x:Name="UnselfRapText" VerticalAlignment="Center" FontSize="12" Opacity="0.8"
+                             TextTrimming="CharacterEllipsis" Text="(none — free/debug need no RAP)" />
+                </StackPanel>
+                <TextBlock x:Name="UnselfNotes" TextWrapping="Wrap" FontSize="12" Opacity="0.7" IsVisible="False" />
+              </StackPanel>
+
+              <!-- Magic-patch firmware -->
+              <StackPanel x:Name="ResignOpMagic" IsVisible="False" Spacing="10">
+                <TextBlock Text="Magic-patch firmware" FontWeight="SemiBold" FontSize="14" />
+                <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.75"
+                           Text="Lower the firmware version an EBOOT demands so a higher-firmware game boots on a lower CFW. Pick an EBOOT.BIN/.self (decrypted automatically) or a plaintext ELF; the result is fake-signed." />
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <TextBlock Text="Target firmware" VerticalAlignment="Center" FontSize="12" />
+                  <TextBox x:Name="MagicFwBox" Width="90" Watermark="4.00" FontFamily="Consolas,monospace"
+                           ToolTip.Tip="The firmware version to write into the EBOOT's SDK field, e.g. 4.00 — lower it so a higher-firmware game boots on a lower CFW." />
+                  <Button Content="Magic-patch EBOOT…" Click="OnMagicPatch" />
+                </StackPanel>
+                <TextBlock x:Name="MagicNotes" TextWrapping="Wrap" FontSize="12" Opacity="0.7" IsVisible="False" />
+              </StackPanel>
+
+              <!-- Byte-patch EBOOT -->
+              <StackPanel x:Name="ResignOpByte" IsVisible="False" Spacing="10">
+                <TextBlock Text="Byte-patch EBOOT" FontWeight="SemiBold" FontSize="14" />
+                <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.75"
+                           Text="Apply raw byte edits to an EBOOT/ELF — a hex find→replace (equal length) and/or an at-offset overwrite. A SELF/EBOOT input is decrypted first; tick 'fake-sign' to write the result back as a CFW-ready fSELF." />
+                <Grid ColumnDefinitions="86,10,*" RowDefinitions="Auto,6,Auto,6,Auto">
+                  <TextBlock Grid.Row="0" Grid.Column="0" Text="Find (hex)" VerticalAlignment="Center" FontSize="12" />
+                  <TextBox   Grid.Row="0" Grid.Column="2" x:Name="PatchFindBox" Watermark="e.g. 90909090"
+                             FontFamily="Consolas,monospace"
+                             ToolTip.Tip="Bytes to search for, as hex. Replaced everywhere it occurs. Leave blank to skip find/replace." />
+                  <TextBlock Grid.Row="2" Grid.Column="0" Text="Replace (hex)" VerticalAlignment="Center" FontSize="12" />
+                  <TextBox   Grid.Row="2" Grid.Column="2" x:Name="PatchReplaceBox" Watermark="same length as find"
+                             FontFamily="Consolas,monospace"
+                             ToolTip.Tip="Replacement bytes, as hex. Must be exactly the same length as Find." />
+                  <TextBlock Grid.Row="4" Grid.Column="0" Text="At offset" VerticalAlignment="Center" FontSize="12" />
+                  <StackPanel Grid.Row="4" Grid.Column="2" Orientation="Horizontal" Spacing="6">
+                    <TextBox x:Name="PatchAtOffsetBox" Width="110" Watermark="0x1234" FontFamily="Consolas,monospace"
+                             ToolTip.Tip="Offset into the ELF to overwrite (0x-hex or decimal). Leave blank to skip." />
+                    <TextBlock Text="=" VerticalAlignment="Center" />
+                    <TextBox x:Name="PatchAtBytesBox" Width="200" Watermark="hex bytes" FontFamily="Consolas,monospace"
+                             ToolTip.Tip="Bytes to write at the offset, as hex." />
+                  </StackPanel>
                 </Grid>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <Button Content="Byte-patch EBOOT…" Click="OnBytePatch" />
+                  <CheckBox x:Name="BytePatchResignCheck" Content="fake-sign output (fSELF)" VerticalAlignment="Center"
+                            ToolTip.Tip="Write the patched result as a fake-signed SELF. Always on when the input was a SELF/EBOOT.BIN." />
+                  <CheckBox x:Name="BytePatchNpdrmCheck" Content="NPDRM" VerticalAlignment="Center"
+                            ToolTip.Tip="Tag the fSELF as NPDRM (app type 8)." />
+                </StackPanel>
+                <TextBlock x:Name="BytePatchNotes" TextWrapping="Wrap" FontSize="12" Opacity="0.7" IsVisible="False" />
               </StackPanel>
-            </Expander>
-
-            <TextBlock x:Name="FselfNotes" TextWrapping="Wrap" FontSize="12" Opacity="0.7" IsVisible="False" />
-
-            <Border Height="1" Background="{DynamicResource SystemControlForegroundBaseLowBrush}" Margin="0,4" />
-
-            <TextBlock Text="Decrypt (SELF → ELF)" FontWeight="SemiBold" FontSize="12" />
-            <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.75"
-                       Text="Decrypt an encrypted EBOOT.BIN / .self back to a plaintext ELF. Free-license and debug SELFs need no key; a licensed SELF needs its RAP." />
-            <StackPanel Orientation="Horizontal" Spacing="8">
-              <Button Content="Decrypt EBOOT.BIN → ELF…" Click="OnUnself" />
-              <CheckBox x:Name="UnselfThenResignCheck" Content="then fake-sign to fSELF" VerticalAlignment="Center" />
             </StackPanel>
-            <StackPanel Orientation="Horizontal" Spacing="8">
-              <Button Content="RAP for licensed SELF…" Click="OnPickRap" />
-              <TextBlock x:Name="UnselfRapText" VerticalAlignment="Center" FontSize="12" Opacity="0.8"
-                         TextTrimming="CharacterEllipsis" Text="(none — free/debug need no RAP)" />
-            </StackPanel>
-            <TextBlock x:Name="UnselfNotes" TextWrapping="Wrap" FontSize="12" Opacity="0.7" IsVisible="False" />
-
-            <Border Height="1" Background="{DynamicResource SystemControlForegroundBaseLowBrush}" Margin="0,4" />
-
-            <TextBlock Text="Magic patch (firmware)" FontWeight="SemiBold" FontSize="12" />
-            <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.75"
-                       Text="Lower the firmware version an EBOOT demands so a higher-firmware game boots on a lower CFW. Pick an EBOOT.BIN/.self (decrypted automatically) or a plaintext ELF; the result is fake-signed." />
-            <StackPanel Orientation="Horizontal" Spacing="8">
-              <TextBlock Text="Target firmware" VerticalAlignment="Center" FontSize="12" />
-              <TextBox x:Name="MagicFwBox" Width="90" Watermark="4.00" FontFamily="Consolas,monospace"
-                       ToolTip.Tip="The firmware version to write into the EBOOT's SDK field, e.g. 4.00 — lower it so a higher-firmware game boots on a lower CFW." />
-              <Button Content="Magic-patch EBOOT…" Click="OnMagicPatch" />
-            </StackPanel>
-            <TextBlock x:Name="MagicNotes" TextWrapping="Wrap" FontSize="12" Opacity="0.7" IsVisible="False" />
-
-            <Border Height="1" Background="{DynamicResource SystemControlForegroundBaseLowBrush}" Margin="0,4" />
-
-            <TextBlock Text="Byte patch (find/replace · at-offset)" FontWeight="SemiBold" FontSize="12" />
-            <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.75"
-                       Text="Apply raw byte edits to an EBOOT/ELF — a hex find→replace (equal length) and/or an at-offset overwrite. A SELF/EBOOT input is decrypted first; tick 'fake-sign' to write the result back as a CFW-ready fSELF." />
-            <Grid ColumnDefinitions="86,10,*" RowDefinitions="Auto,6,Auto,6,Auto">
-              <TextBlock Grid.Row="0" Grid.Column="0" Text="Find (hex)" VerticalAlignment="Center" FontSize="12" />
-              <TextBox   Grid.Row="0" Grid.Column="2" x:Name="PatchFindBox" Watermark="e.g. 90909090"
-                         FontFamily="Consolas,monospace"
-                         ToolTip.Tip="Bytes to search for, as hex. Replaced everywhere it occurs. Leave blank to skip find/replace." />
-              <TextBlock Grid.Row="2" Grid.Column="0" Text="Replace (hex)" VerticalAlignment="Center" FontSize="12" />
-              <TextBox   Grid.Row="2" Grid.Column="2" x:Name="PatchReplaceBox" Watermark="same length as find"
-                         FontFamily="Consolas,monospace"
-                         ToolTip.Tip="Replacement bytes, as hex. Must be exactly the same length as Find." />
-              <TextBlock Grid.Row="4" Grid.Column="0" Text="At offset" VerticalAlignment="Center" FontSize="12" />
-              <StackPanel Grid.Row="4" Grid.Column="2" Orientation="Horizontal" Spacing="6">
-                <TextBox x:Name="PatchAtOffsetBox" Width="110" Watermark="0x1234" FontFamily="Consolas,monospace"
-                         ToolTip.Tip="Offset into the ELF to overwrite (0x-hex or decimal). Leave blank to skip." />
-                <TextBlock Text="=" VerticalAlignment="Center" />
-                <TextBox x:Name="PatchAtBytesBox" Width="200" Watermark="hex bytes" FontFamily="Consolas,monospace"
-                         ToolTip.Tip="Bytes to write at the offset, as hex." />
-              </StackPanel>
-            </Grid>
-            <StackPanel Orientation="Horizontal" Spacing="8">
-              <Button Content="Byte-patch EBOOT…" Click="OnBytePatch" />
-              <CheckBox x:Name="BytePatchResignCheck" Content="fake-sign output (fSELF)" VerticalAlignment="Center"
-                        ToolTip.Tip="Write the patched result as a fake-signed SELF. Always on when the input was a SELF/EBOOT.BIN." />
-              <CheckBox x:Name="BytePatchNpdrmCheck" Content="NPDRM" VerticalAlignment="Center"
-                        ToolTip.Tip="Tag the fSELF as NPDRM (app type 8)." />
-            </StackPanel>
-            <TextBlock x:Name="BytePatchNotes" TextWrapping="Wrap" FontSize="12" Opacity="0.7" IsVisible="False" />
           </StackPanel>
         </ScrollViewer>
 
         <!-- ===== Decrypt page ===== -->
         <ScrollViewer IsVisible="{Binding IsDecryptTool}">
-          <StackPanel Margin="18" Spacing="10" MaxWidth="560" HorizontalAlignment="Left">
-            <TextBlock Text="Decrypt EDAT / SDAT" FontSize="16" FontWeight="SemiBold" />
-            <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.75"
-                       Text="Decrypt an NPDRM data file. SDAT and free EDATs need no key; a licensed EDAT needs its RAP." />
-
-            <Grid ColumnDefinitions="90,10,*" RowDefinitions="Auto,8,Auto">
-              <TextBlock Grid.Row="0" Grid.Column="0" Text="EDAT file" VerticalAlignment="Center" />
-              <StackPanel Grid.Row="0" Grid.Column="2" Orientation="Horizontal" Spacing="8">
-                <Button Content="Browse…" Click="OnDecryptBrowseFile" />
-                <TextBlock x:Name="DecryptFileText" VerticalAlignment="Center" FontSize="12" Opacity="0.8"
-                           TextTrimming="CharacterEllipsis" Text="(none)" />
+          <StackPanel Margin="24,20" Spacing="16" MaxWidth="720" HorizontalAlignment="Left">
+            <StackPanel Spacing="3">
+              <TextBlock Classes="pagetitle" Text="Decrypt EDAT / SDAT" />
+              <TextBlock Classes="pagesubtitle"
+                         Text="Decrypt an NPDRM data file. SDAT and free EDATs need no key; a licensed EDAT needs its RAP." />
+              <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                <Border Classes="chip"><TextBlock Text="EDAT" /></Border>
+                <Border Classes="chip"><TextBlock Text="PS3 / PSP" /></Border>
+                <Border Classes="chip"><TextBlock Text="READ-ONLY" /></Border>
               </StackPanel>
+            </StackPanel>
 
-              <TextBlock Grid.Row="2" Grid.Column="0" Text="RAP (opt.)" VerticalAlignment="Center" />
-              <StackPanel Grid.Row="2" Grid.Column="2" Orientation="Horizontal" Spacing="8">
-                <Button Content="Browse…" Click="OnDecryptBrowseRap" />
-                <TextBlock x:Name="DecryptRapText" VerticalAlignment="Center" FontSize="12" Opacity="0.8"
-                           TextTrimming="CharacterEllipsis" Text="(auto / not needed)" />
+            <Border Classes="panel">
+              <StackPanel Spacing="12">
+                <TextBlock Classes="sectionhead" Text="INPUT" />
+                <Grid ColumnDefinitions="110,*" RowDefinitions="Auto,10,Auto">
+                  <TextBlock Grid.Row="0" Grid.Column="0" Classes="fieldlabel" Text="EDAT file" />
+                  <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                    <Button Content="Browse…" Click="OnDecryptBrowseFile" />
+                    <TextBlock x:Name="DecryptFileText" VerticalAlignment="Center" FontSize="12" Opacity="0.8"
+                               TextTrimming="CharacterEllipsis" Text="(none)" />
+                  </StackPanel>
+
+                  <TextBlock Grid.Row="2" Grid.Column="0" Classes="fieldlabel" Text="RAP (opt.)" />
+                  <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                    <Button Content="Browse…" Click="OnDecryptBrowseRap" />
+                    <TextBlock x:Name="DecryptRapText" VerticalAlignment="Center" FontSize="12" Opacity="0.8"
+                               TextTrimming="CharacterEllipsis" Text="(auto / not needed)" />
+                  </StackPanel>
+                </Grid>
               </StackPanel>
-            </Grid>
+            </Border>
 
-            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,4,0,0">
-              <Button Content="Decrypt…" Click="OnDecryptRun" />
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Button Classes="primary" Content="Decrypt…" Click="OnDecryptRun" />
               <Button x:Name="DecryptViewButton" Content="View result…" Click="OnDecryptView" IsVisible="False"
                       ToolTip.Tip="Show the decrypted file's contents (image, text, or hex)." />
             </StackPanel>
@@ -468,24 +833,32 @@
 
         <!-- ===== Keys page ===== -->
         <ScrollViewer IsVisible="{Binding IsKeysTool}">
-          <StackPanel Margin="18" Spacing="10" MaxWidth="560" HorizontalAlignment="Left">
-            <TextBlock Text="Keys" FontSize="16" FontWeight="SemiBold" />
-            <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.75"
-                       Text="The standard NPDRM PKG PS3 AES key is built in, so retail and debug packages open with no setup. Import an override key only for a non-standard package (e.g. an IDU/kiosk key)." />
-
+          <StackPanel Margin="24,20" Spacing="16" MaxWidth="720" HorizontalAlignment="Left">
             <StackPanel Spacing="3">
-              <TextBlock Text="Status" FontWeight="SemiBold" FontSize="12" />
-              <TextBlock Text="{Binding KeyStatus}" FontSize="12" Opacity="0.85" />
-              <TextBlock Text="{Binding KeysDirectory, FallbackValue='keys folder: default (~/.pkglens)'}"
-                         FontSize="12" Opacity="0.6" />
+              <TextBlock Classes="pagetitle" Text="Keys" />
+              <TextBlock Classes="pagesubtitle"
+                         Text="The standard NPDRM PKG PS3 AES key is built in, so retail and debug packages open with no setup. Import an override key only for a non-standard package (e.g. an IDU/kiosk key)." />
+              <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                <Border Classes="chip"><TextBlock Text="SETUP" /></Border>
+              </StackPanel>
             </StackPanel>
 
-            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,4,0,0">
-              <Button Content="Import override key…" Click="OnSetKeyClick" />
-              <Button Content="Set keys folder…" Click="OnKeysClick" />
-            </StackPanel>
+            <Border Classes="panel">
+              <StackPanel Spacing="12">
+                <TextBlock Classes="sectionhead" Text="STATUS" />
+                <StackPanel Spacing="3">
+                  <TextBlock Text="{Binding KeyStatus}" FontSize="12" Opacity="0.85" />
+                  <TextBlock Text="{Binding KeysDirectory, FallbackValue='keys folder: default (~/.pkglens)'}"
+                             FontSize="12" Opacity="0.6" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <Button Content="Import override key…" Click="OnSetKeyClick" />
+                  <Button Content="Set keys folder…" Click="OnKeysClick" />
+                </StackPanel>
+              </StackPanel>
+            </Border>
 
-            <TextBlock TextWrapping="Wrap" FontSize="11" Opacity="0.55"
+            <TextBlock Classes="pagesubtitle" Opacity="0.55"
                        Text="An override key file takes precedence over the built-in key. RAP files for licensed EDATs/EBOOTs are supplied per operation, not here." />
           </StackPanel>
         </ScrollViewer>

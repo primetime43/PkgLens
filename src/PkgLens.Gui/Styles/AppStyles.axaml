@@ -13,6 +13,147 @@
     <Setter Property="MinWidth" Value="0" />
   </Style>
 
+  <!-- ===== Shared page design language ===== -->
+  <!-- Every tool page opens with a title + one-line subtitle, then content. -->
+  <Style Selector="TextBlock.pagetitle">
+    <Setter Property="FontSize" Value="18" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="TextBlock.pagesubtitle">
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="Opacity" Value="0.7" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+    <Setter Property="MaxWidth" Value="760" />
+    <Setter Property="HorizontalAlignment" Value="Left" />
+  </Style>
+  <!-- Muted uppercase group/section label -->
+  <Style Selector="TextBlock.sectionhead">
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Opacity" Value="0.5" />
+  </Style>
+  <!-- A grouped content panel (forms, status blocks) — matches the card surface -->
+  <Style Selector="Border.panel">
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="18" />
+    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource SystemControlForegroundBaseLowBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+  </Style>
+  <Style Selector="TextBlock.fieldlabel">
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="Opacity" Value="0.85" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <!-- Primary action button (the page's main verb) -->
+  <Style Selector="Button.primary">
+    <Setter Property="Background" Value="{DynamicResource SystemAccentColor}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColor}" />
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+  <Style Selector="Button.primary:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource SystemAccentColorLight1}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColorLight1}" />
+    <Setter Property="TextElement.Foreground" Value="White" />
+  </Style>
+  <Style Selector="Button.primary:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource SystemAccentColorDark1}" />
+    <Setter Property="TextElement.Foreground" Value="White" />
+  </Style>
+
+  <!-- Compatibility tag chips (object type + firmware/console target) -->
+  <Style Selector="Border.chip">
+    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="Padding" Value="6,1" />
+    <Setter Property="Margin" Value="0,0,5,0" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Background" Value="#33808080" />
+  </Style>
+  <Style Selector="Border.chip > TextBlock">
+    <Setter Property="FontSize" Value="10" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Opacity" Value="0.8" />
+  </Style>
+  <!-- Output runs on custom firmware / HEN -->
+  <Style Selector="Border.chip.cfw"><Setter Property="Background" Value="#2E7D32" /></Style>
+  <Style Selector="Border.chip.cfw > TextBlock"><Setter Property="Foreground" Value="White" /><Setter Property="Opacity" Value="1" /></Style>
+  <!-- Output for debug / DEX / RPCS3 -->
+  <Style Selector="Border.chip.debug"><Setter Property="Background" Value="#1565C0" /></Style>
+  <Style Selector="Border.chip.debug > TextBlock"><Setter Property="Foreground" Value="White" /><Setter Property="Opacity" Value="1" /></Style>
+
+  <!-- Action cards: a scannable "pick a verb" tile used on the tool pages -->
+  <Style Selector="Button.card">
+    <Setter Property="Width" Value="264" />
+    <Setter Property="MinHeight" Value="98" />
+    <Setter Property="Margin" Value="0,0,12,12" />
+    <Setter Property="Padding" Value="14,12" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource SystemControlForegroundBaseLowBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
+  <Style Selector="Button.card:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundListLowBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColor}" />
+  </Style>
+  <Style Selector="Button.card:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundListMediumBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColor}" />
+  </Style>
+
+  <!-- Operation rows: a full-width clickable list item (replaces fixed-size cards) -->
+  <Style Selector="Button.row">
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="Padding" Value="12,9" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="6" />
+  </Style>
+  <Style Selector="Button.row:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundListLowBrush}" />
+  </Style>
+  <Style Selector="Button.row:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundListMediumBrush}" />
+  </Style>
+  <Style Selector="Button.row TextBlock.rowtitle">
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="FontSize" Value="13" />
+  </Style>
+
+  <!-- A card's icon glyph — fixed column so titles align regardless of glyph width -->
+  <Style Selector="TextBlock.cardicon">
+    <Setter Property="FontSize" Value="20" />
+    <Setter Property="Width" Value="28" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="TextBlock.cardtitle">
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+  </Style>
+  <Style Selector="TextBlock.carddesc">
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="Opacity" Value="0.65" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+
+  <!-- Quiet back/navigation link on a focused operation view -->
+  <Style Selector="Button.back">
+    <Setter Property="Padding" Value="2,2" />
+    <Setter Property="MinWidth" Value="0" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Opacity" Value="0.8" />
+  </Style>
+  <Style Selector="Button.back:pointerover">
+    <Setter Property="Opacity" Value="1" />
+  </Style>
+
   <!-- Tighter DataGrid rows for a file-list feel -->
   <Style Selector="DataGridRow">
     <Setter Property="MinHeight" Value="24" />

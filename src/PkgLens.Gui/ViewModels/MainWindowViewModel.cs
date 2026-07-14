@@ -7,7 +7,7 @@ using PkgLens.Core.Shared.Keys;
 namespace PkgLens.Gui.ViewModels;
 
 /// <summary>The tool pages shown in the left rail, in rail order.</summary>
-public enum ToolPage { Package, Pack, Resign, Decrypt, Keys }
+public enum ToolPage { Home, Package, Pack, Resign, Decrypt, Keys }
 
 public sealed partial class MainWindowViewModel : ObservableObject
 {
@@ -27,7 +27,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private string _windowTitle = "PkgLens";
 
     [ObservableProperty]
-    private ToolPage _activeTool = ToolPage.Package;
+    private ToolPage _activeTool = ToolPage.Home;
 
     [ObservableProperty]
     private string _keyStatus = "";
@@ -41,6 +41,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         set { if (value >= 0) ActiveTool = (ToolPage)value; }
     }
 
+    public bool IsHomeTool => ActiveTool == ToolPage.Home;
     public bool IsPackageTool => ActiveTool == ToolPage.Package;
     public bool IsPackTool => ActiveTool == ToolPage.Pack;
     public bool IsResignTool => ActiveTool == ToolPage.Resign;
@@ -50,6 +51,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     partial void OnActiveToolChanged(ToolPage value)
     {
         OnPropertyChanged(nameof(SelectedToolIndex));
+        OnPropertyChanged(nameof(IsHomeTool));
         OnPropertyChanged(nameof(IsPackageTool));
         OnPropertyChanged(nameof(IsPackTool));
         OnPropertyChanged(nameof(IsResignTool));
@@ -105,6 +107,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             IKeyProvider keys = new FileKeyProvider(KeysDirectory);
             var vm = await Task.Run(() => PackageViewModel.Load(path, keys));
             Package = vm;
+            ActiveTool = ToolPage.Package; // a freshly opened package lands on the inspector
             Status = vm.IsDecrypted
                 ? vm.StatusCounts
                 : "Header only — this package's contents could not be decrypted.";
