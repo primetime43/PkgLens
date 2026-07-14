@@ -39,6 +39,7 @@
         <MenuItem Header="_Verify integrity…" Click="OnVerifyClick" IsEnabled="{Binding HasPackage}" />
         <MenuItem Header="Package _info…" Click="OnInfoClick" IsEnabled="{Binding HasPackage}" />
         <MenuItem Header="_Folder info…" Click="OnFolderInfoClick" />
+        <MenuItem Header="_Scan folder…" Click="OnScanFolderClick" />
         <Separator />
         <MenuItem Header="Import _override key…" Click="OnSetKeyClick" />
         <MenuItem Header="Keys _folder…" Click="OnKeysClick" />
@@ -191,10 +192,15 @@
                           CanUserReorderColumns="False"
                           GridLinesVisibility="None" HeadersVisibility="Column">
                   <DataGrid.ContextMenu>
-                    <ContextMenu>
+                    <ContextMenu x:DataType="vm:PackageViewModel">
                       <MenuItem Header="View" Click="OnViewClick" />
                       <MenuItem Header="Extract…" Click="OnExtractClick" />
                       <MenuItem Header="Replace…" Click="OnReplaceClick" />
+                      <Separator IsVisible="{Binding HasSelectedPspTool}" />
+                      <MenuItem Header="Decrypt manual (DOCUMENT.DAT)…" Click="OnDecryptManual"
+                                IsVisible="{Binding SelectedIsDocument}" />
+                      <MenuItem Header="Unpack PBP…" Click="OnUnpackPbp"
+                                IsVisible="{Binding SelectedIsPbp}" />
                     </ContextMenu>
                   </DataGrid.ContextMenu>
                   <DataGrid.Columns>

@@ -1,8 +1,5 @@
-using System.Text;
-using System.Text.Json;
 using PkgLens.Core;
 using PkgLens.Core.Keys;
-using PkgLens.Core.Models;
 
 namespace PkgLens.Cli;
 
@@ -15,18 +12,6 @@ namespace PkgLens.Cli;
 internal static class ScanCommand
 {
     private enum Format { Table, Json, Csv }
-
-    private sealed record ScanRow(
-        string File,
-        string? ContentId,
-        string Platform,
-        string Finalization,
-        string? TitleId,
-        string? Title,
-        string? Version,
-        long Size,
-        bool Decrypted,
-        string? Note);
 
     public static int Run(ReadOnlySpan<string> args)
     {
@@ -86,7 +71,7 @@ internal static class ScanCommand
         }
 
         IKeyProvider keys = new FileKeyProvider(keysDir);
-        var rows = files.Select(f => Inspect(f, keys)).ToList();
+        var rows = files.Select(f => PackageScanner.Inspect(f, keys)).ToList();
 
         switch (format)
         {
@@ -97,36 +82,9 @@ internal static class ScanCommand
         return ExitCode.Ok;
     }
 
-    private static ScanRow Inspect(string path, IKeyProvider keys)
-    {
-        long size = 0;
-        try { size = new FileInfo(path).Length; } catch { /* size stays 0 */ }
-
-        try
-        {
-            PkgInfo info = PkgReader.Open(path, keys);
-            var h = info.Header;
-            return new ScanRow(
-                File: path,
-                ContentId: info.ContentId.Raw is { Length: > 0 } cid ? cid : null,
-                Platform: h.PlatformDisplay,
-                Finalization: h.Finalization.ToString(),
-                TitleId: info.Sfo?.TitleId ?? info.ContentId.TitleId,
-                Title: info.Sfo?.Title ?? info.ContentId.Name,
-                Version: info.Sfo?.AppVersion ?? info.Sfo?.Version,
-                Size: size,
-                Decrypted: info.IsDecrypted,
-                Note: info.IsDecrypted ? null : info.DecryptionNote);
-        }
-        catch (Exception ex) when (ex is PkgFormatException or PkgKeyException or IOException or UnauthorizedAccessException)
-        {
-            return new ScanRow(path, null, "?", "?", null, null, null, size, false, ex.Message);
-        }
-    }
-
     // ---- renderers -------------------------------------------------------------------------------
 
-    private static void RenderTable(IReadOnlyList<ScanRow> rows)
+    private static void RenderTable(IReadOnlyList<PackageScanRow> rows)
     {
         static string Cell(string? s) => string.IsNullOrEmpty(s) ? "-" : s;
 
@@ -147,48 +105,9 @@ internal static class ScanCommand
                           (failed > 0 ? $", {failed} unreadable" : "") + ".");
     }
 
-    private static void RenderJson(IReadOnlyList<ScanRow> rows)
-    {
-        var options = new JsonSerializerOptions
-        {
-            WriteIndented = true,
-            Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() },
-        };
-        Console.WriteLine(JsonSerializer.Serialize(rows.Select(r => new
-        {
-            file = r.File,
-            contentId = r.ContentId,
-            platform = r.Platform,
-            finalization = r.Finalization,
-            titleId = r.TitleId,
-            title = r.Title,
-            version = r.Version,
-            size = r.Size,
-            decrypted = r.Decrypted,
-            note = r.Note,
-        }), options));
-    }
+    private static void RenderJson(IReadOnlyList<PackageScanRow> rows) =>
+        Console.WriteLine(PackageScanner.ToJson(rows));
 
-    private static void RenderCsv(IReadOnlyList<ScanRow> rows)
-    {
-        Console.WriteLine("file,content_id,platform,finalization,title_id,title,version,size_bytes,decrypted,note");
-        foreach (var r in rows)
-        {
-            Console.WriteLine(string.Join(',', new[]
-            {
-                Csv(r.File), Csv(r.ContentId), Csv(r.Platform), Csv(r.Finalization),
-                Csv(r.TitleId), Csv(r.Title), Csv(r.Version), r.Size.ToString(),
-                r.Decrypted ? "true" : "false", Csv(r.Note),
-            }));
-        }
-    }
-
-    /// <summary>Quotes a CSV field per RFC 4180 when it contains a comma, quote, or newline.</summary>
-    private static string Csv(string? value)
-    {
-        if (string.IsNullOrEmpty(value)) return "";
-        bool needsQuote = value.AsSpan().IndexOfAny(",\"\n\r") >= 0;
-        if (!needsQuote) return value;
-        return "\"" + value.Replace("\"", "\"\"") + "\"";
-    }
+    private static void RenderCsv(IReadOnlyList<PackageScanRow> rows) =>
+        Console.Write(PackageScanner.ToCsv(rows));
 }

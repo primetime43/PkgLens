@@ -8,6 +8,8 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using PkgLens.Core;
 using PkgLens.Core.Keys;
 using PkgLens.Core.Models;
+using PkgLens.Core.Npd.Psp;
+using PkgLens.Core.Pbp;
 using PkgLens.Core.Sfo;
 
 namespace PkgLens.Gui.ViewModels;
@@ -83,9 +85,23 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
     {
         OnPropertyChanged(nameof(HasSelectedFile));
         OnPropertyChanged(nameof(SelectedFileDetail));
+        OnPropertyChanged(nameof(SelectedIsPbp));
+        OnPropertyChanged(nameof(SelectedIsDocument));
+        OnPropertyChanged(nameof(HasSelectedPspTool));
     }
 
+    /// <summary>True when the selected file has a PSP-specific action (manual decrypt or PBP unpack).</summary>
+    public bool HasSelectedPspTool => SelectedIsPbp || SelectedIsDocument;
+
     public bool HasSelectedFile => SelectedItem is { IsDirectory: false, Entry: not null };
+
+    /// <summary>True when the selected file is a PSP PBP container (EBOOT.PBP), unpackable in-app.</summary>
+    public bool SelectedIsPbp => SelectedItem is { IsDirectory: false, Entry: not null } n
+        && n.Name.EndsWith(".PBP", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>True when the selected file is a PSP/minis DOCUMENT.DAT (a decryptable manual).</summary>
+    public bool SelectedIsDocument => SelectedItem is { IsDirectory: false, Entry: not null } n
+        && n.Name.Equals("DOCUMENT.DAT", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>One-line detail for the selected file (size, offset, encryption, PSP flag), for the footer.</summary>
     public string SelectedFileDetail
@@ -245,6 +261,61 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
 
         using var dest = File.Create(destinationPath);
         PkgReader.ExtractEntry(_stream, _header, entry, dest, _keys);
+    }
+
+    /// <summary>Decrypts the selected DOCUMENT.DAT into its manual pages (each a PNG), using the sibling DOCINFO.EDAT.</summary>
+    public IReadOnlyList<byte[]> DecryptSelectedDocument()
+    {
+        if (SelectedItem is not { IsDirectory: false, Entry: { } entry })
+            throw new InvalidOperationException("Select a DOCUMENT.DAT file.");
+
+        byte[] doc = PkgReader.ExtractEntryBytes(_stream, _header, entry, _keys);
+        byte[]? docInfo = ReadSiblingBytes("DOCINFO.EDAT");
+        return PspDocument.DecryptPages(doc, docInfo);
+    }
+
+    /// <summary>Extracts and splits the selected PBP into its parts under <paramref name="destinationDir"/>.</summary>
+    public IReadOnlyList<string> UnpackSelectedPbpTo(string destinationDir)
+    {
+        if (SelectedItem is not { IsDirectory: false, Entry: { } entry })
+            throw new InvalidOperationException("Select a .PBP file.");
+
+        Directory.CreateDirectory(destinationDir);
+        string temp = Path.Combine(destinationDir, "~" + entry.Name + ".tmp");
+        try
+        {
+            using (var d = File.Create(temp))
+                PkgReader.ExtractEntry(_stream, _header, entry, d, _keys);
+
+            var written = new List<string>();
+            using (var src = File.OpenRead(temp))
+            {
+                var pbp = PbpArchive.Parse(src);
+                foreach (var e in pbp.Entries)
+                {
+                    using var dst = File.Create(Path.Combine(destinationDir, e.Name));
+                    PbpArchive.Extract(src, e, dst);
+                    written.Add(e.Name);
+                }
+            }
+            return written;
+        }
+        finally
+        {
+            try { File.Delete(temp); } catch { /* best-effort temp cleanup */ }
+        }
+    }
+
+    /// <summary>Reads a decrypted sibling entry (same folder as the selection) by leaf name, or null if absent.</summary>
+    private byte[]? ReadSiblingBytes(string leafName)
+    {
+        if (SelectedItem is not { FullPath: { } full })
+            return null;
+        int slash = full.LastIndexOf('/');
+        string siblingPath = slash < 0 ? leafName : full[..(slash + 1)] + leafName;
+        var entry = _info.Entries.FirstOrDefault(e =>
+            e.IsFile && e.Name.Equals(siblingPath, StringComparison.OrdinalIgnoreCase));
+        return entry is null ? null : PkgReader.ExtractEntryBytes(_stream, _header, entry, _keys);
     }
 
     private Bitmap? TryLoadIcon()

@@ -183,6 +183,8 @@ public partial class MainWindow : Window
             Vm.Package.OpenFolder(node);
         else if (node.Name.Equals("PARAM.SFO", StringComparison.OrdinalIgnoreCase) && Vm.Package.CanEditSfo)
             EditSfo();   // SFO opens in the editor, not the hex viewer
+        else if (Vm.Package.SelectedIsDocument)
+            ShowManual();   // DOCUMENT.DAT opens as its decrypted manual pages
         else
             ViewSelected();
     }
@@ -1234,6 +1236,67 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             Vm.Status = $"Couldn't read folder: {ex.Message}";
+        }
+    }
+
+    private void OnScanFolderClick(object? sender, RoutedEventArgs e) =>
+        new ScanDialog(Vm.KeysDirectory).ShowDialog(this);
+
+    private void OnDecryptManual(object? sender, RoutedEventArgs e) => ShowManual();
+
+    /// <summary>Decrypts the selected DOCUMENT.DAT and opens its manual pages in a viewer.</summary>
+    private async void ShowManual()
+    {
+        if (Vm.Package is not { SelectedIsDocument: true } package)
+        {
+            Vm.Status = "Select a DOCUMENT.DAT file first.";
+            return;
+        }
+
+        string name = package.SelectedItem?.Name ?? "DOCUMENT.DAT";
+        try
+        {
+            Vm.Status = "Decrypting manual…";
+            var pages = await Task.Run(package.DecryptSelectedDocument);
+            if (pages.Count == 0)
+            {
+                Vm.Status = "No manual pages were found in this DOCUMENT.DAT.";
+                return;
+            }
+            Vm.Status = $"Decrypted {pages.Count} manual page(s).";
+            await new ManualViewerDialog(name, pages).ShowDialog(this);
+        }
+        catch (Exception ex)
+        {
+            Vm.Status = $"Manual decrypt failed: {ex.Message}";
+        }
+    }
+
+    private async void OnUnpackPbp(object? sender, RoutedEventArgs e)
+    {
+        if (Vm.Package is not { SelectedIsPbp: true } package)
+        {
+            Vm.Status = "Select a .PBP file first.";
+            return;
+        }
+
+        var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        {
+            Title = "Unpack the PBP into…",
+            AllowMultiple = false,
+        });
+        if (folders.FirstOrDefault()?.TryGetLocalPath() is not { } dir)
+            return;
+
+        try
+        {
+            Vm.Status = "Unpacking PBP…";
+            var written = await Task.Run(() => package.UnpackSelectedPbpTo(dir));
+            Vm.Status = $"Unpacked {written.Count} section(s) → {dir}";
+        }
+        catch (Exception ex)
+        {
+            Vm.Status = $"Unpack failed: {ex.Message}";
         }
     }
 

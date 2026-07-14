@@ -105,7 +105,10 @@ Core, CLI, and a first GUI are implemented and tested (spec §11 steps 1–5, pl
 - **CLI**: `pkglens info | list | sfo | verify | extract | decrypt | self | unself | resign | patch | pack | folderinfo | scan | keys`, with `--json`, `--csv`, `--keys`, `--out`, `--filter`, `--rap`, `--klic`.
 - **GUI** (Avalonia): classic menu/toolbar, folder tree + Name/Size list, viewer, Package-info dialog,
   drag-and-drop, light/dark theme, replace + Save-As (repack), and **Pack folder → .pkg** (File menu /
-  toolbar) to build a package from a content folder.
+  toolbar) to build a package from a content folder. The inspector also has full CLI parity for the PSP
+  tools: double-click a `DOCUMENT.DAT` to read the decrypted **manual pages**, right-click an
+  `EBOOT.PBP` to **unpack** it, and **Tools → Scan folder…** to batch-catalog a library (with CSV/JSON
+  export).
 
 Verified against synthetic in-test fixtures **and** a real retail package.
 
