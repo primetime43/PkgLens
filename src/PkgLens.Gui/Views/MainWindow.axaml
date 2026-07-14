@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:PkgLens.Gui.ViewModels"
+        xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
         x:Class="PkgLens.Gui.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Width="860" Height="580"
@@ -151,7 +152,7 @@
                 <StackPanel>
                   <Button Classes="row" Click="OnHomeOpenPkg">
                     <Grid ColumnDefinitions="34,*,Auto">
-                      <TextBlock Grid.Column="0" Text="📂" FontSize="17" VerticalAlignment="Center" />
+                      <materialIcons:MaterialIcon Grid.Column="0" Kind="FileOutline" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="1,0,0,0" />
                       <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
                         <TextBlock Classes="rowtitle" Text="Open a .pkg…" />
                         <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="Browse, list and extract a package." />
@@ -164,7 +165,7 @@
                   </Button>
                   <Button Classes="row" Click="OnHomeScan">
                     <Grid ColumnDefinitions="34,*,Auto">
-                      <TextBlock Grid.Column="0" Text="🗂" FontSize="17" VerticalAlignment="Center" />
+                      <materialIcons:MaterialIcon Grid.Column="0" Kind="FolderSearchOutline" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="1,0,0,0" />
                       <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
                         <TextBlock Classes="rowtitle" Text="Scan a folder…" />
                         <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="Catalog every .pkg in a directory." />
@@ -177,7 +178,7 @@
                   </Button>
                   <Button Classes="row" Click="OnHomeFolderInfo">
                     <Grid ColumnDefinitions="34,*,Auto">
-                      <TextBlock Grid.Column="0" Text="📁" FontSize="17" VerticalAlignment="Center" />
+                      <materialIcons:MaterialIcon Grid.Column="0" Kind="InformationOutline" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="1,0,0,0" />
                       <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
                         <TextBlock Classes="rowtitle" Text="Game folder info…" />
                         <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="Read a content folder's PARAM.SFO / EBOOTs." />
@@ -190,7 +191,7 @@
                   </Button>
                   <Button Classes="row" Click="OnHomePack">
                     <Grid ColumnDefinitions="34,*,Auto">
-                      <TextBlock Grid.Column="0" Text="📦" FontSize="17" VerticalAlignment="Center" />
+                      <materialIcons:MaterialIcon Grid.Column="0" Kind="PackageVariantClosed" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="1,0,0,0" />
                       <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
                         <TextBlock Classes="rowtitle" Text="Pack folder → .pkg" />
                         <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="Build a package from a content folder." />
@@ -217,7 +218,7 @@
                 <StackPanel>
                   <Button Classes="row" Tag="inspect" Click="OnHomeResign">
                     <Grid ColumnDefinitions="34,*,Auto">
-                      <TextBlock Grid.Column="0" Text="🔍" FontSize="17" VerticalAlignment="Center" />
+                      <materialIcons:MaterialIcon Grid.Column="0" Kind="Magnify" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="1,0,0,0" />
                       <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
                         <TextBlock Classes="rowtitle" Text="Inspect SELF / EBOOT" />
                         <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="Header — type, key rev, segments." />
@@ -230,7 +231,7 @@
                   </Button>
                   <Button Classes="row" Tag="decrypt" Click="OnHomeResign">
                     <Grid ColumnDefinitions="34,*,Auto">
-                      <TextBlock Grid.Column="0" Text="🔓" FontSize="17" VerticalAlignment="Center" />
+                      <materialIcons:MaterialIcon Grid.Column="0" Kind="LockOpenOutline" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="1,0,0,0" />
                       <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
                         <TextBlock Classes="rowtitle" Text="Decrypt SELF → ELF" />
                         <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="EBOOT.BIN / .self to a plaintext ELF." />
@@ -243,7 +244,7 @@
                   </Button>
                   <Button Classes="row" Tag="fakesign" Click="OnHomeResign">
                     <Grid ColumnDefinitions="34,*,Auto">
-                      <TextBlock Grid.Column="0" Text="✍️" FontSize="17" VerticalAlignment="Center" />
+                      <materialIcons:MaterialIcon Grid.Column="0" Kind="DrawPen" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="1,0,0,0" />
                       <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
                         <TextBlock Classes="rowtitle" Text="Fake-sign ELF → fSELF" />
                         <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="A CFW-ready fSELF from a plain ELF." />
@@ -256,7 +257,7 @@
                   </Button>
                   <Button Classes="row" Tag="magic" Click="OnHomeResign">
                     <Grid ColumnDefinitions="34,*,Auto">
-                      <TextBlock Grid.Column="0" Text="⬇️" FontSize="17" VerticalAlignment="Center" />
+                      <materialIcons:MaterialIcon Grid.Column="0" Kind="ArrowDownBoldBox" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="1,0,0,0" />
                       <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
                         <TextBlock Classes="rowtitle" Text="Magic-patch firmware" />
                         <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="Lower the firmware an EBOOT requires." />
@@ -269,7 +270,7 @@
                   </Button>
                   <Button Classes="row" Tag="byte" Click="OnHomeResign">
                     <Grid ColumnDefinitions="34,*,Auto">
-                      <TextBlock Grid.Column="0" Text="✂️" FontSize="17" VerticalAlignment="Center" />
+                      <materialIcons:MaterialIcon Grid.Column="0" Kind="CodeBraces" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="1,0,0,0" />
                       <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
                         <TextBlock Classes="rowtitle" Text="Byte-patch EBOOT" />
                         <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="Hex find/replace or at-offset edit." />
@@ -298,7 +299,7 @@
                 <StackPanel>
                   <Button Classes="row" Click="OnHomeDecrypt">
                     <Grid ColumnDefinitions="34,*,Auto">
-                      <TextBlock Grid.Column="0" Text="🔑" FontSize="17" VerticalAlignment="Center" />
+                      <materialIcons:MaterialIcon Grid.Column="0" Kind="KeyVariant" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="1,0,0,0" />
                       <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
                         <TextBlock Classes="rowtitle" Text="Decrypt EDAT / SDAT" />
                         <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="Decrypt an NPDRM data file to plaintext." />
@@ -312,7 +313,7 @@
                   </Button>
                   <Button Classes="row" Click="OnHomeKeys">
                     <Grid ColumnDefinitions="34,*,Auto">
-                      <TextBlock Grid.Column="0" Text="⚙️" FontSize="17" VerticalAlignment="Center" />
+                      <materialIcons:MaterialIcon Grid.Column="0" Kind="CogOutline" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="1,0,0,0" />
                       <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
                         <TextBlock Classes="rowtitle" Text="Manage keys…" />
                         <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="Import an override key or set the folder." />
@@ -567,7 +568,7 @@
                   <Button Classes="row" Tag="inspect" Click="OnResignCardClick"
                           ToolTip.Tip="Read a SELF/EBOOT header without decrypting.">
                     <Grid ColumnDefinitions="34,*,Auto">
-                      <TextBlock Grid.Column="0" Text="🔍" FontSize="17" VerticalAlignment="Center" />
+                      <materialIcons:MaterialIcon Grid.Column="0" Kind="Magnify" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="1,0,0,0" />
                       <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
                         <TextBlock Classes="rowtitle" Text="Inspect SELF / EBOOT" />
                         <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="Header — type, key rev, segments." />
@@ -581,7 +582,7 @@
                   <Button Classes="row" Tag="decrypt" Click="OnResignCardClick"
                           ToolTip.Tip="Recover a plaintext ELF from an encrypted EBOOT.BIN / .self.">
                     <Grid ColumnDefinitions="34,*,Auto">
-                      <TextBlock Grid.Column="0" Text="🔓" FontSize="17" VerticalAlignment="Center" />
+                      <materialIcons:MaterialIcon Grid.Column="0" Kind="LockOpenOutline" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="1,0,0,0" />
                       <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
                         <TextBlock Classes="rowtitle" Text="Decrypt SELF → ELF" />
                         <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="EBOOT.BIN / .self to a plaintext ELF." />
@@ -595,7 +596,7 @@
                   <Button Classes="row" Tag="fakesign" Click="OnResignCardClick"
                           ToolTip.Tip="Wrap a plaintext ELF as a fake-signed SELF that boots on CFW.">
                     <Grid ColumnDefinitions="34,*,Auto">
-                      <TextBlock Grid.Column="0" Text="✍️" FontSize="17" VerticalAlignment="Center" />
+                      <materialIcons:MaterialIcon Grid.Column="0" Kind="DrawPen" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="1,0,0,0" />
                       <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
                         <TextBlock Classes="rowtitle" Text="Fake-sign ELF → fSELF" />
                         <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="A CFW-ready fSELF from a plain ELF." />
@@ -609,7 +610,7 @@
                   <Button Classes="row" Tag="magic" Click="OnResignCardClick"
                           ToolTip.Tip="Lower the firmware an EBOOT demands so it boots on a lower CFW.">
                     <Grid ColumnDefinitions="34,*,Auto">
-                      <TextBlock Grid.Column="0" Text="⬇️" FontSize="17" VerticalAlignment="Center" />
+                      <materialIcons:MaterialIcon Grid.Column="0" Kind="ArrowDownBoldBox" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="1,0,0,0" />
                       <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
                         <TextBlock Classes="rowtitle" Text="Magic-patch firmware" />
                         <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="Lower the firmware an EBOOT requires." />
@@ -623,7 +624,7 @@
                   <Button Classes="row" Tag="byte" Click="OnResignCardClick"
                           ToolTip.Tip="Apply raw hex edits to an EBOOT/ELF.">
                     <Grid ColumnDefinitions="34,*,Auto">
-                      <TextBlock Grid.Column="0" Text="✂️" FontSize="17" VerticalAlignment="Center" />
+                      <materialIcons:MaterialIcon Grid.Column="0" Kind="CodeBraces" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="1,0,0,0" />
                       <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
                         <TextBlock Classes="rowtitle" Text="Byte-patch EBOOT" />
                         <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="Hex find/replace or at-offset edit." />
