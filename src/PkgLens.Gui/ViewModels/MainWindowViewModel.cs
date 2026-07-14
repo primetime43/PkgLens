@@ -57,13 +57,13 @@ public sealed partial class MainWindowViewModel : ObservableObject
         OnPropertyChanged(nameof(IsKeysTool));
     }
 
-    /// <summary>Re-checks whether a retail key is present and updates the status-bar indicator.</summary>
+    /// <summary>Updates the status-bar key indicator: the bundled key, or an override file if present.</summary>
     public void RefreshKeyStatus()
     {
         var provider = new FileKeyProvider(KeysDirectory);
         KeyStatus = provider.TryLocateKeyFile(out string path)
-            ? $"key: {Path.GetFileName(path)}"
-            : "key: none";
+            ? $"key: {Path.GetFileName(path)} (override)"
+            : "key: built-in";
     }
 
     public bool HasPackage => Package is not null;
@@ -107,7 +107,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             Package = vm;
             Status = vm.IsDecrypted
                 ? vm.StatusCounts
-                : "Header only — a retail key is required to list the contents.";
+                : "Header only — this package's contents could not be decrypted.";
         }
         catch (Exception ex)
         {

@@ -114,12 +114,12 @@ internal static class CliHelp
                        magic-patch an EBOOT/ELF (e.g. lower the firmware requirement: --sdk-version 4.00)
               pkglens folderinfo <folder> [--json]           report on an extracted content folder
               pkglens pack    <folder> [--out FILE] [options]   build a .pkg from a content folder
-              pkglens keys    import|status|where           manage the runtime retail key
+              pkglens keys    import|status|where           manage an optional override retail key
 
             Options:
-              --keys DIR   directory holding the runtime NPDRM PKG PS3 AES key file
-                           (also read from $PKGLENS_KEYS or ~/.pkglens). Retail packages
-                           need this; debug packages decrypt without any key.
+              --keys DIR   directory holding an override NPDRM PKG PS3 AES key file
+                           (also read from $PKGLENS_KEYS or ~/.pkglens). The standard retail
+                           key is bundled, so this is only needed for a non-standard key.
               --out DIR    extract destination (default: a folder named after the package)
               --filter GLOB  only extract matching entries, e.g. "*.SFO" or "USRDIR/*"
               --json       machine-readable output

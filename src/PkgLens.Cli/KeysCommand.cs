@@ -3,8 +3,9 @@ using PkgLens.Core.Keys;
 namespace PkgLens.Cli;
 
 /// <summary>
-/// The `pkglens keys` command group: install and inspect the runtime PS3 gpkg AES key. The key is
-/// never bundled — this just makes supplying your own copy a one-time, friendly step.
+/// The `pkglens keys` command group. The standard NPDRM PKG PS3 AES key is bundled, so retail
+/// packages decrypt with no setup; these commands install/inspect an optional <em>override</em> key
+/// file (e.g. an IDU/kiosk key) for the rare package the bundled key does not cover.
 /// </summary>
 internal static class KeysCommand
 {
@@ -54,9 +55,9 @@ internal static class KeysCommand
         }
 
         string path = KeyStore.Install(key, o.KeysDir);
-        Console.WriteLine($"Installed key → {path}");
+        Console.WriteLine($"Installed override key → {path}");
         Console.WriteLine($"  {(KeyStore.IsKnownGpkgKey(key) ? "✓" : "⚠")} {KeyStore.Describe(key)}");
-        Console.WriteLine("Retail packages will now decrypt automatically (no --keys needed).");
+        Console.WriteLine("This file overrides the bundled key for retail packages.");
         return ExitCode.Ok;
     }
 
@@ -64,7 +65,9 @@ internal static class KeysCommand
     {
         var provider = new FileKeyProvider(o.KeysDir);
 
-        Console.WriteLine("Key search order (first match wins):");
+        Console.WriteLine("Bundled: standard NPDRM PKG PS3 AES key (retail packages decrypt out of the box).");
+        Console.WriteLine();
+        Console.WriteLine("Override search order (first match wins):");
         foreach (string dir in provider.SearchDirectories())
             Console.WriteLine($"  {dir}");
         Console.WriteLine($"Recognized filenames: {string.Join(", ", FileKeyProvider.KeyFileNames)}");
@@ -75,20 +78,19 @@ internal static class KeysCommand
             try
             {
                 byte[] key = KeyStore.ResolveKeyArgument(found);
-                Console.WriteLine($"Found key: {found}");
+                Console.WriteLine($"Override key in use: {found}");
                 Console.WriteLine($"  {(KeyStore.IsKnownGpkgKey(key) ? "✓" : "⚠")} {KeyStore.Describe(key)}");
                 return ExitCode.Ok;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Found key file {found}, but it is invalid: {ex.Message}");
+                Console.WriteLine($"Found override key file {found}, but it is invalid: {ex.Message}");
                 return ExitCode.KeyOrDecryptError;
             }
         }
 
-        Console.WriteLine("No key installed yet. Debug packages still work without one.");
-        Console.WriteLine($"Install with:  pkglens keys import <32-hex-key>   (writes to {KeyStore.DefaultDirectory})");
-        Console.WriteLine("See docs/keys.md for where to obtain the standard NPDRM PKG PS3 AES key.");
+        Console.WriteLine("No override installed — using the bundled key.");
+        Console.WriteLine($"Add an override with:  pkglens keys import <32-hex-key>   (writes to {KeyStore.DefaultDirectory})");
         return ExitCode.Ok;
     }
 
@@ -108,14 +110,14 @@ internal static class KeysCommand
     private static void PrintHelp() =>
         Console.WriteLine(
             """
-            pkglens keys — manage the runtime NPDRM PKG PS3 AES key (never bundled)
+            pkglens keys — manage the optional override NPDRM PKG PS3 AES key
+
+            The standard retail key is bundled; retail packages decrypt with no setup. These commands
+            only matter if you need to override it (e.g. an IDU/kiosk key).
 
             Usage:
-              pkglens keys import <hex|file> [--keys DIR]   install your key (default ~/.pkglens)
-              pkglens keys status            [--keys DIR]   show search path + whether a key is present
-              pkglens keys where                            print the default key file path
-
-            The standard NPDRM PKG PS3 AES key is public but not shipped here. See docs/keys.md
-            for where to find it; `import` confirms whether the key you supply is the expected one.
+              pkglens keys import <hex|file> [--keys DIR]   install an override key (default ~/.pkglens)
+              pkglens keys status            [--keys DIR]   show the bundled key + any override
+              pkglens keys where                            print the default override file path
             """);
 }

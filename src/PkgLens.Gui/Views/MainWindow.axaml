@@ -39,7 +39,7 @@
         <MenuItem Header="_Verify integrity…" Click="OnVerifyClick" IsEnabled="{Binding HasPackage}" />
         <MenuItem Header="Package _info…" Click="OnInfoClick" IsEnabled="{Binding HasPackage}" />
         <Separator />
-        <MenuItem Header="Set _retail key…" Click="OnSetKeyClick" />
+        <MenuItem Header="Import _override key…" Click="OnSetKeyClick" />
         <MenuItem Header="Keys _folder…" Click="OnKeysClick" />
       </MenuItem>
       <MenuItem Header="_View">
@@ -358,7 +358,7 @@
           <StackPanel Margin="18" Spacing="10" MaxWidth="560" HorizontalAlignment="Left">
             <TextBlock Text="Keys" FontSize="16" FontWeight="SemiBold" />
             <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.75"
-                       Text="Retail packages need the NPDRM PKG PS3 AES key. Import it once (saved to ~/.pkglens) or point at an existing keys folder. Debug packages need no key." />
+                       Text="The standard NPDRM PKG PS3 AES key is built in, so retail and debug packages open with no setup. Import an override key only for a non-standard package (e.g. an IDU/kiosk key)." />
 
             <StackPanel Spacing="3">
               <TextBlock Text="Status" FontWeight="SemiBold" FontSize="12" />
@@ -368,12 +368,12 @@
             </StackPanel>
 
             <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,4,0,0">
-              <Button Content="Import retail key…" Click="OnSetKeyClick" />
+              <Button Content="Import override key…" Click="OnSetKeyClick" />
               <Button Content="Set keys folder…" Click="OnKeysClick" />
             </StackPanel>
 
             <TextBlock TextWrapping="Wrap" FontSize="11" Opacity="0.55"
-                       Text="The key is public but never bundled with PkgLens. See docs/keys.md for where to find it." />
+                       Text="An override key file takes precedence over the built-in key. RAP files for licensed EDATs/EBOOTs are supplied per operation, not here." />
           </StackPanel>
         </ScrollViewer>
 

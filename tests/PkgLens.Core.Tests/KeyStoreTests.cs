@@ -5,8 +5,8 @@ namespace PkgLens.Core.Tests;
 
 public class KeyStoreTests
 {
-    // The standard PS3 gpkg retail package key (public; used here only to verify the fingerprint
-    // logic recognizes it). Not committed anywhere else in the repo.
+    // The standard PS3 gpkg retail package key (public; bundled as BundledKeys.Ps3GpkgAesKey).
+    // Duplicated here to verify the fingerprint logic recognizes it.
     private static readonly byte[] GpkgKey =
     {
         0x2E, 0x7B, 0x71, 0xD7, 0xC9, 0xC9, 0xA1, 0x4E,

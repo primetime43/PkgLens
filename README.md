@@ -127,7 +127,7 @@ src/PkgLens.Core   # no UI, no I/O policy — pure parsing + models (net8.0, no 
 src/PkgLens.Cli    # thin CLI over the core  ->  builds the `pkglens` executable
 src/PkgLens.Gui    # Avalonia MVVM desktop inspector
 tests/PkgLens.Core.Tests  # synthetic PKG/SFO builders + xUnit tests (no copyrighted data, no keys)
-docs/keys.md       # how to supply the runtime key for retail packages
+docs/keys.md       # which keys are bundled, and what you still supply (RAP)
 docs/coverage.html # feature coverage vs TrueAncestor (themed, open in a browser)
 ```
 
@@ -143,9 +143,9 @@ Launch it any of these ways:
 
 Use **File → Open .pkg…** (or drag a `.pkg` onto the window). The left pane is a folder tree; the
 right pane lists the selected folder's files with sizes; **Tools → Package info…** shows the
-header, metadata, and PARAM.SFO. Debug packages open immediately. For retail packages, use
-**Tools → Set retail key…** and paste the NPDRM PKG PS3 AES key once (saved to `~/.pkglens`), or
-**Tools → Keys folder…** to point at an existing key file. Select a file and **File → Extract
+header, metadata, and PARAM.SFO. Debug and retail packages both open immediately — the standard
+retail key is built in. (You only need **Tools → Import override key…** for a non-standard package,
+e.g. an IDU/kiosk key.) Select a file and **File → Extract
 selected…**. To build a package, use **File → Pack folder → .pkg…** (or the **Pack** toolbar button):
 pick a content folder, confirm the pre-filled fields, and choose where to save. See
 [`docs/keys.md`](docs/keys.md) for where to obtain the key.
@@ -169,7 +169,7 @@ pkglens resign <elf> [--out FILE] [--npdrm] # ELF → fake-signed SELF (fSELF) f
 pkglens patch <eboot> [--sdk-version 4.00] [--find HEX --replace HEX] [--at OFF=HEX]  # magic-patch an EBOOT
 pkglens folderinfo <folder> [--json]        # report on an extracted content folder
 pkglens pack  <folder> [--out FILE] [--resign [--rap FILE]]   # build a .pkg (optionally resign EBOOT)
-pkglens keys  import|status|where           # manage the runtime retail key
+pkglens keys  import|status|where           # manage an optional override retail key
 ```
 
 **Pack** turns a content folder back into a package. With no options it's *Fast Pack* — the content
@@ -192,15 +192,17 @@ PkgLens never forges signatures.
 > `EBOOT.BIN`, the game still needs its license (`act.dat`/`.rif`) to boot — or the EBOOT fake-signed
 > to an fSELF. EBOOT resigning is planned (see the Resign tool in the GUI).
 
-Debug (non-finalized) packages decrypt with no key at all. Retail (finalized) packages need the
-NPDRM PKG PS3 AES key supplied **at runtime**. Install it once and every later run just works:
+Both debug (non-finalized) and retail (finalized) packages decrypt out of the box — the standard
+NPDRM PKG PS3 AES key is a public decryption key and is **bundled**. The `keys` command only manages
+an optional *override* key file for a non-standard package (e.g. an IDU/kiosk key):
 
 ```
-pkglens keys import <32-hex-key>   # writes ~/.pkglens/ps3_gpkg_aes.key, confirms it's the right key
-pkglens keys status                # show the search path + whether a key is present
+pkglens keys status                # show the bundled key + any override
+pkglens keys import <32-hex-key>   # install an override (writes ~/.pkglens/ps3_gpkg_aes.key)
 ```
 
-See [`docs/keys.md`](docs/keys.md) for where to obtain the key (it is never bundled). Exit codes:
+The only material you supply yourself is a **RAP** for a *licensed* EDAT/EBOOT (`--rap FILE`) — it's
+tied to your purchase, so it can't be bundled. See [`docs/keys.md`](docs/keys.md). Exit codes:
 `0` ok · `1` usage · `2` parse error · `3` key/decryption error · `4` integrity failure.
 
 ## Legal & scope
@@ -208,8 +210,12 @@ See [`docs/keys.md`](docs/keys.md) for where to obtain the key (it is never bund
 PkgLens **parses and inspects** package structure and extracts content the user is entitled to
 (their own dumps / debug packages). Format parsing and metadata display are not circumvention.
 
-- **No keys are bundled.** The repository ships derivation *logic* only; users supply their own
-  key files at runtime. `.gitignore` blocks `*.key`, `keys/`, and `*.pkg` from ever being committed.
+- **Only public decryption keys are bundled.** PkgLens ships the well-known, universal PS3
+  *decryption* keys (the NPDRM PKG AES key, appldr/NPDRM SELF keysets, EDAT/SDAT keys) so packages
+  you own open with no setup — the same keys every PS3 package tool has embedded for over a decade.
+  It bundles **no** private/signing keys and **no** per-console (IDPS/EID) secrets, and users still
+  supply their own per-purchase **RAP** license for licensed content. `.gitignore` blocks `*.key`,
+  `keys/`, and `*.pkg` so no user-specific key material or copyrighted package is ever committed.
 - **Repacking is unsigned.** You can rebuild a package you own with modified files, but PkgLens
   never recomputes the header CMAC or forges the ECDSA signature — a repacked retail package is
   unsigned and will not install on a retail console.
