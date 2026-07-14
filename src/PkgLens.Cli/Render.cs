@@ -166,6 +166,20 @@ internal static class Render
             Console.WriteLine($"ELF        : {(elf.Is64Bit ? "64-bit" : "32-bit")} " +
                               $"{(elf.IsBigEndian ? "big-endian" : "little-endian")}, {elf.TypeText}, machine 0x{elf.Machine:X}");
 
+        if (self.ControlBlocks.Count > 0)
+            Console.WriteLine($"Control    : {string.Join(", ", self.ControlBlocks.Select(b => b.TypeText))}");
+
+        if (self.ControlFlags is { } cf)
+            Console.WriteLine($"Ctrl flags : {Convert.ToHexString(cf)}");
+
+        if (self.Segments.Count > 0)
+        {
+            Console.WriteLine($"Segments   : {self.Segments.Count}");
+            foreach (var seg in self.Segments)
+                Console.WriteLine(
+                    $"  [{seg.Index}] offset 0x{seg.Offset:X}  size {seg.Size:n0}  {seg.CompressedText}, {seg.EncryptedText}");
+        }
+
         if (self.Npdrm is { } npd)
         {
             Console.WriteLine("NPDRM:");

@@ -37,7 +37,9 @@ Core, CLI, and a first GUI are implemented and tested (spec §11 steps 1–5, pl
   (`AES-CMAC(gpkg_key, header[0x00:0x80])`, algorithm confirmed against real packages). Detects
   truncation, corruption, and modified/repacked headers. ECDSA signature check is not yet included.
 - **SELF inspector** — read an `EBOOT.BIN` / `.self` / `.sprx` header (`pkglens self <eboot>`): program
-  type, key revision, the embedded ELF header, and NPDRM content id — no keys needed.
+  type, key revision, the embedded ELF header, the **segment table** (offset / size / compressed /
+  encrypted per segment), the **control-info blocks** (control flags, file digest, NPDRM), and NPDRM
+  content id — all no keys needed.
 - **Resign (ELF → fSELF)** — fake-sign a plaintext ELF into a SELF (`pkglens resign <elf>`) that boots on
   a jailbroken (CFW) PS3. No keys; the ELF is stored unencrypted with key revision `0x8000`, so it runs
   where signature checks are patched (CFW) — never on stock retail. **Custom Sign** lets you override the

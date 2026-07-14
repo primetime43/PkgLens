@@ -47,6 +47,45 @@ public sealed class SelfNpdrmInfo
     public string LicenseText => LicenseType?.ToString() ?? $"0x{RawLicenseType:X}";
 }
 
+/// <summary>
+/// One entry of the SELF's plaintext segment (section-info) table — one per ELF program header.
+/// Records where a segment lives in the file and whether it is compressed/encrypted, all readable
+/// without keys.
+/// </summary>
+public sealed class SelfSegment
+{
+    public int Index { get; init; }
+    public ulong Offset { get; init; }
+    public ulong Size { get; init; }
+
+    /// <summary>Raw compression flag (1 = plain, 2 = zlib-compressed).</summary>
+    public uint RawCompressed { get; init; }
+
+    /// <summary>Raw encryption flag (1 = plaintext, 3 = encrypted; other values are format-specific).</summary>
+    public uint RawEncrypted { get; init; }
+
+    public bool? Compressed => RawCompressed switch { 2 => true, 1 => false, _ => null };
+
+    public string CompressedText => RawCompressed switch { 2 => "compressed", 1 => "plain", _ => $"0x{RawCompressed:X}" };
+
+    public string EncryptedText => RawEncrypted switch { 3 => "encrypted", 1 or 2 => "plaintext", _ => $"0x{RawEncrypted:X}" };
+}
+
+/// <summary>A control-info block header ("type + size") found while walking the control-info chain.</summary>
+public sealed class SelfControlBlock
+{
+    public uint RawType { get; init; }
+    public uint Size { get; init; }
+
+    public string TypeText => RawType switch
+    {
+        1 => "control flags",
+        2 => "file/ELF digest",
+        3 => "NPDRM",
+        _ => $"type 0x{RawType:X}",
+    };
+}
+
 /// <summary>Fields decoded from the plaintext ELF header embedded in the SELF.</summary>
 public sealed class ElfIdent
 {
@@ -89,6 +128,15 @@ public sealed class SelfInfo
 
     public ElfIdent? Elf { get; init; }
     public SelfNpdrmInfo? Npdrm { get; init; }
+
+    /// <summary>The segment (section-info) table — one entry per ELF program header. Empty if none parsed.</summary>
+    public IReadOnlyList<SelfSegment> Segments { get; init; } = Array.Empty<SelfSegment>();
+
+    /// <summary>Every control-info block present, in file order (control flags, file digest, NPDRM).</summary>
+    public IReadOnlyList<SelfControlBlock> ControlBlocks { get; init; } = Array.Empty<SelfControlBlock>();
+
+    /// <summary>The 0x20-byte control-flags payload (control-info block type 1), if present.</summary>
+    public byte[]? ControlFlags { get; init; }
 
     public SelfProgramType? ProgramType =>
         Enum.IsDefined(typeof(SelfProgramType), RawProgramType) ? (SelfProgramType)RawProgramType : null;

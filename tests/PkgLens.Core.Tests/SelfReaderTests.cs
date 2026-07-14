@@ -57,6 +57,41 @@ public class SelfReaderTests
     }
 
     [Fact]
+    public void Parse_ReadsControlBlocksAndControlFlags()
+    {
+        byte[] flags = Enumerable.Range(0, 0x20).Select(i => (byte)(0xC0 + i)).ToArray();
+        byte[] self = new SyntheticSelfBuilder { ControlFlags = flags }.Build();
+
+        var info = SelfReader.ParseInfo(new MemoryStream(self));
+
+        Assert.NotNull(info.ControlFlags);
+        Assert.Equal(flags, info.ControlFlags);
+        // Both the control-flags (type 1) and the NPDRM (type 3) blocks should be listed, in order.
+        Assert.Collection(info.ControlBlocks,
+            b => Assert.Equal(1u, b.RawType),
+            b => Assert.Equal(3u, b.RawType));
+    }
+
+    [Fact]
+    public void Parse_RealFakeSelf_ReadsSegmentTable()
+    {
+        // Build a real fSELF from a two-segment ELF and read its plaintext segment table back.
+        byte[] elf = MinimalElf.Build(
+            (1u, new byte[16]),   // PT_LOAD, 16 bytes
+            (1u, new byte[32]));  // PT_LOAD, 32 bytes
+        byte[] fself = SelfBuilder.MakeFakeSelf(elf);
+
+        var info = SelfReader.ParseInfo(new MemoryStream(fself));
+
+        Assert.Equal(2, info.Segments.Count);
+        Assert.Equal(16u, (uint)info.Segments[0].Size);
+        Assert.Equal(32u, (uint)info.Segments[1].Size);
+        Assert.All(info.Segments, s => Assert.False(s.Compressed));   // fSELF stores segments uncompressed
+        // A fake-signed SELF carries the type-2 "file/ELF digest" control block.
+        Assert.Contains(info.ControlBlocks, b => b.RawType == 2);
+    }
+
+    [Fact]
     public void Parse_NotASelf_Throws()
     {
         var notSelf = new byte[0x100];

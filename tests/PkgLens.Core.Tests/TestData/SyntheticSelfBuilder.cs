@@ -26,15 +26,20 @@ public sealed class SyntheticSelfBuilder
     public uint NpdrmLicenseType { get; set; } = 3;   // Free
     public uint NpdrmAppType { get; set; } = 0x21;
 
+    /// <summary>When set, a type-1 control-flags block (0x20-byte payload) is written before the NPDRM block.</summary>
+    public byte[]? ControlFlags { get; set; }
+
     // Fixed layout offsets.
     private const int AppInfoOffset = 0x70;
     private const int ElfOffset = 0x90;
     private const int ControlInfoOffset = 0xD0;
-    private const int ControlInfoSize = 0x90;
 
     public byte[] Build()
     {
-        int total = ControlInfoOffset + ControlInfoSize;
+        int controlFlagsSize = ControlFlags is not null ? 0x30 : 0;   // 0x10 header + 0x20 payload
+        int npdrmSize = NpdrmContentId is not null ? 0x90 : 0;
+        int controlInfoSize = controlFlagsSize + npdrmSize;
+        int total = ControlInfoOffset + Math.Max(controlInfoSize, 0x10);
         var b = new byte[total];
 
         // ---- SCE header (0x20) ----
@@ -51,7 +56,7 @@ public sealed class SyntheticSelfBuilder
         BinaryPrimitives.WriteUInt64BigEndian(b.AsSpan(0x28), AppInfoOffset);
         BinaryPrimitives.WriteUInt64BigEndian(b.AsSpan(0x30), ElfOffset);
         BinaryPrimitives.WriteUInt64BigEndian(b.AsSpan(0x58), ControlInfoOffset);
-        BinaryPrimitives.WriteUInt64BigEndian(b.AsSpan(0x60), ControlInfoSize);
+        BinaryPrimitives.WriteUInt64BigEndian(b.AsSpan(0x60), (ulong)controlInfoSize);
 
         // ---- app_info (0x20) ----
         BinaryPrimitives.WriteUInt64BigEndian(b.AsSpan(AppInfoOffset + 0x00), AuthId);
@@ -74,10 +79,19 @@ public sealed class SyntheticSelfBuilder
             BinaryPrimitives.WriteUInt16LittleEndian(b.AsSpan(ElfOffset + 0x12), ElfMachine);
         }
 
-        // ---- control info: a single NPDRM block ----
+        // ---- control info: an optional control-flags block, then an optional NPDRM block ----
+        int c = ControlInfoOffset;
+        if (ControlFlags is not null)
+        {
+            BinaryPrimitives.WriteUInt32BigEndian(b.AsSpan(c + 0x00), 1);      // type: control flags
+            BinaryPrimitives.WriteUInt32BigEndian(b.AsSpan(c + 0x04), 0x30);   // block size
+            BinaryPrimitives.WriteUInt64BigEndian(b.AsSpan(c + 0x08), 0);      // next
+            Array.Copy(ControlFlags, 0, b, c + 0x10, Math.Min(ControlFlags.Length, 0x20));
+            c += 0x30;
+        }
+
         if (NpdrmContentId is not null)
         {
-            int c = ControlInfoOffset;
             BinaryPrimitives.WriteUInt32BigEndian(b.AsSpan(c + 0x00), 3);      // type: NPDRM
             BinaryPrimitives.WriteUInt32BigEndian(b.AsSpan(c + 0x04), 0x90);   // block size
             BinaryPrimitives.WriteUInt64BigEndian(b.AsSpan(c + 0x08), 0);      // next
