@@ -1,15 +1,34 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="PkgLens.Gui.Views.AboutDialog"
-        Width="380" SizeToContent="Height" CanResize="False"
+        Width="440" SizeToContent="Height" CanResize="False"
         WindowStartupLocation="CenterOwner"
         Title="About PkgLens">
 
   <StackPanel Margin="18" Spacing="8">
     <TextBlock Text="PkgLens" FontSize="18" FontWeight="SemiBold" />
-    <TextBlock Text="PS3 .pkg inspector and extractor." Opacity="0.8" />
+    <TextBlock Text="PS3 .pkg inspector, extractor, and (re)packer." Opacity="0.8" />
+
     <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.7"
-               Text="A cross-platform rewrite of the classic PkgView. Parses package structure and extracts content you own. Not affiliated with Sony; no keys are bundled." />
+               Text="A modern, cross-platform, testable rewrite of the classic PS3 .pkg inspector. It parses and inspects package structure and extracts content you own, and can pack, repack, decrypt EDAT/SDAT, inspect and fake-sign SELF/EBOOT files, and magic-patch executables for jailbroken (CFW) consoles." />
+
+    <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.7"
+               Text="Ships only public decryption keys — it never forges Sony signatures, so repacked or fake-signed output runs on CFW consoles only, never on stock retail. Not affiliated with Sony." />
+
+    <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,4,0,0">
+      <TextBlock Text="Repository:" FontSize="12" Opacity="0.7" VerticalAlignment="Center" />
+      <HyperlinkButton Content="github.com/primetime43/PkgLens"
+                       NavigateUri="https://github.com/primetime43/PkgLens"
+                       FontSize="12" Padding="4,0" />
+    </StackPanel>
+
+    <StackPanel Orientation="Horizontal" Spacing="4">
+      <TextBlock Text="Author:" FontSize="12" Opacity="0.7" VerticalAlignment="Center" />
+      <HyperlinkButton Content="primetime43"
+                       NavigateUri="https://github.com/primetime43"
+                       FontSize="12" Padding="4,0" />
+    </StackPanel>
+
     <Button Content="Close" Click="OnClose" HorizontalAlignment="Right" Margin="0,6,0,0" />
   </StackPanel>
 </Window>
