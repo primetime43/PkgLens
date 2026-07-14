@@ -58,6 +58,25 @@ public class NpdTests
         Assert.Throws<PkgLens.Core.PkgFormatException>(() => EdatFile.ParseHeader(new MemoryStream(new byte[0x90])));
     }
 
+    [Fact]
+    public void ParseHeader_ZeroBlockSize_ThrowsInsteadOfDivideByZero()
+    {
+        // A malformed header with block_size == 0 must fail cleanly, not throw DivideByZeroException
+        // downstream (numBlocks = ceil(fileSize / blockSize)).
+        var buf = BuildHeader(4, 2, flags: 0x0000003C, blockSize: 0, fileSize: 46, contentId: "X");
+        using var s = new MemoryStream(buf);
+        var ex = Assert.Throws<PkgLens.Core.PkgFormatException>(() => EdatFile.ParseHeader(s));
+        Assert.Contains("block size", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ParseHeader_AbsurdBlockSize_Throws()
+    {
+        var buf = BuildHeader(4, 2, flags: 0x0000003C, blockSize: unchecked((int)0x40000000), fileSize: 46, contentId: "X");
+        using var s = new MemoryStream(buf);
+        Assert.Throws<PkgLens.Core.PkgFormatException>(() => EdatFile.ParseHeader(s));
+    }
+
     private static byte[] BuildHeader(int version, int license, uint flags, int blockSize, long fileSize, string contentId)
     {
         var b = new byte[0x90];

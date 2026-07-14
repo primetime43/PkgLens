@@ -69,15 +69,16 @@ public static class PkgVerifier
         else
             checks.Add(new PkgCheck("Total size", PkgCheckStatus.Pass, $"{total:n0} bytes == file length"));
 
-        // Data region.
-        if ((long)header.DataOffset + (long)header.DataSize > fileLen)
+        // Data region. data_offset/data_size are untrusted u64s — compare in ulong with a
+        // subtraction guard so a huge value can't overflow a signed cast and read as in-range.
+        if (header.DataOffset > (ulong)fileLen || header.DataSize > (ulong)fileLen - header.DataOffset)
             checks.Add(new PkgCheck("Data region", PkgCheckStatus.Fail, "extends past the end of the file (truncated)"));
         else
             checks.Add(new PkgCheck("Data region", PkgCheckStatus.Pass,
                 $"offset 0x{header.DataOffset:X}, size {header.DataSize:n0}"));
 
-        // Metadata block must sit before the data region.
-        if ((long)header.MetadataOffset + header.MetadataSize > (long)header.DataOffset)
+        // Metadata block must sit before the data region (widen to ulong before the u32+u32 add).
+        if ((ulong)header.MetadataOffset + header.MetadataSize > header.DataOffset)
             checks.Add(new PkgCheck("Metadata block", PkgCheckStatus.Fail, "overruns into the data region"));
         else
             checks.Add(new PkgCheck("Metadata block", PkgCheckStatus.Pass, $"{header.MetadataCount} entries"));
@@ -112,14 +113,33 @@ public static class PkgVerifier
             }
         }
 
-        // Item table: decrypt and confirm every entry lies within the data region.
+        // Item table: decrypt and confirm every entry lies within the data region. The reader only
+        // validates ranges lazily (at extraction), so the verifier checks each entry itself here —
+        // otherwise the "all offsets in range" claim would be asserted without ever being tested.
         try
         {
             var info = PkgReader.Read(source, keys);
-            checks.Add(info.IsDecrypted
-                ? new PkgCheck("Item table", PkgCheckStatus.Pass,
-                    $"{info.FileCount} files, {info.DirectoryCount} directories — all offsets in range")
-                : new PkgCheck("Item table", PkgCheckStatus.Skipped, "not decrypted (no key)"));
+            if (!info.IsDecrypted)
+                checks.Add(new PkgCheck("Item table", PkgCheckStatus.Skipped, "not decrypted (no key)"));
+            else
+            {
+                PkgEntry? bad = null;
+                foreach (var e in info.Entries)
+                {
+                    if (e.IsDirectory || e.FileSize == 0) continue;
+                    // Subtraction guard: FileOffset/FileSize are untrusted u64s.
+                    if (e.FileOffset > header.DataSize || e.FileSize > header.DataSize - e.FileOffset)
+                    {
+                        bad = e;
+                        break;
+                    }
+                }
+                checks.Add(bad is null
+                    ? new PkgCheck("Item table", PkgCheckStatus.Pass,
+                        $"{info.FileCount} files, {info.DirectoryCount} directories — all offsets in range")
+                    : new PkgCheck("Item table", PkgCheckStatus.Fail,
+                        $"entry '{bad.Name}' data range [0x{bad.FileOffset:X}, +0x{bad.FileSize:X}) exceeds data_size 0x{header.DataSize:X}"));
+            }
         }
         catch (PkgFormatException ex)
         {

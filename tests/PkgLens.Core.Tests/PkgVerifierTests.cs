@@ -84,4 +84,30 @@ public class PkgVerifierTests
         Assert.False(report.Passed);
         Assert.Equal(PkgCheckStatus.Fail, Check(report, "Total size").Status);
     }
+
+    [Fact]
+    public void Verify_HugeDataOffset_FailsDataRegion_NotFooledByOverflow()
+    {
+        // data_offset with the high bit set casts to a negative long; the old signed comparison
+        // reported "Pass" for this garbage. It must Fail on the data-region bounds check.
+        byte[] header = BuildBareHeader(dataOffset: 0x8000000000000000UL, dataSize: 0x10);
+
+        using var s = new MemoryStream(header);
+        var report = PkgVerifier.Verify(s, new InMemoryKeyProvider());
+
+        Assert.Equal(PkgCheckStatus.Fail, Check(report, "Data region").Status);
+    }
+
+    /// <summary>A minimal 0xC0-byte debug PKG header (valid magic, no real body) for bounds-check tests.</summary>
+    private static byte[] BuildBareHeader(ulong dataOffset, ulong dataSize)
+    {
+        var h = new byte[0xC0];
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt32BigEndian(h.AsSpan(0x00), PkgHeader.Magic);
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt16BigEndian(h.AsSpan(0x04), 0x0000); // debug
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt16BigEndian(h.AsSpan(0x06), 0x0001); // PS3
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt64BigEndian(h.AsSpan(0x18), (ulong)h.Length); // total_size
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt64BigEndian(h.AsSpan(0x20), dataOffset);
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt64BigEndian(h.AsSpan(0x28), dataSize);
+        return h;
+    }
 }

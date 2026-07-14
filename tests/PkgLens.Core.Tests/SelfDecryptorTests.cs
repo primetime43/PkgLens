@@ -65,6 +65,28 @@ public class SelfDecryptorTests
     }
 
     [Fact]
+    public void Decrypt_OutOfRangeElfHeaderOffset_ThrowsFormatNotIndexException()
+    {
+        // A corrupt ehdr_offset (ext header @ 0x30) that points past EOF must fail as a clean
+        // PkgFormatException, not an IndexOutOfRangeException from an unchecked span read.
+        byte[] elf = BuildElf(shdrCount: 1, segments: new[] { (type: 1u, data: RandomBytes(0x40)) });
+        byte[] self = EncodeDebugSelf(elf, out _);
+        BinaryPrimitives.WriteUInt64BigEndian(self.AsSpan(0x30), 0xFFFFFFF0UL);
+
+        Assert.Throws<PkgFormatException>(() => SelfDecryptor.Decrypt(self));
+    }
+
+    [Fact]
+    public void Decrypt_OutOfRangeAppInfoOffset_ThrowsFormatNotIndexException()
+    {
+        byte[] elf = BuildElf(shdrCount: 1, segments: new[] { (type: 1u, data: RandomBytes(0x40)) });
+        byte[] self = EncodeDebugSelf(elf, out _);
+        BinaryPrimitives.WriteUInt64BigEndian(self.AsSpan(0x28), 0xFFFFFFF0UL); // prog_id_offset
+
+        Assert.Throws<PkgFormatException>(() => SelfDecryptor.Decrypt(self));
+    }
+
+    [Fact]
     public void Decrypt_UnknownRetailKeyRevision_Throws()
     {
         byte[] elf = BuildElf(shdrCount: 0, segments: new[] { (type: 1u, data: RandomBytes(0x20)) });

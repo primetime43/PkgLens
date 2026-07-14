@@ -63,7 +63,9 @@ public static class SfoParser
 
             string key = ReadNullTerminated(data, (int)keyTableStart + keyOffset);
 
-            long valueStart = dataTableStart + dataOffset;
+            // Widen to long *before* adding: dataTableStart and dataOffset are both u32, so a hostile
+            // pair whose sum exceeds 2^32 would otherwise wrap mod 2^32 and sail past the bounds check.
+            long valueStart = (long)dataTableStart + dataOffset;
             if (valueStart + dataLen > data.Length)
                 throw new PkgFormatException($"PARAM.SFO value for '{key}' is out of range.");
 
@@ -84,7 +86,11 @@ public static class SfoParser
                 value = Encoding.UTF8.GetString(valueBytes).TrimEnd('\0');
             }
 
-            entries.Add(new SfoEntry { Key = key, Format = format, Value = value, IntValue = intValue, MaxLength = dataMaxLen });
+            // Clamp the allocated field size to the blob itself. A real data_max_len is a few bytes;
+            // an attacker-supplied 0x7FFFFFFF would drive the writer to pad a ~2 GB field on re-save.
+            uint maxLength = Math.Min(dataMaxLen, (uint)data.Length);
+
+            entries.Add(new SfoEntry { Key = key, Format = format, Value = value, IntValue = intValue, MaxLength = maxLength });
         }
 
         return new SfoTable(entries);

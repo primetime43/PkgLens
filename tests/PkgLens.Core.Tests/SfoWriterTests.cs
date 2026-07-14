@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.Linq;
 using PkgLens.Core.Sfo;
 using PkgLens.Core.Tests.TestData;
@@ -7,6 +8,33 @@ namespace PkgLens.Core.Tests;
 
 public class SfoWriterTests
 {
+    [Fact]
+    public void Parse_HostileDataMaxLen_ClampedAndRoundTripStaysSmall()
+    {
+        // A malformed data_max_len (0x7FFFFFFF) must not drive the writer to pad a ~2 GB field.
+        byte[] blob = new SfoBuilder().AddString("TITLE", "Hello").Build();
+        // Patch entry 0's data_max_len (index entry 0 at 0x14, field at +0x08).
+        BinaryPrimitives.WriteUInt32LittleEndian(blob.AsSpan(0x14 + 0x08), 0x7FFFFFFF);
+
+        var table = SfoParser.Parse(blob);
+        Assert.True(table.Entries[0].MaxLength <= (uint)blob.Length); // clamped to the blob size
+
+        byte[] rewritten = SfoWriter.Write(table.Entries);
+        Assert.True(rewritten.Length < 0x10000); // no multi-GB allocation
+        Assert.Equal("Hello", SfoParser.Parse(rewritten).Title);
+    }
+
+    [Fact]
+    public void Parse_ValueOffsetOverflow_ThrowsInsteadOfReadingWrongBytes()
+    {
+        // dataTableStart + dataOffset must be widened before the bounds check, or a huge dataOffset
+        // wraps mod 2^32 and reads the wrong region as the value. Patch entry 0's data_offset.
+        byte[] blob = new SfoBuilder().AddString("TITLE", "Hello").Build();
+        BinaryPrimitives.WriteUInt32LittleEndian(blob.AsSpan(0x14 + 0x0C), 0xFFFFF000);
+
+        Assert.Throws<PkgLens.Core.PkgFormatException>(() => SfoParser.Parse(blob));
+    }
+
     [Fact]
     public void Write_RoundTripsUnchangedTable()
     {

@@ -64,9 +64,11 @@ public static class SelfDecryptor
         ulong supplSize = ReadU64(self, 0x60);
 
         // ---- app_info (program identification header) ----
+        RequireWithin((long)progIdOffset, 0x10, self.Length, "app_info header");
         uint programType = BinaryPrimitives.ReadUInt32BigEndian(self.AsSpan((int)progIdOffset + 0x0C));
 
         // ---- embedded plaintext ELF header + program headers ----
+        RequireWithin((long)ehdrOffset, 0x40, self.Length, "ELF header");
         if (self[(int)ehdrOffset + 4] != 2 || self[(int)ehdrOffset + 5] != 2)
             throw new PkgFormatException("Only 64-bit big-endian PS3 ELF SELFs are supported.");
         int ePhnum = BinaryPrimitives.ReadUInt16BigEndian(self.AsSpan((int)ehdrOffset + 0x38));
@@ -140,13 +142,19 @@ public static class SelfDecryptor
         // AES-128-CTR over the metadata header + section headers + data keys.
         AesCtr(metaKey, metaIv, metaHeaders, 0, metaHeaders.Length);
 
-        int sectionCount = (int)BinaryPrimitives.ReadUInt32BigEndian(metaHeaders.AsSpan(0x0C));
-        int keyCount = (int)BinaryPrimitives.ReadUInt32BigEndian(metaHeaders.AsSpan(0x10));
+        // Read the counts as long so the offset math below can't overflow int before it's bounds-checked;
+        // the check then guarantees both fit the (few-KB) metadata-header buffer.
+        long sectionCountL = BinaryPrimitives.ReadUInt32BigEndian(metaHeaders.AsSpan(0x0C));
+        long keyCountL = BinaryPrimitives.ReadUInt32BigEndian(metaHeaders.AsSpan(0x10));
 
         int shdrBase = MetadataHeaderLen;
-        int dataKeysOffset = shdrBase + sectionCount * MetadataSectionHeaderLen;
-        if (dataKeysOffset + keyCount * 0x10 > metaHeaders.Length)
+        long dataKeysOffsetL = shdrBase + sectionCountL * MetadataSectionHeaderLen;
+        if (dataKeysOffsetL + keyCountL * 0x10 > metaHeaders.Length)
             throw new PkgFormatException("SELF metadata headers are truncated.");
+
+        int sectionCount = (int)sectionCountL;
+        int keyCount = (int)keyCountL;
+        int dataKeysOffset = (int)dataKeysOffsetL;
 
         var sections = new MetaSection[sectionCount];
         for (int i = 0; i < sectionCount; i++)
@@ -172,6 +180,8 @@ public static class SelfDecryptor
             if (s.Encrypted != 3) continue;
             if (!(s.KeyIdx <= keyCount - 1 && s.IvIdx <= keyCount)) continue;
 
+            // DataOffset/DataSize come from decrypted section headers — validate before slicing.
+            RequireWithin(s.DataOffset, s.DataSize, self.Length, "encrypted section data");
             var buf = self.AsSpan((int)s.DataOffset, (int)s.DataSize).ToArray();
             byte[] dataKey = metaHeaders[(dataKeysOffset + s.KeyIdx * 0x10)..(dataKeysOffset + s.KeyIdx * 0x10 + 0x10)];
             byte[] dataIv = metaHeaders[(dataKeysOffset + s.IvIdx * 0x10)..(dataKeysOffset + s.IvIdx * 0x10 + 0x10)];
@@ -318,10 +328,25 @@ public static class SelfDecryptor
             if (++counter[i] != 0) break;
     }
 
+    /// <summary>
+    /// Upper bound on a reconstructed ELF. The PS3 has 256 MiB of RAM, so a plaintext executable can't
+    /// legitimately exceed it — this caps the output <see cref="MemoryStream"/> so a crafted header
+    /// (huge <c>p_offset</c>/<c>e_shoff</c>/<c>p_filesz</c>) can't drive an unbounded allocation.
+    /// </summary>
+    private const long MaxElfSize = 256L << 20;
+
     private static byte[] WriteElf(byte[] self, int ehdrOffset, int phdrOffset, int shdrOffset,
         int phnum, int shnum, long eShoff, MetaSection[] sections, byte[] data)
     {
         const int EhdrLen = 0x40, PhdrLen = 0x38, ShdrLen = 0x40;
+
+        // All of these offsets/counts come from the (plaintext) SELF/ELF headers — validate every
+        // read against the file and every write position against the ELF-size cap.
+        if (phnum < 0 || shnum < 0)
+            throw new PkgFormatException("SELF has a negative program/section header count.");
+        RequireWithin(ehdrOffset, EhdrLen, self.Length, "ELF header");
+        RequireWithin(phdrOffset, (long)phnum * PhdrLen, self.Length, "program headers");
+
         var e = new MemoryStream();
 
         // ELF header + program headers, verbatim from the SELF (they are stored plaintext).
@@ -333,9 +358,15 @@ public static class SelfDecryptor
         foreach (var s in sections)
         {
             if (s.Type != 2) continue;
+            if (s.ProgramIdx < 0 || s.ProgramIdx >= phnum)
+                throw new PkgFormatException($"SELF section references program header {s.ProgramIdx} (only {phnum} present).");
             int p = phdrOffset + s.ProgramIdx * PhdrLen;
             long pOffset = (long)BinaryPrimitives.ReadUInt64BigEndian(self.AsSpan(p + 0x08));
             long pFilesz = (long)BinaryPrimitives.ReadUInt64BigEndian(self.AsSpan(p + 0x20));
+
+            // pOffset/pFilesz land the segment in the output ELF; bound both against the size cap.
+            RequireWithin(pOffset, pFilesz, MaxElfSize, "ELF segment placement");
+            RequireWithin(dataOff, s.DataSize, data.Length, "decrypted section data");
 
             e.Position = pOffset;
             if (s.Compressed == 2)
@@ -362,6 +393,8 @@ public static class SelfDecryptor
         // Section headers, verbatim, at e_shoff.
         if (shdrOffset != 0 && shnum > 0)
         {
+            RequireWithin(shdrOffset, (long)shnum * ShdrLen, self.Length, "section headers");
+            RequireWithin(eShoff, (long)shnum * ShdrLen, MaxElfSize, "section-header placement");
             e.Position = eShoff;
             e.Write(self, shdrOffset, shnum * ShdrLen);
         }
@@ -374,5 +407,17 @@ public static class SelfDecryptor
         if (offset + 8 > buf.Length)
             throw new PkgFormatException($"SELF header truncated at 0x{offset:X}.");
         return BinaryPrimitives.ReadUInt64BigEndian(buf.AsSpan(offset));
+    }
+
+    /// <summary>
+    /// Requires <c>[offset, offset+length)</c> to lie within <paramref name="total"/> bytes, throwing
+    /// <see cref="PkgFormatException"/> (never a raw index exception) otherwise. Uses a subtraction
+    /// guard so attacker-controlled 64-bit offsets/lengths can't overflow past the check.
+    /// </summary>
+    private static void RequireWithin(long offset, long length, long total, string what)
+    {
+        if (offset < 0 || length < 0 || offset > total || length > total - offset)
+            throw new PkgFormatException(
+                $"SELF {what} is out of bounds (offset 0x{offset:X}, length 0x{length:X}, file 0x{total:X}).");
     }
 }

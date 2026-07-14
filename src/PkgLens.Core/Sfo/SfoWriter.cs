@@ -14,6 +14,9 @@ public static class SfoWriter
     private const int IndexEntrySize = 0x10;
     private const uint Version = 0x00000101; // 1.1
 
+    /// <summary>Defensive ceiling on any single value's allocated size (real fields are tiny).</summary>
+    private const int MaxFieldLength = 0x10000; // 64 KiB
+
     public static byte[] Write(IReadOnlyList<SfoEntry> entries)
     {
         ArgumentNullException.ThrowIfNull(entries);
@@ -24,8 +27,13 @@ public static class SfoWriter
         for (int i = 0; i < entries.Count; i++)
         {
             values[i] = EncodeValue(entries[i]);
-            maxLens[i] = Math.Max((int)entries[i].MaxLength, values[i].Length);
-            if (maxLens[i] == 0) maxLens[i] = values[i].Length; // never zero-size a slot
+            if (values[i].Length > MaxFieldLength)
+                throw new PkgFormatException(
+                    $"PARAM.SFO value for '{entries[i].Key}' is 0x{values[i].Length:X} bytes, exceeding the 0x{MaxFieldLength:X} limit.");
+            // Honor the entry's allocated size, but never below the value and never above the cap —
+            // a hostile data_max_len must not drive an unbounded pad below.
+            int requested = Math.Min((int)Math.Min(entries[i].MaxLength, (uint)MaxFieldLength), MaxFieldLength);
+            maxLens[i] = Math.Max(requested, values[i].Length);
         }
 
         // Key table.
@@ -50,7 +58,8 @@ public static class SfoWriter
         {
             dataOffsets[i] = (int)dataTable.Length;
             dataTable.Write(values[i], 0, values[i].Length);
-            for (int pad = values[i].Length; pad < maxLens[i]; pad++) dataTable.WriteByte(0);
+            int padLen = maxLens[i] - values[i].Length;
+            if (padLen > 0) dataTable.Write(new byte[padLen], 0, padLen);
         }
 
         var output = new MemoryStream();

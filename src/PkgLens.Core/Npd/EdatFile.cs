@@ -43,6 +43,8 @@ public static class EdatFile
     private const int NpdSize = 0x80;
     private const int EdatSize = 0x10;
     private const int MetadataOffset = 0x100;
+    /// <summary>Upper bound on a sane EDAT/SDAT block size (real files use ~0x4000).</summary>
+    private const int MaxBlockSize = 0x10000000; // 256 MiB
 
     /// <summary>True if the bytes begin with the NPD magic (an EDAT/SDAT file).</summary>
     public static bool IsEdat(ReadOnlySpan<byte> data) =>
@@ -68,6 +70,17 @@ public static class EdatFile
         if (BinaryPrimitives.ReadUInt32BigEndian(head) != Magic)
             throw new PkgFormatException("Not an NPD/EDAT/SDAT file (bad magic).");
 
+        int blockSize = (int)BinaryPrimitives.ReadUInt32BigEndian(head.AsSpan(0x84));
+        long fileSize = (long)BinaryPrimitives.ReadUInt64BigEndian(head.AsSpan(0x88));
+
+        // block_size seeds the block-count division and per-block buffers; a zero (or absurd) value
+        // in a malformed header would otherwise divide-by-zero or over-allocate. Real EDATs use
+        // small powers of two (typically 0x4000). Reject anything outside a sane range up front.
+        if (blockSize <= 0 || blockSize > MaxBlockSize)
+            throw new PkgFormatException($"EDAT/SDAT block size 0x{blockSize:X} is invalid.");
+        if (fileSize < 0)
+            throw new PkgFormatException($"EDAT/SDAT file size 0x{fileSize:X} is invalid.");
+
         return new NpdInfo
         {
             Version = (int)BinaryPrimitives.ReadUInt32BigEndian(head.AsSpan(0x04)),
@@ -77,8 +90,8 @@ public static class EdatFile
             Digest = head[0x40..0x50],
             DevHash = head[0x60..0x70],
             Flags = BinaryPrimitives.ReadUInt32BigEndian(head.AsSpan(0x80)),
-            BlockSize = (int)BinaryPrimitives.ReadUInt32BigEndian(head.AsSpan(0x84)),
-            FileSize = (long)BinaryPrimitives.ReadUInt64BigEndian(head.AsSpan(0x88)),
+            BlockSize = blockSize,
+            FileSize = fileSize,
         };
     }
 
