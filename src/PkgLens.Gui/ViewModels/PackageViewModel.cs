@@ -6,11 +6,11 @@ using System.Linq;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using PkgLens.Core;
-using PkgLens.Core.Keys;
-using PkgLens.Core.Models;
-using PkgLens.Core.Npd.Psp;
-using PkgLens.Core.Pbp;
-using PkgLens.Core.Sfo;
+using PkgLens.Core.Shared;
+using PkgLens.Core.Shared.Keys;
+using PkgLens.Core.Shared.Models;
+using PkgLens.Core.Psp;
+using PkgLens.Core.Shared.Sfo;
 
 namespace PkgLens.Gui.ViewModels;
 

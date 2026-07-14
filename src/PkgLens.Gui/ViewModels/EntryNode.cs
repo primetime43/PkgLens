@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using PkgLens.Core.Models;
+using PkgLens.Core.Shared.Models;
 
 namespace PkgLens.Gui.ViewModels;
 

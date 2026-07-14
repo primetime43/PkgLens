@@ -1,4 +1,5 @@
-using PkgLens.Core.Crypto;
+using PkgLens.Core.Ps3;
+using PkgLens.Core.Shared.Crypto;
 using Xunit;
 
 namespace PkgLens.Core.Tests;

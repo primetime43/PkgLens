@@ -1,6 +1,7 @@
 using PkgLens.Core;
-using PkgLens.Core.Keys;
-using PkgLens.Core.Models;
+using PkgLens.Core.Shared;
+using PkgLens.Core.Shared.Keys;
+using PkgLens.Core.Shared.Models;
 using PkgLens.Core.Tests.TestData;
 using Xunit;
 
@@ -119,7 +120,7 @@ public class PackageReaderTests
         // Streamed extraction with a small buffer to exercise chunk boundaries.
         using var dest = new MemoryStream();
         var dec = DecryptionContext.ForDebug(header).CreateDecryptor();
-        PkgLens.Core.Formats.Ps3.Ps3PackageReader.CopyEntryTo(stream, header, dec, entry, dest, bufferSize: 64);
+        PkgLens.Core.Shared.Formats.PkgContainerReader.CopyEntryTo(stream, header, dec, entry, dest, bufferSize: 64);
         Assert.Equal(payload, dest.ToArray());
     }
 

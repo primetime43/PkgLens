@@ -2,7 +2,7 @@ using System;
 using System.Buffers.Binary;
 using System.IO;
 using System.Text;
-using PkgLens.Core.Npd;
+using PkgLens.Core.Ps3.Npd;
 using Xunit;
 
 namespace PkgLens.Core.Tests;

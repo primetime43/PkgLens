@@ -1,4 +1,4 @@
-using PkgLens.Core.Keys;
+using PkgLens.Core.Shared.Keys;
 
 namespace PkgLens.Cli;
 

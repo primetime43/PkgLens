@@ -1,5 +1,5 @@
 using System.Security.Cryptography;
-using PkgLens.Core.Crypto;
+using PkgLens.Core.Shared.Crypto;
 using Xunit;
 
 namespace PkgLens.Core.Tests;

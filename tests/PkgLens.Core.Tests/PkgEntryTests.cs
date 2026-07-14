@@ -1,5 +1,5 @@
 using System.Buffers.Binary;
-using PkgLens.Core.Models;
+using PkgLens.Core.Shared.Models;
 using Xunit;
 
 namespace PkgLens.Core.Tests;

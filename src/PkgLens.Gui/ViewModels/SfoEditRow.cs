@@ -1,5 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
-using PkgLens.Core.Sfo;
+using PkgLens.Core.Shared.Sfo;
 
 namespace PkgLens.Gui.ViewModels;
 

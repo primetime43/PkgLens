@@ -1,5 +1,6 @@
 using System.IO;
 using PkgLens.Core;
+using PkgLens.Core.Shared;
 
 namespace PkgLens.Gui.ViewModels;
 

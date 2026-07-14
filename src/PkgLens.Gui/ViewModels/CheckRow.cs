@@ -1,5 +1,6 @@
 using Avalonia.Media;
 using PkgLens.Core;
+using PkgLens.Core.Shared;
 
 namespace PkgLens.Gui.ViewModels;
 

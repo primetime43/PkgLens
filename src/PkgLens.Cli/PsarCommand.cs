@@ -1,6 +1,7 @@
 using PkgLens.Core;
-using PkgLens.Core.Npd;
-using PkgLens.Core.Npd.Psp;
+using PkgLens.Core.Shared;
+using PkgLens.Core.Ps3.Npd;
+using PkgLens.Core.Psp;
 
 namespace PkgLens.Cli;
 

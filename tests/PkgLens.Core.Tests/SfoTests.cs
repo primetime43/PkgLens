@@ -1,5 +1,6 @@
 using PkgLens.Core;
-using PkgLens.Core.Sfo;
+using PkgLens.Core.Shared;
+using PkgLens.Core.Shared.Sfo;
 using PkgLens.Core.Tests.TestData;
 using Xunit;
 

@@ -2,7 +2,8 @@ using System;
 using System.IO;
 using System.Linq;
 using PkgLens.Core;
-using PkgLens.Core.Keys;
+using PkgLens.Core.Shared;
+using PkgLens.Core.Shared.Keys;
 using PkgLens.Core.Tests.TestData;
 using Xunit;
 

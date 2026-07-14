@@ -1,7 +1,7 @@
 using System.Buffers.Binary;
 using System.Text;
-using PkgLens.Core.Crypto;
-using PkgLens.Core.Models;
+using PkgLens.Core.Shared.Crypto;
+using PkgLens.Core.Shared.Models;
 
 namespace PkgLens.Core.Tests.TestData;
 
@@ -169,7 +169,7 @@ public sealed class SyntheticPkgBuilder
         var sha = System.Security.Cryptography.SHA1.HashData(header[0x00..0x80].ToArray());
         sha.AsSpan(12, 8).CopyTo(header[0xB8..]);
         if (Finalization == PkgFinalization.Retail && !Psp)
-            PkgLens.Core.Crypto.AesCmac.Compute(RetailAesKey, header[0x00..0x80]).CopyTo(header[0x80..]);
+            PkgLens.Core.Shared.Crypto.AesCmac.Compute(RetailAesKey, header[0x00..0x80]).CopyTo(header[0x80..]);
 
         metaBlock.CopyTo(output.AsSpan(metadataOffset));
         data.CopyTo(output.AsSpan(dataOffset));
@@ -183,8 +183,8 @@ public sealed class SyntheticPkgBuilder
     /// </summary>
     private void EncryptPspRegion(byte[] data, int tableLen, int[] nameOffsets, int[] nameSizes, int[] fileOffsets)
     {
-        using var psp = new RetailAesCtrDecryptor(PkgLens.Core.Keys.BundledKeys.PspPkgAesKey, DataRiv);
-        using var gpkg = new RetailAesCtrDecryptor(PkgLens.Core.Keys.BundledKeys.Ps3GpkgAesKey, DataRiv);
+        using var psp = new RetailAesCtrDecryptor(PkgLens.Core.Shared.Keys.BundledKeys.PspPkgAesKey, DataRiv);
+        using var gpkg = new RetailAesCtrDecryptor(PkgLens.Core.Shared.Keys.BundledKeys.Ps3GpkgAesKey, DataRiv);
 
         psp.DecryptInPlace(data.AsSpan(0, tableLen), 0); // item table always uses the PSP key
 

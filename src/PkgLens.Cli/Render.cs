@@ -1,6 +1,7 @@
 using System.Text.Json;
 using PkgLens.Core;
-using PkgLens.Core.Models;
+using PkgLens.Core.Shared;
+using PkgLens.Core.Shared.Models;
 
 namespace PkgLens.Cli;
 
@@ -160,7 +161,7 @@ internal static class Render
             : $"Integrity: FAILED — {report.Failures} check(s) failed");
     }
 
-    public static void Self(PkgLens.Core.Self.SelfInfo self)
+    public static void Self(PkgLens.Core.Ps3.Self.SelfInfo self)
     {
         Console.WriteLine($"SELF       : {self.FileSize:n0} bytes");
         Console.WriteLine($"Program    : {self.ProgramTypeText}" + (self.IsNpdrm ? "  (NPDRM)" : ""));

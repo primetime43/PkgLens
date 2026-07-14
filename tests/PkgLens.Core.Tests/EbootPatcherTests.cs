@@ -1,7 +1,8 @@
 using System;
 using System.Buffers.Binary;
 using PkgLens.Core;
-using PkgLens.Core.Self;
+using PkgLens.Core.Shared;
+using PkgLens.Core.Ps3.Self;
 using Xunit;
 
 namespace PkgLens.Core.Tests;

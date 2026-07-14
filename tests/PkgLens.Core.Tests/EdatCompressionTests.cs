@@ -1,9 +1,11 @@
+using PkgLens.Core.Shared.Crypto;
 using System;
 using System.Buffers.Binary;
 using System.IO;
 using System.Linq;
 using PkgLens.Core;
-using PkgLens.Core.Npd;
+using PkgLens.Core.Shared;
+using PkgLens.Core.Ps3.Npd;
 using Xunit;
 
 namespace PkgLens.Core.Tests;

@@ -1,4 +1,4 @@
-using PkgLens.Core.Npd;
+using PkgLens.Core.Ps3.Npd;
 
 namespace PkgLens.Cli;
 

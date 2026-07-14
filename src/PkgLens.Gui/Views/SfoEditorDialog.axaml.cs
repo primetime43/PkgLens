@@ -5,7 +5,7 @@ using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
-using PkgLens.Core.Sfo;
+using PkgLens.Core.Shared.Sfo;
 using PkgLens.Gui.ViewModels;
 
 namespace PkgLens.Gui.Views;

@@ -1,6 +1,6 @@
 using System.Buffers.Binary;
 using System.Text;
-using PkgLens.Core.Sfo;
+using PkgLens.Core.Shared.Sfo;
 
 namespace PkgLens.Core.Tests.TestData;
 

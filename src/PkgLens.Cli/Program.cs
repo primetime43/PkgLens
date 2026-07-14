@@ -1,6 +1,7 @@
 using PkgLens.Core;
-using PkgLens.Core.Keys;
-using PkgLens.Core.Models;
+using PkgLens.Core.Shared;
+using PkgLens.Core.Shared.Keys;
+using PkgLens.Core.Shared.Models;
 using PkgLens.Cli;
 
 // UTF-8 output so ✓ / · / ⚠ render instead of mojibake; ignore when the console is redirected/absent.
@@ -110,7 +111,7 @@ if (command == "extract")
         }
 
         string outDir = parsed.OutDir ?? Path.GetFileNameWithoutExtension(parsed.Path);
-        Func<PkgLens.Core.Models.PkgEntry, bool>? filter = null;
+        Func<PkgLens.Core.Shared.Models.PkgEntry, bool>? filter = null;
         if (parsed.Filter is not null)
         {
             var match = Glob.Matcher(parsed.Filter);
@@ -131,7 +132,7 @@ if (command == "self")
     try
     {
         using var s = File.OpenRead(parsed.Path);
-        var info = PkgLens.Core.Self.SelfReader.ParseInfo(s);
+        var info = PkgLens.Core.Ps3.Self.SelfReader.ParseInfo(s);
         Render.Self(info);
         return ExitCode.Ok;
     }
@@ -145,12 +146,12 @@ if (command == "decrypt")
         using var src = File.OpenRead(parsed.Path);
 
         // PSP EDAT ("\0PSPEDAT") and bare PGD ("\0PGD") decrypt via the PSP AMCTRL/PGD path (no RAP).
-        if (PkgLens.Core.Npd.Psp.PspEdatFile.IsPspEncrypted(src))
+        if (PkgLens.Core.Psp.PspEdatFile.IsPspEncrypted(src))
         {
             byte[] allBytes = File.ReadAllBytes(parsed.Path);
-            if (PkgLens.Core.Npd.Psp.PspEdatFile.IsPspEdat(allBytes))
+            if (PkgLens.Core.Psp.PspEdatFile.IsPspEdat(allBytes))
             {
-                var pspInfo = PkgLens.Core.Npd.Psp.PspEdatFile.ParseHeader(allBytes);
+                var pspInfo = PkgLens.Core.Psp.PspEdatFile.ParseHeader(allBytes);
                 Console.WriteLine($"{pspInfo.ContentId}  (PSP EDAT, DRM {pspInfo.DrmType})");
             }
             else
@@ -159,12 +160,12 @@ if (command == "decrypt")
             }
             string pspOut = parsed.OutDir ?? StripNpdExtension(parsed.Path);
             using (var dst = File.Create(pspOut))
-                PkgLens.Core.Npd.Psp.PspEdatFile.Decrypt(src, dst);
+                PkgLens.Core.Psp.PspEdatFile.Decrypt(src, dst);
             Console.WriteLine($"Decrypted → {pspOut}");
             return ExitCode.Ok;
         }
 
-        var npd = PkgLens.Core.Npd.EdatFile.ParseHeader(src);
+        var npd = PkgLens.Core.Ps3.Npd.EdatFile.ParseHeader(src);
         Console.WriteLine($"{npd.ContentId}  (v{npd.Version}, DRM {npd.LicenseText}{(npd.IsSdat ? ", SDAT" : "")})");
 
         byte[]? klic = null;
@@ -186,7 +187,7 @@ if (command == "decrypt")
 
         string outPath = parsed.OutDir ?? StripNpdExtension(parsed.Path);
         using (var dst = File.Create(outPath))
-            PkgLens.Core.Npd.EdatFile.Decrypt(src, dst, klic);
+            PkgLens.Core.Ps3.Npd.EdatFile.Decrypt(src, dst, klic);
         Console.WriteLine($"Decrypted {npd.FileSize:n0} bytes → {outPath}");
         return ExitCode.Ok;
     }

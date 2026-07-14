@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
-using PkgLens.Core.Keys;
+using PkgLens.Core.Shared.Keys;
 
 namespace PkgLens.Gui.ViewModels;
 

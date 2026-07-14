@@ -3,7 +3,8 @@ using System.Buffers.Binary;
 using System.IO;
 using System.Text;
 using PkgLens.Core;
-using PkgLens.Core.Npd.Psp;
+using PkgLens.Core.Shared;
+using PkgLens.Core.Psp;
 using Xunit;
 
 namespace PkgLens.Core.Tests;

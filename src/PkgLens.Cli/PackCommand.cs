@@ -1,7 +1,8 @@
 using System.Globalization;
 using PkgLens.Core;
-using PkgLens.Core.Keys;
-using PkgLens.Core.Models;
+using PkgLens.Core.Shared;
+using PkgLens.Core.Shared.Keys;
+using PkgLens.Core.Shared.Models;
 
 namespace PkgLens.Cli;
 
@@ -109,7 +110,7 @@ internal static class PackCommand
             Console.WriteLine($"  content id   : {plan.ContentId}");
             Console.WriteLine($"  install dir  : {plan.InstallDirectory}");
             Console.WriteLine($"  content type : {ContentTypeName(plan.ContentType)}");
-            Console.WriteLine($"  drm type     : {plan.DrmType} ({PkgLens.Core.Models.DrmType.Name(plan.DrmType)})");
+            Console.WriteLine($"  drm type     : {plan.DrmType} ({PkgLens.Core.Shared.Models.DrmType.Name(plan.DrmType)})");
             Console.WriteLine($"  finalization : {(plan.Finalization == PkgFinalization.Retail ? "retail (unsigned)" : "non-finalized (debug)")}");
             foreach (var note in plan.Notes)
                 Console.WriteLine($"  · {note}");

@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using PkgLens.Core;
+using PkgLens.Core.Shared;
 using PkgLens.Gui.ViewModels;
 
 namespace PkgLens.Gui.Views;

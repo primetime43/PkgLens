@@ -3,7 +3,8 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using PkgLens.Core;
-using PkgLens.Core.Pbp;
+using PkgLens.Core.Shared;
+using PkgLens.Core.Psp;
 using Xunit;
 
 namespace PkgLens.Core.Tests;

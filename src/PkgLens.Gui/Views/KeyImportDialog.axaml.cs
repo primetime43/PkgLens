@@ -4,7 +4,7 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Platform.Storage;
-using PkgLens.Core.Keys;
+using PkgLens.Core.Shared.Keys;
 
 namespace PkgLens.Gui.Views;
 

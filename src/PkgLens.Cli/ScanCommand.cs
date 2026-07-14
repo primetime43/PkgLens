@@ -1,5 +1,6 @@
 using PkgLens.Core;
-using PkgLens.Core.Keys;
+using PkgLens.Core.Shared;
+using PkgLens.Core.Shared.Keys;
 
 namespace PkgLens.Cli;
 

@@ -8,7 +8,8 @@ using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Platform.Storage;
 using PkgLens.Core;
-using PkgLens.Core.Keys;
+using PkgLens.Core.Shared;
+using PkgLens.Core.Shared.Keys;
 using PkgLens.Gui.ViewModels;
 
 namespace PkgLens.Gui.Views;

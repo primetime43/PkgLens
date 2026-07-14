@@ -1,6 +1,6 @@
 using System.Buffers.Binary;
 using System.Linq;
-using PkgLens.Core.Sfo;
+using PkgLens.Core.Shared.Sfo;
 using PkgLens.Core.Tests.TestData;
 using Xunit;
 

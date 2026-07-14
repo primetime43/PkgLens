@@ -10,8 +10,8 @@ using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Platform.Storage;
 using Avalonia.Styling;
-using PkgLens.Core.Keys;
-using PkgLens.Core.Models;
+using PkgLens.Core.Shared.Keys;
+using PkgLens.Core.Shared.Models;
 using PkgLens.Gui.Services;
 using PkgLens.Gui.ViewModels;
 
@@ -208,7 +208,7 @@ public partial class MainWindow : Window
             string title = node.Name;
 
             // If it's an EDAT/SDAT (PS3 NPDRM or PSP EDAT/PGD), decrypt it so the viewer shows the real contents.
-            if (PkgLens.Core.Npd.EdatFile.IsEdat(data) || PkgLens.Core.Npd.Psp.PspEdatFile.IsPspEncrypted(data))
+            if (PkgLens.Core.Ps3.Npd.EdatFile.IsEdat(data) || PkgLens.Core.Psp.PspEdatFile.IsPspEncrypted(data))
                 (data, title) = await DecryptEdatForView(data, node.Name);
 
             await new FileViewerDialog(title, data).ShowDialog(this);
@@ -223,11 +223,11 @@ public partial class MainWindow : Window
     private async Task<(byte[] data, string title)> DecryptEdatForView(byte[] data, string name)
     {
         // PSP EDAT ("\0PSPEDAT") / bare PGD ("\0PGD") decrypt via the PSP path (fixed key, no RAP).
-        if (PkgLens.Core.Npd.Psp.PspEdatFile.IsPspEncrypted(data))
+        if (PkgLens.Core.Psp.PspEdatFile.IsPspEncrypted(data))
         {
             try
             {
-                byte[] pspPlain = await Task.Run(() => PkgLens.Core.Npd.Psp.PspEdatFile.DecryptToArray(new MemoryStream(data)));
+                byte[] pspPlain = await Task.Run(() => PkgLens.Core.Psp.PspEdatFile.DecryptToArray(new MemoryStream(data)));
                 Vm.Status = $"Decrypted PSP EDAT ({data.Length:n0} → {pspPlain.Length:n0} bytes)";
                 return (pspPlain, $"{name}  ·  decrypted PSP EDAT");
             }
@@ -238,23 +238,23 @@ public partial class MainWindow : Window
             }
         }
 
-        var npd = PkgLens.Core.Npd.EdatFile.ParseHeader(new MemoryStream(data));
+        var npd = PkgLens.Core.Ps3.Npd.EdatFile.ParseHeader(new MemoryStream(data));
 
         byte[]? klic = null;
         if (npd.NeedsKlicensee)
         {
-            byte[]? rap = PkgLens.Core.Npd.RapStore.Find(npd.ContentId) ?? await PromptForRap(npd.ContentId);
+            byte[]? rap = PkgLens.Core.Ps3.Npd.RapStore.Find(npd.ContentId) ?? await PromptForRap(npd.ContentId);
             if (rap is null)
             {
                 Vm.Status = $"{npd.ContentId}: licensed EDAT — no RAP provided, showing the raw encrypted file.";
                 return (data, name);
             }
-            klic = PkgLens.Core.Npd.NpdKeys.RapToKlicensee(rap);
+            klic = PkgLens.Core.Ps3.Npd.NpdKeys.RapToKlicensee(rap);
         }
 
         try
         {
-            byte[] plain = PkgLens.Core.Npd.EdatFile.DecryptToArray(new MemoryStream(data), klic);
+            byte[] plain = PkgLens.Core.Ps3.Npd.EdatFile.DecryptToArray(new MemoryStream(data), klic);
             Vm.Status = $"Decrypted EDAT: {npd.ContentId} (DRM {npd.LicenseText})";
             return (plain, $"{name}  ·  decrypted EDAT");
         }
@@ -286,7 +286,7 @@ public partial class MainWindow : Window
             Vm.Status = "That file is not a 16-byte RAP.";
             return null;
         }
-        try { PkgLens.Core.Npd.RapStore.Install(contentId, rap); } catch { /* best-effort caching */ }
+        try { PkgLens.Core.Ps3.Npd.RapStore.Install(contentId, rap); } catch { /* best-effort caching */ }
         return rap;
     }
 
@@ -343,7 +343,7 @@ public partial class MainWindow : Window
         var text = this.FindControl<TextBlock>("FolderInfoText")!;
         try
         {
-            var report = await Task.Run(() => PkgLens.Core.GameFolderInfo.Describe(_packFolder));
+            var report = await Task.Run(() => PkgLens.Core.Shared.GameFolderInfo.Describe(_packFolder));
             text.Text = DescribeFolder(report);
             box.IsVisible = true;
             Vm.Status = $"Folder: {report.FileCount} file(s), {report.TotalBytes:n0} bytes.";
@@ -355,7 +355,7 @@ public partial class MainWindow : Window
         }
     }
 
-    private static string DescribeFolder(PkgLens.Core.GameFolderReport r)
+    private static string DescribeFolder(PkgLens.Core.Shared.GameFolderReport r)
     {
         var sb = new System.Text.StringBuilder();
         sb.AppendLine($"Content ID   : {r.ContentId ?? "(unknown)"}");
@@ -369,9 +369,9 @@ public partial class MainWindow : Window
         {
             string state = eb.State switch
             {
-                PkgLens.Core.EbootState.EncryptedSigned => "encrypted / signed",
-                PkgLens.Core.EbootState.FakeSigned => "fake-signed (fSELF, CFW-ready)",
-                PkgLens.Core.EbootState.PlainElf => "plain ELF",
+                PkgLens.Core.Shared.EbootState.EncryptedSigned => "encrypted / signed",
+                PkgLens.Core.Shared.EbootState.FakeSigned => "fake-signed (fSELF, CFW-ready)",
+                PkgLens.Core.Shared.EbootState.PlainElf => "plain ELF",
                 _ => "unknown",
             };
             sb.AppendLine($"EBOOT        : {eb.RelativePath}  [{state}]");
@@ -390,7 +390,7 @@ public partial class MainWindow : Window
     {
         var label = this.FindControl<TextBlock>("PackDrmName");
         if (label is not null)
-            label.Text = PkgLens.Core.Models.DrmType.Name((uint)(e.NewValue ?? 3));
+            label.Text = PkgLens.Core.Shared.Models.DrmType.Name((uint)(e.NewValue ?? 3));
     }
 
     private async void OnPackBrowseFolder(object? sender, RoutedEventArgs e)
@@ -409,7 +409,7 @@ public partial class MainWindow : Window
         // Fast-Pack inference to pre-fill the fields (blank fallback if it can't infer).
         try
         {
-            var plan = await Task.Run(() => PkgLens.Core.FolderPackage.Plan(folder));
+            var plan = await Task.Run(() => PkgLens.Core.Shared.FolderPackage.Plan(folder));
             this.FindControl<TextBox>("PackContentIdBox")!.Text = plan.ContentId;
             this.FindControl<TextBox>("PackInstallDirBox")!.Text = plan.InstallDirectory;
             this.FindControl<NumericUpDown>("PackDrmBox")!.Value = plan.DrmType;
@@ -449,12 +449,12 @@ public partial class MainWindow : Window
             {
                 byte[] rapBytes = File.ReadAllBytes(_packRapPath);
                 if (rapBytes.Length != 16) { Vm.Status = "The chosen RAP is not 16 bytes."; return; }
-                ebootKlic = PkgLens.Core.Npd.NpdKeys.RapToKlicensee(rapBytes);
+                ebootKlic = PkgLens.Core.Ps3.Npd.NpdKeys.RapToKlicensee(rapBytes);
             }
             catch (Exception ex) { Vm.Status = $"Couldn't read the RAP: {ex.Message}"; return; }
         }
 
-        var options = new PkgLens.Core.PackOptions
+        var options = new PkgLens.Core.Shared.PackOptions
         {
             ContentId = contentId,
             InstallDirectory = installDir.Length == 0 ? null : installDir,
@@ -481,7 +481,7 @@ public partial class MainWindow : Window
             Vm.Status = "Packing…";
             var plan = await Task.Run(() =>
             {
-                var p = PkgLens.Core.FolderPackage.Plan(folder, options);
+                var p = PkgLens.Core.Shared.FolderPackage.Plan(folder, options);
                 IKeyProvider keys = new FileKeyProvider(Vm.KeysDirectory);
                 using var dst = File.Create(dest);
                 p.Builder.Build(dst, keys);
@@ -582,7 +582,7 @@ public partial class MainWindow : Window
             byte[] bytes = await File.ReadAllBytesAsync(_decryptFile);
 
             // PSP EDAT / bare PGD: decrypt via the PSP path (fixed key, no RAP).
-            if (PkgLens.Core.Npd.Psp.PspEdatFile.IsPspEncrypted(bytes))
+            if (PkgLens.Core.Psp.PspEdatFile.IsPspEncrypted(bytes))
             {
                 var pspSave = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
                 {
@@ -596,26 +596,26 @@ public partial class MainWindow : Window
                 {
                     using var input = File.OpenRead(pspSrc);
                     using var output = File.Create(pspDest);
-                    PkgLens.Core.Npd.Psp.PspEdatFile.Decrypt(input, output);
+                    PkgLens.Core.Psp.PspEdatFile.Decrypt(input, output);
                 });
                 Vm.Status = $"Decrypted PSP EDAT → {Path.GetFileName(pspDest)}";
                 return;
             }
 
-            var npd = PkgLens.Core.Npd.EdatFile.ParseHeader(new MemoryStream(bytes));
+            var npd = PkgLens.Core.Ps3.Npd.EdatFile.ParseHeader(new MemoryStream(bytes));
 
             byte[]? klic = null;
             if (npd.NeedsKlicensee)
             {
                 byte[]? rap = _decryptRap is not null
                     ? await File.ReadAllBytesAsync(_decryptRap)
-                    : PkgLens.Core.Npd.RapStore.Find(npd.ContentId);
+                    : PkgLens.Core.Ps3.Npd.RapStore.Find(npd.ContentId);
                 if (rap is null)
                 {
                     Vm.Status = $"{npd.ContentId} is a licensed EDAT — choose its RAP (Browse next to “RAP”).";
                     return;
                 }
-                klic = PkgLens.Core.Npd.NpdKeys.RapToKlicensee(rap);
+                klic = PkgLens.Core.Ps3.Npd.NpdKeys.RapToKlicensee(rap);
             }
 
             var save = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
@@ -632,7 +632,7 @@ public partial class MainWindow : Window
             {
                 using var input = File.OpenRead(src);
                 using var output = File.Create(dest);
-                PkgLens.Core.Npd.EdatFile.Decrypt(input, output, k);
+                PkgLens.Core.Ps3.Npd.EdatFile.Decrypt(input, output, k);
             });
             Vm.Status = $"Decrypted {npd.ContentId} → {Path.GetFileName(dest)}";
             ShowDecryptNotes($"Wrote {new FileInfo(dest).Length:n0} bytes to {dest}");
@@ -696,7 +696,7 @@ public partial class MainWindow : Window
             var info = await Task.Run(() =>
             {
                 using var s = File.OpenRead(path);
-                return PkgLens.Core.Self.SelfReader.ParseInfo(s);
+                return PkgLens.Core.Ps3.Self.SelfReader.ParseInfo(s);
             });
             text.Text = DescribeSelf(info);
             box.IsVisible = true;
@@ -726,7 +726,7 @@ public partial class MainWindow : Window
 
         bool npdrm = this.FindControl<CheckBox>("FselfNpdrmCheck")!.IsChecked == true;
 
-        var opts = new PkgLens.Core.Self.SelfBuilder.FakeSelfOptions { Npdrm = npdrm };
+        var opts = new PkgLens.Core.Ps3.Self.SelfBuilder.FakeSelfOptions { Npdrm = npdrm };
         if (!TryReadFselfCustomFields(opts, out string? fieldError))
         {
             Vm.Status = fieldError!;
@@ -748,7 +748,7 @@ public partial class MainWindow : Window
             long size = await Task.Run(() =>
             {
                 byte[] elf = File.ReadAllBytes(input);
-                byte[] fself = PkgLens.Core.Self.SelfBuilder.MakeFakeSelf(elf, opts);
+                byte[] fself = PkgLens.Core.Ps3.Self.SelfBuilder.MakeFakeSelf(elf, opts);
                 File.WriteAllBytes(dest, fself);
                 return (long)fself.Length;
             });
@@ -826,9 +826,9 @@ public partial class MainWindow : Window
                     {
                         byte[] rb = File.ReadAllBytes(rap);
                         if (rb.Length != 16) throw new PkgLens.Core.PkgFormatException("A RAP must be 16 bytes.");
-                        klic = PkgLens.Core.Npd.NpdKeys.RapToKlicensee(rb);
+                        klic = PkgLens.Core.Ps3.Npd.NpdKeys.RapToKlicensee(rb);
                     }
-                    var dec = PkgLens.Core.Self.SelfDecryptor.Decrypt(raw, klic);
+                    var dec = PkgLens.Core.Ps3.Self.SelfDecryptor.Decrypt(raw, klic);
                     elf = dec.Elf; npdrm = dec.WasNpdrm;
                 }
                 else if (magic == 0x7F454C46) // ELF
@@ -837,12 +837,12 @@ public partial class MainWindow : Window
                 }
                 else throw new PkgLens.Core.PkgFormatException("Input is neither an ELF nor a SELF/EBOOT.BIN.");
 
-                var prev = PkgLens.Core.Self.EbootPatcher.SetFirmwareVersion(elf, major, minor);
+                var prev = PkgLens.Core.Ps3.Self.EbootPatcher.SetFirmwareVersion(elf, major, minor);
                 string fwNote = prev is null
                     ? "no sys_process_param found — firmware left unchanged"
                     : $"firmware {prev.Display} → {major}.{minor:D2}";
 
-                byte[] fself = PkgLens.Core.Self.SelfBuilder.MakeFakeSelf(elf, npdrm);
+                byte[] fself = PkgLens.Core.Ps3.Self.SelfBuilder.MakeFakeSelf(elf, npdrm);
                 File.WriteAllBytes(dest, fself);
                 return $"Magic-patched → {Path.GetFileName(dest)} ({fself.Length:n0} bytes); {fwNote}.";
             });
@@ -946,9 +946,9 @@ public partial class MainWindow : Window
                     {
                         byte[] rb = File.ReadAllBytes(rap);
                         if (rb.Length != 16) throw new PkgLens.Core.PkgFormatException("A RAP must be 16 bytes.");
-                        klic = PkgLens.Core.Npd.NpdKeys.RapToKlicensee(rb);
+                        klic = PkgLens.Core.Ps3.Npd.NpdKeys.RapToKlicensee(rb);
                     }
-                    var dec = PkgLens.Core.Self.SelfDecryptor.Decrypt(raw, klic);
+                    var dec = PkgLens.Core.Ps3.Self.SelfDecryptor.Decrypt(raw, klic);
                     elf = dec.Elf; wasSelf = true; npdrm = dec.WasNpdrm || npdrmOverride;
                 }
                 else if (magic == 0x7F454C46) // ELF
@@ -960,17 +960,17 @@ public partial class MainWindow : Window
                 var steps = new List<string>();
                 if (find is not null && replace is not null)
                 {
-                    int n = PkgLens.Core.Self.EbootPatcher.PatchPattern(elf, find, replace);
+                    int n = PkgLens.Core.Ps3.Self.EbootPatcher.PatchPattern(elf, find, replace);
                     steps.Add($"find/replace: {n} occurrence(s)");
                 }
                 if (atBytes is not null)
                 {
-                    PkgLens.Core.Self.EbootPatcher.PatchAt(elf, atOffset, atBytes);
+                    PkgLens.Core.Ps3.Self.EbootPatcher.PatchAt(elf, atOffset, atBytes);
                     steps.Add($"at 0x{atOffset:X}: {atBytes.Length} byte(s)");
                 }
 
                 bool emitSelf = wasSelf || resign;
-                byte[] output = emitSelf ? PkgLens.Core.Self.SelfBuilder.MakeFakeSelf(elf, npdrm) : elf;
+                byte[] output = emitSelf ? PkgLens.Core.Ps3.Self.SelfBuilder.MakeFakeSelf(elf, npdrm) : elf;
                 File.WriteAllBytes(dest, output);
 
                 string kind = emitSelf ? $"fake-signed {(npdrm ? "NPDRM" : "NON-DRM")} SELF" : "ELF";
@@ -1007,7 +1007,7 @@ public partial class MainWindow : Window
     }
 
     /// <summary>Reads the optional Custom Sign fields into <paramref name="opts"/>. Blank fields are left at defaults.</summary>
-    private bool TryReadFselfCustomFields(PkgLens.Core.Self.SelfBuilder.FakeSelfOptions opts, out string? error)
+    private bool TryReadFselfCustomFields(PkgLens.Core.Ps3.Self.SelfBuilder.FakeSelfOptions opts, out string? error)
     {
         error = null;
         if (!TryHexU64(this.FindControl<TextBox>("FselfAuthIdBox")!.Text, "Auth ID", out var authId, out error)) return false;
@@ -1053,7 +1053,7 @@ public partial class MainWindow : Window
         string npLic = (this.FindControl<TextBox>("FselfNpLicenseBox")!.Text ?? string.Empty).Trim();
         if (npLic.Length > 0)
         {
-            if (!PkgLens.Core.Self.SelfBuilder.TryParseNpLicenseType(npLic, out uint lic))
+            if (!PkgLens.Core.Ps3.Self.SelfBuilder.TryParseNpLicenseType(npLic, out uint lic))
             {
                 error = "NP license must be FREE, LOCAL or NETWORK.";
                 return false;
@@ -1064,7 +1064,7 @@ public partial class MainWindow : Window
         string npApp = (this.FindControl<TextBox>("FselfNpAppTypeBox")!.Text ?? string.Empty).Trim();
         if (npApp.Length > 0)
         {
-            if (!PkgLens.Core.Self.SelfBuilder.TryParseNpAppType(npApp, out uint at))
+            if (!PkgLens.Core.Ps3.Self.SelfBuilder.TryParseNpAppType(npApp, out uint at))
             {
                 error = "NP app type must be SPRX, EXEC, USPRX or UEXEC.";
                 return false;
@@ -1144,15 +1144,15 @@ public partial class MainWindow : Window
                 {
                     byte[] rapBytes = File.ReadAllBytes(rap);
                     if (rapBytes.Length != 16) throw new PkgLens.Core.PkgFormatException("A RAP file must be exactly 16 bytes.");
-                    klic = PkgLens.Core.Npd.NpdKeys.RapToKlicensee(rapBytes);
+                    klic = PkgLens.Core.Ps3.Npd.NpdKeys.RapToKlicensee(rapBytes);
                 }
 
-                var result = PkgLens.Core.Self.SelfDecryptor.Decrypt(self, klic);
+                var result = PkgLens.Core.Ps3.Self.SelfDecryptor.Decrypt(self, klic);
                 string lic = result.WasNpdrm ? (result.License?.ToString() ?? "NPDRM") : "non-NPDRM";
 
                 if (chain)
                 {
-                    byte[] fself = PkgLens.Core.Self.SelfBuilder.MakeFakeSelf(result.Elf, npdrm: result.WasNpdrm);
+                    byte[] fself = PkgLens.Core.Ps3.Self.SelfBuilder.MakeFakeSelf(result.Elf, npdrm: result.WasNpdrm);
                     File.WriteAllBytes(dest, fself);
                     // Drop the intermediate ELF beside the fSELF for reference.
                     string elfBeside = Path.Combine(Path.GetDirectoryName(dest) ?? "", baseName + ".ELF");
@@ -1173,7 +1173,7 @@ public partial class MainWindow : Window
         }
     }
 
-    private static string DescribeSelf(PkgLens.Core.Self.SelfInfo s)
+    private static string DescribeSelf(PkgLens.Core.Ps3.Self.SelfInfo s)
     {
         var sb = new System.Text.StringBuilder();
         sb.AppendLine($"Program    : {s.ProgramTypeText}" + (s.IsNpdrm ? "  (NPDRM)" : ""));
@@ -1229,7 +1229,7 @@ public partial class MainWindow : Window
 
         try
         {
-            var report = await Task.Run(() => PkgLens.Core.GameFolderInfo.Describe(dir));
+            var report = await Task.Run(() => PkgLens.Core.Shared.GameFolderInfo.Describe(dir));
             await new FolderInfoDialog(dir, DescribeFolder(report)).ShowDialog(this);
             Vm.Status = $"Folder: {report.FileCount} file(s), {report.TotalBytes:n0} bytes.";
         }
@@ -1339,7 +1339,7 @@ public partial class MainWindow : Window
         if (Vm.Package is not { Sfo: { } sfo } package)
             return;
 
-        var edited = await new SfoEditorDialog(sfo.Entries).ShowDialog<List<PkgLens.Core.Sfo.SfoEntry>?>(this);
+        var edited = await new SfoEditorDialog(sfo.Entries).ShowDialog<List<PkgLens.Core.Shared.Sfo.SfoEntry>?>(this);
         if (edited is null)
             return;
 
