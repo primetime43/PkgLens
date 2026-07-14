@@ -277,11 +277,11 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
     /// <summary>Extracts and splits the selected PBP into its parts under <paramref name="destinationDir"/>.</summary>
     public IReadOnlyList<string> UnpackSelectedPbpTo(string destinationDir)
     {
-        if (SelectedItem is not { IsDirectory: false, Entry: { } entry })
+        if (SelectedItem is not { IsDirectory: false, Name: { } leaf, Entry: { } entry })
             throw new InvalidOperationException("Select a .PBP file.");
 
         Directory.CreateDirectory(destinationDir);
-        string temp = Path.Combine(destinationDir, "~" + entry.Name + ".tmp");
+        string temp = Path.Combine(destinationDir, "~" + leaf + ".tmp");
         try
         {
             using (var d = File.Create(temp))
@@ -312,11 +312,11 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
     /// </summary>
     public void ExtractSelectedPspIsoTo(string isoPath)
     {
-        if (SelectedItem is not { IsDirectory: false, Entry: { } entry })
+        if (SelectedItem is not { IsDirectory: false, Name: { } leaf, Entry: { } entry })
             throw new InvalidOperationException("Select an EBOOT.PBP file.");
 
         string dir = Path.GetDirectoryName(isoPath) ?? ".";
-        string pbpTmp = Path.Combine(dir, "~" + entry.Name + ".tmp");
+        string pbpTmp = Path.Combine(dir, "~" + leaf + ".tmp");
         string psarTmp = Path.Combine(dir, "~DATA.PSAR.tmp");
         try
         {
