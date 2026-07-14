@@ -154,6 +154,38 @@
     <Setter Property="Opacity" Value="1" />
   </Style>
 
+  <!-- Result banner: a prominent success/error box shown in the main content after an operation -->
+  <Style Selector="Border.resultbanner">
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="14,12" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Background" Value="#2634A853" />
+    <Setter Property="BorderBrush" Value="#34A853" />
+  </Style>
+  <Style Selector="Border.resultbanner.error">
+    <Setter Property="Background" Value="#26D14343" />
+    <Setter Property="BorderBrush" Value="#D14343" />
+  </Style>
+  <Style Selector="Border.resultbanner TextBlock.bannericon">
+    <Setter Property="FontSize" Value="18" />
+    <Setter Property="Foreground" Value="#34A853" />
+    <Setter Property="VerticalAlignment" Value="Top" />
+  </Style>
+  <Style Selector="Border.resultbanner.error TextBlock.bannericon">
+    <Setter Property="Foreground" Value="#D14343" />
+  </Style>
+  <Style Selector="Border.resultbanner TextBlock.bannertitle">
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+  <Style Selector="Border.resultbanner SelectableTextBlock.bannerpath">
+    <Setter Property="FontFamily" Value="Consolas, Menlo, monospace" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="Opacity" Value="0.85" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+
   <!-- Tighter DataGrid rows for a file-list feel -->
   <Style Selector="DataGridRow">
     <Setter Property="MinHeight" Value="24" />

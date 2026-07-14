@@ -734,7 +734,17 @@
                   <TextBlock x:Name="UnselfRapText" VerticalAlignment="Center" FontSize="12" Opacity="0.8"
                              TextTrimming="CharacterEllipsis" Text="(none — free/debug need no RAP)" />
                 </StackPanel>
-                <TextBlock x:Name="UnselfNotes" TextWrapping="Wrap" FontSize="12" Opacity="0.7" IsVisible="False" />
+                <Border x:Name="UnselfBanner" Classes="resultbanner" IsVisible="False">
+                  <Grid ColumnDefinitions="Auto,10,*,Auto">
+                    <TextBlock Grid.Column="0" x:Name="UnselfBannerIcon" Classes="bannericon" Text="✓" />
+                    <StackPanel Grid.Column="2" Spacing="3">
+                      <TextBlock x:Name="UnselfBannerTitle" Classes="bannertitle" />
+                      <SelectableTextBlock x:Name="UnselfBannerPath" Classes="bannerpath" IsVisible="False" />
+                    </StackPanel>
+                    <Button Grid.Column="3" x:Name="UnselfBannerShow" Content="Show in folder"
+                            Click="OnShowResultInFolder" IsVisible="False" VerticalAlignment="Center" Margin="10,0,0,0" />
+                  </Grid>
+                </Border>
               </StackPanel>
 
               <!-- Magic-patch firmware -->
@@ -828,7 +838,17 @@
                       ToolTip.Tip="Show the decrypted file's contents (image, text, or hex)." />
             </StackPanel>
 
-            <TextBlock x:Name="DecryptNotes" TextWrapping="Wrap" FontSize="12" Opacity="0.7" IsVisible="False" />
+            <Border x:Name="DecryptBanner" Classes="resultbanner" IsVisible="False">
+              <Grid ColumnDefinitions="Auto,10,*,Auto">
+                <TextBlock Grid.Column="0" x:Name="DecryptBannerIcon" Classes="bannericon" Text="✓" />
+                <StackPanel Grid.Column="2" Spacing="3">
+                  <TextBlock x:Name="DecryptBannerTitle" Classes="bannertitle" />
+                  <SelectableTextBlock x:Name="DecryptBannerPath" Classes="bannerpath" IsVisible="False" />
+                </StackPanel>
+                <Button Grid.Column="3" x:Name="DecryptBannerShow" Content="Show in folder"
+                        Click="OnShowResultInFolder" IsVisible="False" VerticalAlignment="Center" Margin="10,0,0,0" />
+              </Grid>
+            </Border>
           </StackPanel>
         </ScrollViewer>
 

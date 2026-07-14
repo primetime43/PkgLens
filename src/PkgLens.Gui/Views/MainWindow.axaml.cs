@@ -547,7 +547,7 @@ public partial class MainWindow : Window
             return;
         _decryptFile = path;
         this.FindControl<TextBlock>("DecryptFileText")!.Text = Path.GetFileName(path);
-        ShowDecryptNotes(null);
+        HideResultBanner("DecryptBanner");
         SetDecryptResult(null); // a new input invalidates any previous result
     }
 
@@ -599,6 +599,9 @@ public partial class MainWindow : Window
                     PkgLens.Core.Psp.PspEdatFile.Decrypt(input, output);
                 });
                 Vm.Status = $"Decrypted PSP EDAT → {Path.GetFileName(pspDest)}";
+                ShowResultBanner("DecryptBanner", ok: true,
+                    $"Decrypted PSP EDAT — wrote {new FileInfo(pspDest).Length:n0} bytes.", pspDest);
+                SetDecryptResult(pspDest);
                 return;
             }
 
@@ -635,12 +638,14 @@ public partial class MainWindow : Window
                 PkgLens.Core.Ps3.Npd.EdatFile.Decrypt(input, output, k);
             });
             Vm.Status = $"Decrypted {npd.ContentId} → {Path.GetFileName(dest)}";
-            ShowDecryptNotes($"Wrote {new FileInfo(dest).Length:n0} bytes to {dest}");
+            ShowResultBanner("DecryptBanner", ok: true,
+                $"Decrypted {npd.ContentId} — wrote {new FileInfo(dest).Length:n0} bytes.", dest);
             SetDecryptResult(dest);
         }
         catch (Exception ex)
         {
             Vm.Status = $"Decrypt failed: {ex.Message}";
+            ShowResultBanner("DecryptBanner", ok: false, $"Decrypt failed: {ex.Message}", null);
             SetDecryptResult(null);
         }
     }
@@ -663,12 +668,6 @@ public partial class MainWindow : Window
         }
     }
 
-    private void ShowDecryptNotes(string? text)
-    {
-        var notes = this.FindControl<TextBlock>("DecryptNotes")!;
-        notes.Text = text ?? string.Empty;
-        notes.IsVisible = !string.IsNullOrEmpty(text);
-    }
 
     // ==================== Resign page ====================
 
@@ -1213,12 +1212,58 @@ public partial class MainWindow : Window
                 return $"Decrypted {self.Length:n0}-byte SELF ({lic}) → {Path.GetFileName(dest)} ({result.Elf.Length:n0} bytes).";
             });
             Vm.Status = summary;
-            ShowFselfNotes(summary);
+            ShowResultBanner("UnselfBanner", ok: true, summary, dest);
         }
         catch (Exception ex)
         {
             Vm.Status = $"Decrypt failed: {ex.Message}";
-            ShowFselfNotes(ex.Message);
+            ShowResultBanner("UnselfBanner", ok: false, $"Decrypt failed: {ex.Message}", null);
+        }
+    }
+
+    /// <summary>
+    /// Fills a prominent result banner (named "{banner}", with "{banner}Icon/Title/Path/Show" parts)
+    /// in the main content area. <paramref name="path"/> non-null shows the output path and a
+    /// "Show in folder" button; a failure (<paramref name="ok"/> = false) styles the banner red.
+    /// </summary>
+    private void ShowResultBanner(string banner, bool ok, string title, string? path)
+    {
+        var box = this.FindControl<Border>(banner)!;
+        var icon = this.FindControl<TextBlock>($"{banner}Icon")!;
+        var titleText = this.FindControl<TextBlock>($"{banner}Title")!;
+        var pathText = this.FindControl<SelectableTextBlock>($"{banner}Path")!;
+        var show = this.FindControl<Button>($"{banner}Show")!;
+
+        box.Classes.Set("error", !ok);
+        icon.Text = ok ? "✓" : "✕"; // ✓ / ✕
+        titleText.Text = title;
+        pathText.Text = path ?? string.Empty;
+        pathText.IsVisible = path is not null;
+        show.Tag = path;
+        show.IsVisible = path is not null && File.Exists(path);
+        box.IsVisible = true;
+    }
+
+    private void HideResultBanner(string banner)
+        => this.FindControl<Border>(banner)!.IsVisible = false;
+
+    /// <summary>"Show in folder": open the OS file browser with the result file selected.</summary>
+    private void OnShowResultInFolder(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: string path } || !File.Exists(path))
+            return;
+        try
+        {
+            if (OperatingSystem.IsWindows())
+                System.Diagnostics.Process.Start("explorer.exe", $"/select,\"{path}\"");
+            else if (OperatingSystem.IsMacOS())
+                System.Diagnostics.Process.Start("open", $"-R \"{path}\"");
+            else
+                System.Diagnostics.Process.Start("xdg-open", $"\"{Path.GetDirectoryName(path)}\"");
+        }
+        catch (Exception ex)
+        {
+            Vm.Status = $"Could not open the folder: {ex.Message}";
         }
     }
 
