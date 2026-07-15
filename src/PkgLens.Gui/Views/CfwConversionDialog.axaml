@@ -1,0 +1,38 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="PkgLens.Gui.Views.CfwConversionDialog"
+        Width="520" Height="310" CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        Title="Convert package for CFW">
+  <Grid Margin="18" RowDefinitions="Auto,Auto,Auto,*,Auto" RowSpacing="14">
+    <StackPanel Grid.Row="0" Spacing="4">
+      <TextBlock Text="One-click CFW conversion" FontSize="20" FontWeight="SemiBold" />
+      <TextBlock Text="Extracts every EBOOT.BIN, resolves RAPs, fake-signs it, and rebuilds the package." TextWrapping="Wrap" Opacity="0.75" />
+    </StackPanel>
+
+    <Border Grid.Row="1" Padding="10" CornerRadius="5"
+            Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
+      <TextBlock x:Name="SourceText" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" />
+    </Border>
+
+    <Grid Grid.Row="2" ColumnDefinitions="Auto,Auto,*" ColumnSpacing="8">
+      <CheckBox x:Name="FirmwareCheck" Grid.Column="0" Content="Patch required firmware to" VerticalAlignment="Center"
+                IsCheckedChanged="OnFirmwareChanged" />
+      <TextBox x:Name="FirmwareBox" Grid.Column="1" Width="76" Text="4.00" IsEnabled="False"
+               Watermark="4.00" />
+      <TextBlock Grid.Column="2" Text="Optional; leave disabled to preserve the ELF SDK requirement."
+                 VerticalAlignment="Center" TextWrapping="Wrap" FontSize="11" Opacity="0.65" />
+    </Grid>
+
+    <StackPanel Grid.Row="3" Spacing="8">
+      <TextBlock x:Name="ErrorText" Foreground="IndianRed" IsVisible="False" TextWrapping="Wrap" />
+      <TextBlock Text="Licensed EBOOTs must have a matching RAP in Keys → RAP Library. Output is unsigned and runs only on CFW/HEN or compatible emulators."
+                 TextWrapping="Wrap" FontSize="11" Opacity="0.7" />
+    </StackPanel>
+
+    <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+      <Button Content="Cancel" Click="OnCancel" />
+      <Button Content="Convert…" Click="OnConvert" Classes="accent" />
+    </StackPanel>
+  </Grid>
+</Window>

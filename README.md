@@ -44,7 +44,8 @@ On Windows you can skip the command line: double-click `run-gui.cmd` to build an
 In the GUI, open a package with **File → Open** or drag a `.pkg` onto the window. Retail and debug
 packages both open with no setup — the standard decryption key is built in. The left pane is a
 folder tree; the right pane lists the selected folder's files. **Tools → Package info…** shows the
-header, metadata, and `PARAM.SFO`.
+header, metadata, and `PARAM.SFO`. **File → Convert package → CFW…** performs the complete EBOOT
+conversion and streaming rebuild workflow in one operation.
 
 ## What it does
 
@@ -81,6 +82,9 @@ header, metadata, and `PARAM.SFO`.
 - Fake-sign a plaintext ELF into a SELF that boots on CFW (`resign`), with optional custom sign
   fields.
 - Fake-sign a folder's `EBOOT.BIN` while packing (`pack --resign`).
+- Convert a PS3 package for CFW in one GUI workflow: find every `EBOOT.BIN`, resolve licensed SELFs
+  from the RAP library, decrypt and fake-sign them, optionally lower their firmware requirement,
+  stream the rebuilt `.pkg`, and write a per-executable transformation report beside it.
 
 ### Patch & verify
 
