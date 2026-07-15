@@ -154,7 +154,8 @@ internal static class PatchCommand
             byte[] output = emitSelf ? SelfBuilder.MakeFakeSelf(elf, npdrm) : elf;
 
             outPath ??= DefaultOut(input, emitSelf);
-            File.WriteAllBytes(outPath, output);
+            AtomicOutput.EnsureDifferentPath(input, outPath);
+            AtomicOutput.WriteAllBytes(outPath, output);
 
             Console.WriteLine($"Patched → {Path.GetFullPath(outPath)} ({output.Length:n0} bytes)" +
                               (emitSelf ? $"  [fake-signed {(npdrm ? "NPDRM" : "NON-DRM")} SELF]" : "  [ELF]"));

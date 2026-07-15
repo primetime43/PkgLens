@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Text;
 using Avalonia.Styling;
 
 namespace PkgLens.Gui.Services;
@@ -30,7 +31,11 @@ public static class ThemeSettings
         {
             var dir = Path.GetDirectoryName(FilePath)!;
             Directory.CreateDirectory(dir);
-            File.WriteAllText(FilePath, Name(variant));
+            AtomicOutput.Write(FilePath, stream =>
+            {
+                using var writer = new StreamWriter(stream, new UTF8Encoding(false), 1024, leaveOpen: true);
+                writer.Write(Name(variant));
+            });
         }
         catch { /* non-fatal: theme just won't persist */ }
     }

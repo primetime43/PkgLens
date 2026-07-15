@@ -60,8 +60,7 @@ internal static class UnpbpCommand
             foreach (var e in pbp.Entries)
             {
                 string dest = Path.Combine(dir, e.Name);
-                using (var d = File.Create(dest))
-                    PbpArchive.Extract(stream, e, d);
+                AtomicOutput.Write(dest, d => PbpArchive.Extract(stream, e, d));
             }
 
             Console.WriteLine($"Extracted {pbp.Entries.Count} section(s) to {Path.GetFullPath(dir)}");

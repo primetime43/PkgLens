@@ -11,6 +11,7 @@ using PkgLens.Core.Shared.Keys;
 using PkgLens.Core.Shared.Models;
 using PkgLens.Core.Psp;
 using PkgLens.Core.Shared.Sfo;
+using PkgLens.Gui.Services;
 
 namespace PkgLens.Gui.ViewModels;
 
@@ -180,8 +181,9 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
     /// </summary>
     public void SaveAs(string destinationPath)
     {
-        using var dest = File.Create(destinationPath);
-        PkgWriter.Repack(_stream, _info, _replacements, _keys, dest);
+        AtomicOutput.EnsureDifferentPath(FilePath, destinationPath);
+        AtomicOutput.Write(destinationPath,
+            dest => PkgWriter.Repack(_stream, _info, _replacements, _keys, dest));
     }
 
     private PackageViewModel(string path, Stream stream, PkgInfo info, IKeyProvider keys)
@@ -259,8 +261,9 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
         if (SelectedItem?.Entry is not { } entry)
             throw new InvalidOperationException("No extractable file is selected.");
 
-        using var dest = File.Create(destinationPath);
-        PkgReader.ExtractEntry(_stream, _header, entry, dest, _keys);
+        AtomicOutput.EnsureDifferentPath(FilePath, destinationPath);
+        AtomicOutput.Write(destinationPath,
+            dest => PkgReader.ExtractEntry(_stream, _header, entry, dest, _keys));
     }
 
     /// <summary>Decrypts the selected DOCUMENT.DAT into its manual pages (each a PNG), using the sibling DOCINFO.EDAT.</summary>
@@ -281,7 +284,7 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
             throw new InvalidOperationException("Select a .PBP file.");
 
         Directory.CreateDirectory(destinationDir);
-        string temp = Path.Combine(destinationDir, "~" + leaf + ".tmp");
+        string temp = Path.Combine(destinationDir, $".pkglens-{Guid.NewGuid():N}.tmp");
         try
         {
             using (var d = File.Create(temp))
@@ -293,8 +296,8 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
                 var pbp = PbpArchive.Parse(src);
                 foreach (var e in pbp.Entries)
                 {
-                    using var dst = File.Create(Path.Combine(destinationDir, e.Name));
-                    PbpArchive.Extract(src, e, dst);
+                    AtomicOutput.Write(Path.Combine(destinationDir, e.Name),
+                        dst => PbpArchive.Extract(src, e, dst));
                     written.Add(e.Name);
                 }
             }
@@ -316,8 +319,8 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
             throw new InvalidOperationException("Select an EBOOT.PBP file.");
 
         string dir = Path.GetDirectoryName(isoPath) ?? ".";
-        string pbpTmp = Path.Combine(dir, "~" + leaf + ".tmp");
-        string psarTmp = Path.Combine(dir, "~DATA.PSAR.tmp");
+        string pbpTmp = Path.Combine(dir, $".pkglens-pbp-{Guid.NewGuid():N}.tmp");
+        string psarTmp = Path.Combine(dir, $".pkglens-psar-{Guid.NewGuid():N}.tmp");
         try
         {
             using (var d = File.Create(pbpTmp))
@@ -339,8 +342,7 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
                 throw new InvalidOperationException("DATA.PSAR is not an NPUMDIMG (this game isn't a UMD/minis image).");
             psarStream.Position = 0;
 
-            using var iso = File.Create(isoPath);
-            NpumdImg.DecryptToIso(psarStream, iso);
+            AtomicOutput.Write(isoPath, iso => NpumdImg.DecryptToIso(psarStream, iso));
         }
         finally
         {

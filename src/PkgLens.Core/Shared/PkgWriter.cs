@@ -39,8 +39,7 @@ public static class PkgWriter
         if (!keys.TryResolve(header, out var context, out string? reason))
             throw new PkgKeyException(reason ?? "No key available to re-encrypt the package.");
 
-        var decryptor = context.CreateDecryptor();
-        try
+        using (var decryptors = context.CreateDecryptorSet())
         {
             var entries = info.Entries;
             int itemCount = entries.Count;
@@ -60,7 +59,7 @@ public static class PkgWriter
                 else if (e.IsDirectory || e.FileSize == 0)
                     contents[i] = Array.Empty<byte>();
                 else
-                    contents[i] = PkgContainerReader.ReadEntry(source, header, decryptor, e);
+                    contents[i] = PkgContainerReader.ReadEntry(source, header, decryptors.For(e), e);
             }
 
             long namesLen = names.Sum(n => (long)n.Length);
@@ -103,8 +102,18 @@ public static class PkgWriter
                 // rec[0x1C..0x20] left zero (padding)
             }
 
-            // Encrypt the region in place (XOR keystream — same primitive used to decrypt).
-            decryptor.DecryptInPlace(region, 0);
+            // Encrypt each portion with the same key selection the reader uses. PS3/PSVita packages
+            // use one key throughout, while PSP/PSX packages encrypt the table with the PSP key and
+            // select PSP vs gpkg per entry for both names and file data.
+            decryptors.Table.DecryptInPlace(region.AsSpan(0, tableLen), 0);
+            for (int i = 0; i < itemCount; i++)
+            {
+                decryptors.For(entries[i]).DecryptInPlace(
+                    region.AsSpan(nameOffsets[i], names[i].Length), nameOffsets[i]);
+                if (contents[i].Length > 0)
+                    decryptors.For(entries[i]).DecryptInPlace(
+                        region.AsSpan(fileOffsets[i], contents[i].Length), fileOffsets[i]);
+            }
 
             // Copy the header + metadata prefix verbatim, patching only the size fields.
             long dataOffset = (long)header.DataOffset;
@@ -121,10 +130,6 @@ public static class PkgWriter
 
             destination.Write(prefix, 0, prefix.Length);
             destination.Write(region, 0, region.Length);
-        }
-        finally
-        {
-            (decryptor as IDisposable)?.Dispose();
         }
     }
 

@@ -102,9 +102,12 @@ internal static class PackCommand
 
         try
         {
-            PackPlan plan = FolderPackage.Plan(folder, options);
+            bool outputWasInferred = outPath is null;
+            PackPlan plan = FolderPackage.Plan(folder, options, outPath);
 
             outPath ??= SanitizeFileName(plan.ContentId) + ".pkg";
+            if (outputWasInferred && File.Exists(outPath))
+                plan = FolderPackage.Plan(folder, options, outPath);
 
             Console.WriteLine($"Packing {plan.FileCount} file(s), {plan.DirectoryCount} folder(s) — {plan.TotalBytes:n0} bytes");
             Console.WriteLine($"  content id   : {plan.ContentId}");
@@ -115,8 +118,7 @@ internal static class PackCommand
             foreach (var note in plan.Notes)
                 Console.WriteLine($"  · {note}");
 
-            using (var dst = File.Create(outPath))
-                plan.Builder.Build(dst, keys);
+            AtomicOutput.Write(outPath, dst => plan.Builder.Build(dst, keys));
 
             long size = new FileInfo(outPath).Length;
             Console.WriteLine($"Wrote {size:n0} bytes → {Path.GetFullPath(outPath)}");

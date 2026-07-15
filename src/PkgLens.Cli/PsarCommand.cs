@@ -64,8 +64,8 @@ internal static class PsarCommand
             if (sub == "decrypt")
             {
                 string dest = outPath ?? Path.ChangeExtension(input, ".iso");
-                using (var dst = File.Create(dest))
-                    NpumdImg.DecryptToIso(src, dst);
+                AtomicOutput.EnsureDifferentPath(input, dest);
+                AtomicOutput.Write(dest, dst => NpumdImg.DecryptToIso(src, dst));
                 Console.WriteLine($"Decrypted NPUMDIMG → {Path.GetFullPath(dest)} ({new FileInfo(dest).Length:n0} bytes)");
                 return ExitCode.Ok;
             }

@@ -1,4 +1,5 @@
 using System.IO;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using PkgLens.Core;
@@ -101,5 +102,33 @@ public class PspPackageTests
         var icon = info.Entries.Single(e => e.Name == "ICON0.PNG");
         byte[] iconBytes = PkgReader.ExtractEntryBytes(s, info.Header, icon, new FileKeyProvider());
         Assert.Equal("not-really-a-png", Encoding.UTF8.GetString(iconBytes));
+    }
+
+    [Fact]
+    public void Repack_PspPackage_PreservesBothKeyDomains()
+    {
+        byte[] pkg = PspPackage().Build();
+        var keys = new FileKeyProvider();
+        using var source = new MemoryStream(pkg);
+        var info = PkgReader.Read(source, keys);
+        var eboot = info.Entries.Single(e => e.Name == "USRDIR/CONTENT/EBOOT.PBP");
+        byte[] replacement = Encoding.UTF8.GetBytes("replacement PSP payload");
+
+        using var destination = new MemoryStream();
+        PkgWriter.Repack(source, info,
+            new Dictionary<PkgEntry, byte[]> { [eboot] = replacement }, keys, destination);
+
+        using var repacked = new MemoryStream(destination.ToArray());
+        var repackedInfo = PkgReader.Read(repacked, keys);
+        Assert.Equal(info.Entries.Select(e => e.Name), repackedInfo.Entries.Select(e => e.Name));
+        Assert.Equal("PSP Test Game", repackedInfo.Sfo?.Title);
+
+        var repackedEboot = repackedInfo.Entries.Single(e => e.Name == "USRDIR/CONTENT/EBOOT.PBP");
+        Assert.Equal(replacement,
+            PkgReader.ExtractEntryBytes(repacked, repackedInfo.Header, repackedEboot, keys));
+
+        var icon = repackedInfo.Entries.Single(e => e.Name == "ICON0.PNG");
+        Assert.Equal("not-really-a-png", Encoding.UTF8.GetString(
+            PkgReader.ExtractEntryBytes(repacked, repackedInfo.Header, icon, keys)));
     }
 }

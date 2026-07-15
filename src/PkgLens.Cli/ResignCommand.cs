@@ -94,7 +94,8 @@ internal static class ResignCommand
             byte[] fself = SelfBuilder.MakeFakeSelf(elf, opts);
 
             outPath ??= Path.GetFileNameWithoutExtension(input) + ".self";
-            File.WriteAllBytes(outPath, fself);
+            AtomicOutput.EnsureDifferentPath(input, outPath);
+            AtomicOutput.WriteAllBytes(outPath, fself);
 
             Console.WriteLine($"Resigned {elf.Length:n0}-byte ELF → {Path.GetFullPath(outPath)} ({fself.Length:n0} bytes)");
             Console.WriteLine($"  type : fake-signed {(npdrm ? "NPDRM" : "NON-DRM")} SELF (key revision 0x8000)");

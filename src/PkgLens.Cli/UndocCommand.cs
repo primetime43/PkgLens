@@ -77,7 +77,7 @@ internal static class UndocCommand
             for (int i = 0; i < pages.Count; i++)
             {
                 string dest = Path.Combine(dir, $"page_{i + 1:D3}.png");
-                File.WriteAllBytes(dest, pages[i]);
+                AtomicOutput.WriteAllBytes(dest, pages[i]);
                 Console.WriteLine($"  page_{i + 1:D3}.png  ({pages[i].Length:n0} bytes)");
             }
             Console.WriteLine($"Decrypted {pages.Count} manual page(s) → {Path.GetFullPath(dir)}");

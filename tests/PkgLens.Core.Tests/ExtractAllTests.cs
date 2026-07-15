@@ -66,4 +66,69 @@ public class ExtractAllTests
             if (Directory.Exists(dir)) Directory.Delete(dir, recursive: true);
         }
     }
+
+    [Fact]
+    public void ExtractAll_FailedEntryPreservesExistingDestination()
+    {
+        byte[] pkg = new SyntheticPkgBuilder()
+            .AddFile("DATA.BIN", Enumerable.Range(0, 128).Select(i => (byte)i).ToArray())
+            .Build();
+        string dir = Path.Combine(Path.GetTempPath(), "pkglens-extract-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        string destination = Path.Combine(dir, "DATA.BIN");
+        byte[] original = { 9, 8, 7, 6 };
+        File.WriteAllBytes(destination, original);
+
+        try
+        {
+            using var stream = new MemoryStream(pkg);
+            var info = PkgReader.Read(stream, new InMemoryKeyProvider());
+            var entry = info.Entries.Single(e => e.Name == "DATA.BIN");
+            stream.SetLength((long)info.Header.DataOffset + (long)entry.FileOffset + 1);
+
+            Assert.Throws<PkgFormatException>(() =>
+                PkgReader.ExtractAll(stream, info, dir, new InMemoryKeyProvider()));
+            Assert.Equal(original, File.ReadAllBytes(destination));
+            Assert.Empty(Directory.GetFiles(dir, "*.tmp"));
+        }
+        finally
+        {
+            if (Directory.Exists(dir)) Directory.Delete(dir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void ExtractAll_LinkInsideDestinationIsRejected()
+    {
+        byte[] pkg = new SyntheticPkgBuilder()
+            .AddDirectory("LINK")
+            .AddFile("LINK/ESCAPE.BIN", new byte[] { 1, 2, 3 })
+            .Build();
+        string dir = Path.Combine(Path.GetTempPath(), "pkglens-extract-" + Guid.NewGuid().ToString("N"));
+        string outside = Path.Combine(Path.GetTempPath(), "pkglens-outside-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        Directory.CreateDirectory(outside);
+        string link = Path.Combine(dir, "LINK");
+
+        try
+        {
+            try { Directory.CreateSymbolicLink(link, outside); }
+            catch (Exception ex) when (ex is UnauthorizedAccessException or IOException or PlatformNotSupportedException)
+            {
+                return;
+            }
+
+            using var stream = new MemoryStream(pkg);
+            var info = PkgReader.Read(stream, new InMemoryKeyProvider());
+            Assert.Throws<PkgFormatException>(() =>
+                PkgReader.ExtractAll(stream, info, dir, new InMemoryKeyProvider()));
+            Assert.False(File.Exists(Path.Combine(outside, "ESCAPE.BIN")));
+        }
+        finally
+        {
+            try { Directory.Delete(link); } catch { /* link may not have been created */ }
+            if (Directory.Exists(dir)) Directory.Delete(dir, recursive: true);
+            if (Directory.Exists(outside)) Directory.Delete(outside, recursive: true);
+        }
+    }
 }

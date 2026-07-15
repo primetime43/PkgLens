@@ -10,6 +10,7 @@ using Avalonia.Platform.Storage;
 using PkgLens.Core;
 using PkgLens.Core.Shared;
 using PkgLens.Core.Shared.Keys;
+using PkgLens.Gui.Services;
 using PkgLens.Gui.ViewModels;
 
 namespace PkgLens.Gui.Views;
@@ -115,7 +116,7 @@ public partial class ScanDialog : Window
             return;
         try
         {
-            await File.WriteAllTextAsync(dest, content);
+            await AtomicOutput.WriteAllTextAsync(dest, content);
             _status.Text = $"Saved {Path.GetFileName(dest)}.";
         }
         catch (Exception ex)

@@ -76,7 +76,8 @@ internal static class UnselfCommand
             var result = SelfDecryptor.Decrypt(self, klic);
 
             outPath ??= DefaultOut(input);
-            File.WriteAllBytes(outPath, result.Elf);
+            AtomicOutput.EnsureDifferentPath(input, outPath);
+            AtomicOutput.WriteAllBytes(outPath, result.Elf);
 
             string lic = result.WasNpdrm ? (result.License?.ToString() ?? "NPDRM") : "non-NPDRM";
             Console.WriteLine($"Decrypted {self.Length:n0}-byte SELF → {Path.GetFullPath(outPath)} ({result.Elf.Length:n0} bytes)");

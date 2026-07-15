@@ -481,10 +481,9 @@ public partial class MainWindow : Window
             Vm.Status = "Packing…";
             var plan = await Task.Run(() =>
             {
-                var p = PkgLens.Core.Shared.FolderPackage.Plan(folder, options);
+                var p = PkgLens.Core.Shared.FolderPackage.Plan(folder, options, dest);
                 IKeyProvider keys = new FileKeyProvider(Vm.KeysDirectory);
-                using var dst = File.Create(dest);
-                p.Builder.Build(dst, keys);
+                AtomicOutput.Write(dest, dst => p.Builder.Build(dst, keys));
                 return p;
             });
 
@@ -594,9 +593,10 @@ public partial class MainWindow : Window
                 string pspSrc = _decryptFile;
                 await Task.Run(() =>
                 {
+                    AtomicOutput.EnsureDifferentPath(pspSrc, pspDest);
                     using var input = File.OpenRead(pspSrc);
-                    using var output = File.Create(pspDest);
-                    PkgLens.Core.Psp.PspEdatFile.Decrypt(input, output);
+                    AtomicOutput.Write(pspDest,
+                        output => PkgLens.Core.Psp.PspEdatFile.Decrypt(input, output));
                 });
                 Vm.Status = $"Decrypted PSP EDAT → {Path.GetFileName(pspDest)}";
                 ShowResultBanner("DecryptBanner", ok: true,
@@ -633,9 +633,10 @@ public partial class MainWindow : Window
             byte[]? k = klic;
             await Task.Run(() =>
             {
+                AtomicOutput.EnsureDifferentPath(src, dest);
                 using var input = File.OpenRead(src);
-                using var output = File.Create(dest);
-                PkgLens.Core.Ps3.Npd.EdatFile.Decrypt(input, output, k);
+                AtomicOutput.Write(dest,
+                    output => PkgLens.Core.Ps3.Npd.EdatFile.Decrypt(input, output, k));
             });
             Vm.Status = $"Decrypted {npd.ContentId} → {Path.GetFileName(dest)}";
             ShowResultBanner("DecryptBanner", ok: true,
@@ -797,7 +798,8 @@ public partial class MainWindow : Window
             {
                 byte[] elf = File.ReadAllBytes(input);
                 byte[] fself = PkgLens.Core.Ps3.Self.SelfBuilder.MakeFakeSelf(elf, opts);
-                File.WriteAllBytes(dest, fself);
+                AtomicOutput.EnsureDifferentPath(input, dest);
+                AtomicOutput.WriteAllBytes(dest, fself);
                 return (long)fself.Length;
             });
             Vm.Status = $"Fake-signed → {Path.GetFileName(dest)} ({size:n0} bytes).";
@@ -891,7 +893,8 @@ public partial class MainWindow : Window
                     : $"firmware {prev.Display} → {major}.{minor:D2}";
 
                 byte[] fself = PkgLens.Core.Ps3.Self.SelfBuilder.MakeFakeSelf(elf, npdrm);
-                File.WriteAllBytes(dest, fself);
+                AtomicOutput.EnsureDifferentPath(input, dest);
+                AtomicOutput.WriteAllBytes(dest, fself);
                 return $"Magic-patched → {Path.GetFileName(dest)} ({fself.Length:n0} bytes); {fwNote}.";
             });
             Vm.Status = summary;
@@ -1019,7 +1022,8 @@ public partial class MainWindow : Window
 
                 bool emitSelf = wasSelf || resign;
                 byte[] output = emitSelf ? PkgLens.Core.Ps3.Self.SelfBuilder.MakeFakeSelf(elf, npdrm) : elf;
-                File.WriteAllBytes(dest, output);
+                AtomicOutput.EnsureDifferentPath(input, dest);
+                AtomicOutput.WriteAllBytes(dest, output);
 
                 string kind = emitSelf ? $"fake-signed {(npdrm ? "NPDRM" : "NON-DRM")} SELF" : "ELF";
                 return $"Patched → {Path.GetFileName(dest)} ({output.Length:n0} bytes) [{kind}]; {string.Join("; ", steps)}.";
@@ -1201,14 +1205,17 @@ public partial class MainWindow : Window
                 if (chain)
                 {
                     byte[] fself = PkgLens.Core.Ps3.Self.SelfBuilder.MakeFakeSelf(result.Elf, npdrm: result.WasNpdrm);
-                    File.WriteAllBytes(dest, fself);
+                    AtomicOutput.EnsureDifferentPath(input, dest);
+                    AtomicOutput.WriteAllBytes(dest, fself);
                     // Drop the intermediate ELF beside the fSELF for reference.
                     string elfBeside = Path.Combine(Path.GetDirectoryName(dest) ?? "", baseName + ".ELF");
-                    File.WriteAllBytes(elfBeside, result.Elf);
+                    AtomicOutput.EnsureDifferentPath(input, elfBeside);
+                    AtomicOutput.WriteAllBytes(elfBeside, result.Elf);
                     return $"Decrypted ({lic}) → fake-signed fSELF {Path.GetFileName(dest)} ({fself.Length:n0} bytes); ELF beside it.";
                 }
 
-                File.WriteAllBytes(dest, result.Elf);
+                AtomicOutput.EnsureDifferentPath(input, dest);
+                AtomicOutput.WriteAllBytes(dest, result.Elf);
                 return $"Decrypted {self.Length:n0}-byte SELF ({lic}) → {Path.GetFileName(dest)} ({result.Elf.Length:n0} bytes).";
             });
             Vm.Status = summary;
@@ -1562,7 +1569,7 @@ public partial class MainWindow : Window
 
     private void OnDragOver(object? sender, DragEventArgs e)
     {
-        bool hasFiles = e.Data.Contains(DataFormats.Files);
+        bool hasFiles = e.DataTransfer.Formats.Contains(DataFormat.File);
         e.DragEffects = hasFiles ? DragDropEffects.Copy : DragDropEffects.None;
         ShowDropOverlay(hasFiles);
     }
@@ -1573,7 +1580,7 @@ public partial class MainWindow : Window
     {
         ShowDropOverlay(false);
 
-        var files = e.Data.GetFiles();
+        var files = e.DataTransfer.TryGetFiles();
         if (files is null)
             return;
 

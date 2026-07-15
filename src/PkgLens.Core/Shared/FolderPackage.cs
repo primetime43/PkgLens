@@ -51,7 +51,7 @@ public static class FolderPackage
     private static readonly Regex ContentIdShape =
         new(@"^[A-Z]{2}\d{4}-[A-Z0-9]+_\d{2}-[A-Z0-9_]+$", RegexOptions.Compiled);
 
-    public static PackPlan Plan(string folder, PackOptions? options = null)
+    public static PackPlan Plan(string folder, PackOptions? options = null, string? excludedPath = null)
     {
         ArgumentException.ThrowIfNullOrEmpty(folder);
         options ??= new PackOptions();
@@ -59,6 +59,7 @@ public static class FolderPackage
         var root = new DirectoryInfo(folder);
         if (!root.Exists)
             throw new PkgFormatException($"Content folder not found: {folder}");
+        SafeFileTree.ThrowIfLink(root);
 
         var notes = new List<string>();
         SfoTable? sfo = TryReadSfo(root, notes);
@@ -88,7 +89,9 @@ public static class FolderPackage
 
         long totalBytes = 0;
         int files = 0, dirs = 0;
-        Walk(root, string.Empty, builder, options, notes, ref totalBytes, ref files, ref dirs);
+        string? excludedFullPath = excludedPath is null ? null : Path.GetFullPath(excludedPath);
+        Walk(root, string.Empty, builder, options, notes, excludedFullPath,
+            ref totalBytes, ref files, ref dirs);
         if (files == 0)
             throw new PkgFormatException($"Content folder '{folder}' contains no files to pack.");
 
@@ -97,16 +100,20 @@ public static class FolderPackage
     }
 
     private static void Walk(DirectoryInfo dir, string prefix, PkgBuilder builder, PackOptions options,
-        List<string> notes, ref long totalBytes, ref int files, ref int dirs)
+        List<string> notes, string? excludedFullPath, ref long totalBytes, ref int files, ref int dirs)
     {
         foreach (var info in dir.GetFileSystemInfos().OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase))
         {
+            SafeFileTree.ThrowIfLink(info);
+            if (excludedFullPath is not null && PathsEqual(info.FullName, excludedFullPath))
+                continue;
             string name = prefix.Length == 0 ? info.Name : prefix + "/" + info.Name;
             if (info is DirectoryInfo sub)
             {
                 builder.AddDirectory(name);
                 dirs++;
-                Walk(sub, name, builder, options, notes, ref totalBytes, ref files, ref dirs);
+                Walk(sub, name, builder, options, notes, excludedFullPath,
+                    ref totalBytes, ref files, ref dirs);
             }
             else if (info is FileInfo file)
             {
@@ -203,6 +210,11 @@ public static class FolderPackage
             "content id (e.g. UP0001-NPUB30910_00-EXAMPLE000000001). Pass --content-id to set one.");
     }
 
+    private static bool PathsEqual(string left, string right) => Path.GetFullPath(left).Equals(
+        Path.GetFullPath(right), OperatingSystem.IsWindows()
+            ? StringComparison.OrdinalIgnoreCase
+            : StringComparison.Ordinal);
+
     private static uint InferContentType(DirectoryInfo root, SfoTable? sfo, List<string> notes)
     {
         string? category = sfo?.Category;
@@ -222,7 +234,7 @@ public static class FolderPackage
             }
         }
 
-        bool hasEboot = root.GetFiles("EBOOT.BIN", SearchOption.AllDirectories).Length > 0;
+        bool hasEboot = SafeFileTree.ContainsFile(root, "EBOOT.BIN");
         uint type = hasEboot ? (uint)PkgContentType.GameExec : (uint)PkgContentType.GameData;
         notes.Add($"content type: {(PkgContentType)type} (inferred)");
         return type;

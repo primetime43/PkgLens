@@ -7,6 +7,7 @@ using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
+using PkgLens.Gui.Services;
 
 namespace PkgLens.Gui.Views;
 
@@ -68,7 +69,7 @@ public partial class ManualViewerDialog : Window
         try
         {
             for (int i = 0; i < _pages.Count; i++)
-                await File.WriteAllBytesAsync(Path.Combine(dir, $"page_{i + 1:D3}.png"), _pages[i]);
+                await AtomicOutput.WriteAllBytesAsync(Path.Combine(dir, $"page_{i + 1:D3}.png"), _pages[i]);
             _label.Text = $"Saved {_pages.Count} page(s) to {dir}";
         }
         catch (Exception ex)

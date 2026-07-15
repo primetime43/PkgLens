@@ -61,6 +61,7 @@ public static class GameFolderInfo
         var root = new DirectoryInfo(folder);
         if (!root.Exists)
             throw new PkgFormatException($"Content folder not found: {folder}");
+        SafeFileTree.ThrowIfLink(root);
 
         var notes = new List<string>();
         SfoTable? sfo = TryReadSfo(root, notes);
@@ -70,7 +71,7 @@ public static class GameFolderInfo
         var eboots = new List<EbootReport>();
         var edats = new List<EdatReport>();
 
-        foreach (var fsi in root.EnumerateFileSystemInfos("*", SearchOption.AllDirectories))
+        foreach (var fsi in SafeFileTree.Enumerate(root))
         {
             if (fsi is DirectoryInfo) { dirs++; continue; }
             if (fsi is not FileInfo file) continue;

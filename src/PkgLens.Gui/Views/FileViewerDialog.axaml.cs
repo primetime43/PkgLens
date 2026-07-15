@@ -7,6 +7,7 @@ using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
+using PkgLens.Gui.Services;
 
 namespace PkgLens.Gui.Views;
 
@@ -90,7 +91,7 @@ public partial class FileViewerDialog : Window
         });
         if (file?.TryGetLocalPath() is { } dest)
         {
-            try { await File.WriteAllBytesAsync(dest, _data); }
+            try { await AtomicOutput.WriteAllBytesAsync(dest, _data); }
             catch (Exception ex) { _header.Text = $"Extract failed: {ex.Message}"; }
         }
     }

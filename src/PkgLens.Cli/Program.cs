@@ -159,8 +159,8 @@ if (command == "decrypt")
                 Console.WriteLine("(bare PSP PGD)");
             }
             string pspOut = parsed.OutDir ?? StripNpdExtension(parsed.Path);
-            using (var dst = File.Create(pspOut))
-                PkgLens.Core.Psp.PspEdatFile.Decrypt(src, dst);
+            AtomicOutput.EnsureDifferentPath(parsed.Path, pspOut);
+            AtomicOutput.Write(pspOut, dst => PkgLens.Core.Psp.PspEdatFile.Decrypt(src, dst));
             Console.WriteLine($"Decrypted → {pspOut}");
             return ExitCode.Ok;
         }
@@ -186,8 +186,8 @@ if (command == "decrypt")
         }
 
         string outPath = parsed.OutDir ?? StripNpdExtension(parsed.Path);
-        using (var dst = File.Create(outPath))
-            PkgLens.Core.Ps3.Npd.EdatFile.Decrypt(src, dst, klic);
+        AtomicOutput.EnsureDifferentPath(parsed.Path, outPath);
+        AtomicOutput.Write(outPath, dst => PkgLens.Core.Ps3.Npd.EdatFile.Decrypt(src, dst, klic));
         Console.WriteLine($"Decrypted {npd.FileSize:n0} bytes → {outPath}");
         return ExitCode.Ok;
     }

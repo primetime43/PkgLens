@@ -69,15 +69,18 @@ public static class PkgReader
             if (filter is not null && !filter(entry)) continue;
 
             string dest = SafeCombine(rootWithSep, entry.Name);
+            EnsureNoLinkedDescendant(root, dest);
             if (entry.IsDirectory)
             {
                 Directory.CreateDirectory(dest);
+                EnsureNoLinkedDescendant(root, dest);
                 continue;
             }
 
             Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
-            using (var fs = File.Create(dest))
-                PkgContainerReader.CopyEntryTo(stream, info.Header, decryptors.For(entry), entry, fs);
+            EnsureNoLinkedDescendant(root, Path.GetDirectoryName(dest)!);
+            WriteAtomically(dest, fs =>
+                PkgContainerReader.CopyEntryTo(stream, info.Header, decryptors.For(entry), entry, fs));
             onExtracted?.Invoke(entry);
             count++;
         }
@@ -92,6 +95,45 @@ public static class PkgReader
             full != rootWithSep.TrimEnd(Path.DirectorySeparatorChar))
             throw new PkgFormatException($"Entry '{relative}' would escape the output directory.");
         return full;
+    }
+
+    private static void EnsureNoLinkedDescendant(string root, string destination)
+    {
+        string relative = Path.GetRelativePath(root, destination);
+        string current = root;
+        foreach (string part in relative.Split(
+                     new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar },
+                     StringSplitOptions.RemoveEmptyEntries))
+        {
+            current = Path.Combine(current, part);
+            if (!File.Exists(current) && !Directory.Exists(current))
+                continue;
+
+            if ((File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0)
+                throw new PkgFormatException(
+                    $"Extraction path contains a symbolic link or junction: {current}");
+        }
+    }
+
+    private static void WriteAtomically(string destination, Action<Stream> write)
+    {
+        string fullPath = Path.GetFullPath(destination);
+        string directory = Path.GetDirectoryName(fullPath)!;
+        string temp = Path.Combine(directory,
+            $".{Path.GetFileName(fullPath)}.{Guid.NewGuid():N}.tmp");
+        try
+        {
+            using (var file = new FileStream(temp, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+            {
+                write(file);
+                file.Flush(flushToDisk: true);
+            }
+            File.Move(temp, fullPath, overwrite: true);
+        }
+        finally
+        {
+            try { File.Delete(temp); } catch { /* best-effort cleanup after a failed write */ }
+        }
     }
 
     private static PkgDecryptorSet ResolveDecryptorSet(PkgHeader header, IKeyProvider keys)

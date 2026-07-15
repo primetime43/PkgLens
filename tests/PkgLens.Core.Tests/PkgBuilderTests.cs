@@ -179,6 +179,39 @@ public class PkgBuilderTests
     }
 
     [Fact]
+    public void Plan_SymbolicLinkInContentFolderIsRejected()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), "pkglens_src_" + Guid.NewGuid().ToString("N"));
+        string outside = Path.Combine(Path.GetTempPath(), "pkglens_outside_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        Directory.CreateDirectory(outside);
+        File.WriteAllText(Path.Combine(dir, "DATA.BIN"), "data");
+        string link = Path.Combine(dir, "LINK");
+
+        try
+        {
+            try { Directory.CreateSymbolicLink(link, outside); }
+            catch (Exception ex) when (ex is UnauthorizedAccessException or IOException or PlatformNotSupportedException)
+            {
+                return;
+            }
+
+            var options = new PackOptions
+            {
+                ContentId = "UP0001-NPUB30910_00-EXAMPLE000000001",
+            };
+            Assert.Throws<PkgFormatException>(() => FolderPackage.Plan(dir, options));
+            Assert.Throws<PkgFormatException>(() => GameFolderInfo.Describe(dir));
+        }
+        finally
+        {
+            try { Directory.Delete(link); } catch { /* link may not have been created */ }
+            if (Directory.Exists(dir)) Directory.Delete(dir, recursive: true);
+            if (Directory.Exists(outside)) Directory.Delete(outside, recursive: true);
+        }
+    }
+
+    [Fact]
     public void Plan_CustomPack_OverridesInference()
     {
         string dir = Path.Combine(Path.GetTempPath(), "pkglens_src_" + Guid.NewGuid().ToString("N"));
