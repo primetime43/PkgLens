@@ -1,0 +1,103 @@
+name: Release
+
+# Push a version tag to cut a release, e.g.:
+#   git tag v1.0.0 && git push origin v1.0.0
+# Or run it manually from the Actions tab with a version input.
+on:
+  push:
+    tags: [ 'v*' ]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag to release (e.g. v1.0.0)'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.rid }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: windows-latest, rid: win-x64 }
+          - { os: ubuntu-latest,  rid: linux-x64 }
+          - { os: macos-13,       rid: osx-x64 }
+          - { os: macos-latest,   rid: osx-arm64 }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Resolve version
+        id: ver
+        shell: bash
+        run: echo "version=${{ github.event.inputs.version || github.ref_name }}" >> "$GITHUB_OUTPUT"
+
+      - name: Publish CLI (pkglens)
+        run: >
+          dotnet publish src/PkgLens.Cli/PkgLens.Cli.csproj
+          -c Release -r ${{ matrix.rid }}
+          --self-contained true
+          -p:PublishSingleFile=true
+          -p:DebugType=none -p:DebugSymbols=false
+          -o publish/cli
+
+      - name: Publish GUI
+        run: >
+          dotnet publish src/PkgLens.Gui/PkgLens.Gui.csproj
+          -c Release -r ${{ matrix.rid }}
+          --self-contained true
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:DebugType=none -p:DebugSymbols=false
+          -o publish/gui
+
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force artifacts | Out-Null
+          Compress-Archive -Path publish/cli/* -DestinationPath "artifacts/pkglens-cli-${{ steps.ver.outputs.version }}-${{ matrix.rid }}.zip"
+          Compress-Archive -Path publish/gui/* -DestinationPath "artifacts/pkglens-gui-${{ steps.ver.outputs.version }}-${{ matrix.rid }}.zip"
+
+      - name: Package (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          mkdir -p artifacts
+          tar -C publish/cli -czf "artifacts/pkglens-cli-${{ steps.ver.outputs.version }}-${{ matrix.rid }}.tar.gz" .
+          tar -C publish/gui -czf "artifacts/pkglens-gui-${{ steps.ver.outputs.version }}-${{ matrix.rid }}.tar.gz" .
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pkglens-${{ matrix.rid }}
+          path: artifacts/*
+          if-no-files-found: error
+
+  release:
+    name: Publish GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.version || github.ref_name }}
+          name: PkgLens ${{ github.event.inputs.version || github.ref_name }}
+          generate_release_notes: true
+          prerelease: ${{ contains(github.event.inputs.version || github.ref_name, '-') }}
+          files: artifacts/**/*
