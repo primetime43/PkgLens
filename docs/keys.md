@@ -25,11 +25,30 @@ QA digest.
 ## What you still supply
 
 - **RAP files** — a licensed (non-free) EDAT or EBOOT is encrypted with a klicensee derived from the
-  RAP that came with your purchase. Pass it per operation: `--rap FILE` on the CLI (`decrypt`,
-  `unself`, `pack --resign`), or the RAP picker in the GUI. PkgLens derives the klicensee itself and
-  never stores the RAP in the repo.
+  RAP that came with your purchase. Import it once with `pkglens raps import`; CLI and GUI operations
+  then resolve it automatically by content ID. Explicit `--klic` and `--rap` options take precedence.
+  PkgLens derives the klicensee itself and never stores RAP material in the repository.
 - **Per-console secrets (IDPS / EID)** are out of scope and never needed by any PkgLens feature. A
   workflow that would require them isn't something PkgLens does.
+
+## RAP library
+
+```
+pkglens raps import CONTENT-ID.rap
+pkglens raps import license.rap --content-id CONTENT-ID
+pkglens raps list
+pkglens raps status [CONTENT-ID]
+pkglens raps remove CONTENT-ID
+```
+
+The default directory is `%USERPROFILE%\.pkglens\raps` on Windows or `~/.pkglens/raps` elsewhere.
+Set `PKGLENS_RAPS` or pass `--rap-dir DIR` to select another library. Files are indexed as
+`<content-id>.rap`; listings and status never print the 16-byte RAP contents. Import rejects unsafe
+content IDs and will not replace an installed RAP unless `--force` is supplied.
+
+In the GUI, open **Tools → RAP library** or use **Keys → Manage RAP library**. The manager provides
+the CLI operations visually, including a selectable persisted library folder. All GUI workflows that
+decrypt licensed content use this same library automatically.
 
 ## Adding a custom PKG key
 

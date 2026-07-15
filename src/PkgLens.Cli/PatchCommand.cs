@@ -20,7 +20,7 @@ internal static class PatchCommand
 
     public static int Run(ReadOnlySpan<string> args)
     {
-        string? input = null, outPath = null, sdk = null, rap = null, klicHex = null;
+        string? input = null, outPath = null, sdk = null, rap = null, rapDirectory = null, klicHex = null;
         var patterns = new List<(byte[] find, byte[] replace)>();
         var offsets = new List<(int at, byte[] bytes)>();
         bool resign = false, npdrmOverride = false, json = false;
@@ -33,6 +33,7 @@ internal static class PatchCommand
                 case "--out": if (!Take(args, ref i, a, out outPath)) return ExitCode.Usage; break;
                 case "--sdk-version": if (!Take(args, ref i, a, out sdk)) return ExitCode.Usage; break;
                 case "--rap": if (!Take(args, ref i, a, out rap)) return ExitCode.Usage; break;
+                case "--rap-dir": if (!Take(args, ref i, a, out rapDirectory)) return ExitCode.Usage; break;
                 case "--klic": if (!Take(args, ref i, a, out klicHex)) return ExitCode.Usage; break;
                 case "--resign": resign = true; break;
                 case "--npdrm": npdrmOverride = true; break;
@@ -88,23 +89,11 @@ internal static class PatchCommand
             return ExitCode.Usage;
         }
 
-        byte[]? klic = null;
-        if (klicHex is not null)
-        {
-            if (!TryHex(klicHex, out klic) || klic.Length != 16) { Console.Error.WriteLine("error: --klic must be 16 bytes (32 hex chars)."); return ExitCode.Usage; }
-        }
-        else if (rap is not null)
-        {
-            if (!File.Exists(rap)) { Console.Error.WriteLine($"error: RAP not found: {rap}"); return ExitCode.Usage; }
-            var rapBytes = File.ReadAllBytes(rap);
-            if (rapBytes.Length != 16) { Console.Error.WriteLine("error: a RAP must be 16 bytes."); return ExitCode.Usage; }
-            klic = NpdKeys.RapToKlicensee(rapBytes);
-        }
-
         try
         {
             byte[] raw = File.ReadAllBytes(input);
             var changes = new List<object>();
+            string? licenseSource = null;
             if (raw.Length < 4) { Console.Error.WriteLine("error: file is too small."); return ExitCode.ParseError; }
             uint magic = BinaryPrimitives.ReadUInt32BigEndian(raw);
 
@@ -112,7 +101,17 @@ internal static class PatchCommand
             bool wasSelf = false, npdrm = npdrmOverride;
             if (magic == SceMagic)
             {
-                var dec = SelfDecryptor.Decrypt(raw, klic);
+                var selfInfo = SelfReader.ParseInfo(new MemoryStream(raw));
+                string? contentId = selfInfo.Npdrm?.LicenseType == NpdrmLicenseType.Free
+                    ? null
+                    : selfInfo.Npdrm?.ContentId;
+                NpKlic.Resolution resolution;
+                try { resolution = NpKlic.Resolve(klicHex, rap, contentId, rapDirectory); }
+                catch (FormatException ex) { Console.Error.WriteLine($"error: {ex.Message}"); return ExitCode.Usage; }
+                licenseSource = resolution.Source;
+                if (!json && resolution.Source == "rap-store")
+                    Console.WriteLine("Using RAP from the local library.");
+                var dec = SelfDecryptor.Decrypt(raw, resolution.Klicensee);
                 elf = dec.Elf;
                 wasSelf = true;
                 npdrm = dec.WasNpdrm || npdrmOverride;
@@ -182,6 +181,7 @@ internal static class PatchCommand
                     npdrm = emitSelf && npdrm,
                     inputSize = raw.LongLength,
                     outputSize = output.LongLength,
+                    licenseSource,
                     changes,
                 });
             }

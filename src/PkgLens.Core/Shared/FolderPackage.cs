@@ -24,6 +24,12 @@ public sealed class PackOptions
 
     /// <summary>Optional 16-byte klicensee (from a RAP) for decrypting a licensed EBOOT during resign-on-pack.</summary>
     public byte[]? EbootKlicensee { get; set; }
+
+    /// <summary>
+    /// Optional content-id resolver used when <see cref="EbootKlicensee"/> is not set. This lets a
+    /// caller use a RAP library without reading every EBOOT before planning the package.
+    /// </summary>
+    public Func<string, byte[]?>? EbootKlicenseeResolver { get; set; }
 }
 
 /// <summary>A configured builder plus a record of what was inferred, so the CLI/GUI can report it.</summary>
@@ -139,7 +145,22 @@ public static class FolderPackage
         byte[] raw = File.ReadAllBytes(file.FullName);
         try
         {
-            var r = EbootResigner.Resign(raw, options.EbootKlicensee);
+            byte[]? klicensee = options.EbootKlicensee;
+            if (klicensee is null && options.EbootKlicenseeResolver is not null)
+            {
+                var info = SelfReader.ParseInfo(new MemoryStream(raw));
+                string? contentId = info.Npdrm?.LicenseType == NpdrmLicenseType.Free
+                    ? null
+                    : info.Npdrm?.ContentId;
+                if (!string.IsNullOrWhiteSpace(contentId))
+                {
+                    klicensee = options.EbootKlicenseeResolver(contentId);
+                    if (klicensee is not null)
+                        notes.Add($"EBOOT.BIN license resolved from RAP library: {contentId}");
+                }
+            }
+
+            var r = EbootResigner.Resign(raw, klicensee);
             string what = r.Action switch
             {
                 EbootResignAction.AlreadyFakeSigned => "already fake-signed (unchanged)",

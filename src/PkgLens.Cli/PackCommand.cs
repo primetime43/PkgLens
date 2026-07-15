@@ -16,7 +16,7 @@ internal static class PackCommand
 {
     public static int Run(ReadOnlySpan<string> args)
     {
-        string? folder = null, outPath = null, keysDir = null;
+        string? folder = null, outPath = null, keysDir = null, rapPath = null, rapDirectory = null, klicHex = null;
         bool json = false;
         // Default to retail-encrypted: it's the format a jailbroken (CFW) PS3 installs. Use --debug for
         // a self-contained non-finalized package (RPCS3 / dev consoles, no key needed).
@@ -33,17 +33,14 @@ internal static class PackCommand
                 case "--json": json = true; break;
 
                 case "--rap":
-                    if (!Next(args, ref i, a, out var rapPath)) return ExitCode.Usage;
-                    if (!File.Exists(rapPath)) { Console.Error.WriteLine($"error: RAP file not found: {rapPath}"); return ExitCode.Usage; }
-                    try { options.EbootKlicensee = NpKlic.FromRapFile(rapPath); }
-                    catch (FormatException ex) { Console.Error.WriteLine($"error: {ex.Message}"); return ExitCode.Usage; }
+                    if (!Next(args, ref i, a, out rapPath)) return ExitCode.Usage;
                     break;
+
+                case "--rap-dir": if (!Next(args, ref i, a, out rapDirectory)) return ExitCode.Usage; break;
 
                 case "--klic":
                 case "--klicensee":
-                    if (!Next(args, ref i, a, out var klicHex)) return ExitCode.Usage;
-                    try { options.EbootKlicensee = NpKlic.ParseHex(klicHex); }
-                    catch (FormatException ex) { Console.Error.WriteLine($"error: {ex.Message}"); return ExitCode.Usage; }
+                    if (!Next(args, ref i, a, out klicHex)) return ExitCode.Usage;
                     break;
 
                 case "--out": if (!Next(args, ref i, a, out outPath)) return ExitCode.Usage; break;
@@ -101,6 +98,19 @@ internal static class PackCommand
         }
 
         IKeyProvider keys = new FileKeyProvider(keysDir);
+
+        try
+        {
+            options.EbootKlicensee = NpKlic.Resolve(klicHex, rapPath, null, rapDirectory).Klicensee;
+            if (options.ResignEboot && options.EbootKlicensee is null)
+                options.EbootKlicenseeResolver = contentId =>
+                    NpKlic.Resolve(null, null, contentId, rapDirectory).Klicensee;
+        }
+        catch (FormatException ex)
+        {
+            Console.Error.WriteLine($"error: {ex.Message}");
+            return ExitCode.Usage;
+        }
 
         try
         {

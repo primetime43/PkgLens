@@ -60,10 +60,10 @@ header, metadata, and `PARAM.SFO`.
 ### Extract & decrypt
 
 - Extract one file, a selection, or everything to a folder (the tree is rebuilt on disk).
-- Decrypt EDAT/SDAT data files. SDAT needs no key; a licensed EDAT needs its RAP. Compressed EDATs
-  are supported.
+- Decrypt EDAT/SDAT data files. SDAT needs no key; a licensed EDAT resolves its RAP automatically
+  from the local library. Compressed EDATs are supported.
 - Decrypt an encrypted EBOOT.BIN / `.self` back to a plaintext ELF (`unself`). Fake-signed and debug
-  SELFs need no key; a licensed one needs its RAP.
+  SELFs need no key; a licensed one resolves its RAP automatically when installed.
 
 ### PSP / minis
 
@@ -104,7 +104,7 @@ pkglens list   <pkg> [--keys DIR] [--json]              # entry table
 pkglens sfo    <pkg> [--keys DIR] [--json]              # dump PARAM.SFO key/values
 pkglens extract <pkg> [--out DIR] [--filter GLOB] [--json]   # extract entries
 pkglens verify <pkg> [--json]                           # integrity check (SHA-1 + CMAC + ECDSA)
-pkglens decrypt <edat> [--rap FILE] [--json]            # decrypt an EDAT/SDAT
+pkglens decrypt <edat> [--rap FILE] [--json]            # decrypt; stored RAPs resolve automatically
 pkglens self   <eboot> [--json]                         # inspect a SELF/EBOOT.BIN header (no keys)
 pkglens unself <eboot> [--rap FILE | --klic HEX] [--out FILE]   # decrypt a SELF → plaintext ELF
 pkglens resign <elf> [--out FILE] [--npdrm]             # ELF → fake-signed SELF (fSELF) for CFW
@@ -116,7 +116,24 @@ pkglens unpbp  <EBOOT.PBP> [--out DIR] [--list]         # split a PSP PBP into i
 pkglens undoc  <DOCUMENT.DAT> [--docinfo FILE] [--out DIR]   # decrypt a PSP manual to PNG pages
 pkglens psar   decrypt <DATA.PSAR> [--out FILE]         # decrypt a PSP NPUMDIMG to .iso (keyless)
 pkglens keys   import|status|where                      # manage an optional override key
+pkglens raps   import|list|status|remove                # manage the local RAP library
 ```
+
+Licensed EDATs and EBOOTs are matched to stored RAPs by content ID. Explicit `--klic` and `--rap`
+options override the library. Use `--rap-dir DIR` or `PKGLENS_RAPS` for a non-default library.
+
+```
+pkglens raps import MY-CONTENT-ID.rap                    # content ID inferred from the filename
+pkglens raps import license.rap --content-id CONTENT-ID # specify it explicitly
+pkglens raps list
+pkglens raps status [CONTENT-ID]
+pkglens raps remove CONTENT-ID
+```
+
+The GUI exposes the same library from **Tools → RAP library** and the **Keys** page. It supports
+import, list/status, folder selection, replacement, and removal. EDAT viewing/decryption, Unself,
+Patch, and Pack-with-resign all resolve stored RAPs automatically; choosing a RAP override caches it
+under the detected content ID for later operations.
 
 Every command accepts `--json`. Successful JSON mode writes exactly one JSON value to stdout;
 diagnostics remain on stderr and exit codes remain unchanged.

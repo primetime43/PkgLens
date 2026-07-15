@@ -14,7 +14,7 @@ internal static class UnselfCommand
 {
     public static int Run(ReadOnlySpan<string> args)
     {
-        string? input = null, outPath = null, rap = null, klicHex = null;
+        string? input = null, outPath = null, rap = null, rapDirectory = null, klicHex = null;
         bool json = false;
 
         for (int i = 0; i < args.Length; i++)
@@ -29,6 +29,10 @@ internal static class UnselfCommand
                 case "--rap":
                     if (i + 1 >= args.Length) { Console.Error.WriteLine("error: --rap requires a RAP file path."); return ExitCode.Usage; }
                     rap = args[++i];
+                    break;
+                case "--rap-dir":
+                    if (i + 1 >= args.Length) { Console.Error.WriteLine("error: --rap-dir requires a directory path."); return ExitCode.Usage; }
+                    rapDirectory = args[++i];
                     break;
                 case "--klic":
                 case "--klicensee":
@@ -62,22 +66,20 @@ internal static class UnselfCommand
             return ExitCode.Usage;
         }
 
-        byte[]? klic = null;
-        try
-        {
-            if (klicHex is not null) klic = NpKlic.ParseHex(klicHex);
-            else if (rap is not null)
-            {
-                if (!File.Exists(rap)) { Console.Error.WriteLine($"error: RAP file not found: {rap}"); return ExitCode.Usage; }
-                klic = NpKlic.FromRapFile(rap);
-            }
-        }
-        catch (FormatException ex) { Console.Error.WriteLine($"error: {ex.Message}"); return ExitCode.Usage; }
-
         try
         {
             byte[] self = File.ReadAllBytes(input);
-            var result = SelfDecryptor.Decrypt(self, klic);
+            var selfInfo = SelfReader.ParseInfo(new MemoryStream(self));
+            string? contentId = selfInfo.Npdrm?.LicenseType == NpdrmLicenseType.Free
+                ? null
+                : selfInfo.Npdrm?.ContentId;
+            NpKlic.Resolution resolution;
+            try { resolution = NpKlic.Resolve(klicHex, rap, contentId, rapDirectory); }
+            catch (FormatException ex) { Console.Error.WriteLine($"error: {ex.Message}"); return ExitCode.Usage; }
+
+            if (!json && resolution.Source == "rap-store")
+                Console.WriteLine("Using RAP from the local library.");
+            var result = SelfDecryptor.Decrypt(self, resolution.Klicensee);
 
             outPath ??= DefaultOut(input);
             AtomicOutput.EnsureDifferentPath(input, outPath);
@@ -96,6 +98,7 @@ internal static class UnselfCommand
                     result.KeyRevision,
                     result.WasNpdrm,
                     license = lic,
+                    licenseSource = resolution.Source,
                     result.ContentId,
                 });
             }

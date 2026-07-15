@@ -28,6 +28,7 @@ public sealed class CliContractTests
         [new[] { "undoc", "--json" }],
         [new[] { "psar", "info", "--json" }],
         [new[] { "keys", "status", "--json" }],
+        [new[] { "raps", "status", "--json" }],
     ];
 
     [Fact]
@@ -108,6 +109,56 @@ public sealed class CliContractTests
             Assert.True(json.RootElement.GetProperty("fakeSigned").GetBoolean());
             Assert.True(File.Exists(output));
             Assert.Empty(result.StandardError);
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task RapsJson_ManagesLibraryLifecycle()
+    {
+        string directory = CreateTempDirectory();
+        try
+        {
+            const string contentId = "UP0001-NPUB30910_00-EXAMPLE000000001";
+            string library = Path.Combine(directory, "library");
+            string source = Path.Combine(directory, "license.rap");
+            await File.WriteAllBytesAsync(source, Enumerable.Range(0, 16).Select(index => (byte)index).ToArray());
+
+            CommandResult imported = await RunAsync("raps", "import", source, "--content-id", contentId,
+                "--rap-dir", library, "--json");
+            using (JsonDocument json = JsonDocument.Parse(imported.StandardOutput))
+            {
+                Assert.Equal(0, imported.ExitCode);
+                Assert.Equal("raps.import", json.RootElement.GetProperty("command").GetString());
+                Assert.Equal(contentId, json.RootElement.GetProperty("contentId").GetString());
+            }
+
+            CommandResult listed = await RunAsync("raps", "list", "--rap-dir", library, "--json");
+            using (JsonDocument json = JsonDocument.Parse(listed.StandardOutput))
+            {
+                Assert.Equal(0, listed.ExitCode);
+                Assert.Equal(1, json.RootElement.GetProperty("validCount").GetInt32());
+                Assert.Equal(contentId, json.RootElement.GetProperty("entries")[0].GetProperty("contentId").GetString());
+            }
+
+            CommandResult status = await RunAsync("raps", "status", contentId, "--rap-dir", library, "--json");
+            using (JsonDocument json = JsonDocument.Parse(status.StandardOutput))
+            {
+                Assert.Equal(0, status.ExitCode);
+                Assert.True(json.RootElement.GetProperty("installed").GetBoolean());
+                Assert.True(json.RootElement.GetProperty("valid").GetBoolean());
+            }
+
+            CommandResult removed = await RunAsync("raps", "remove", contentId, "--rap-dir", library, "--json");
+            using (JsonDocument json = JsonDocument.Parse(removed.StandardOutput))
+            {
+                Assert.Equal(0, removed.ExitCode);
+                Assert.True(json.RootElement.GetProperty("removed").GetBoolean());
+            }
+            Assert.False(File.Exists(Path.Combine(library, contentId + ".rap")));
         }
         finally
         {

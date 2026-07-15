@@ -273,7 +273,7 @@ public static class SelfDecryptor
         {
             throw new PkgFormatException(
                 $"This NPDRM SELF uses license type {npd.License?.ToString() ?? npd.RawLicense.ToString()} " +
-                "and needs its RAP license file to decrypt (supply --rap).");
+                "and needs its RAP license file to decrypt (import it into the RAP library or supply --rap).");
         }
 
         // Unwrap the klicensee, then AES-128-CBC (iv = 0) decrypt the metadata info.

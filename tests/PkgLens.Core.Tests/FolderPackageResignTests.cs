@@ -65,6 +65,35 @@ public class FolderPackageResignTests
         Assert.Equal(elf, packed); // unchanged
     }
 
+    [Fact]
+    public void Pack_WithResignEboot_ResolvesKlicenseeBySelfContentId()
+    {
+        using var tmp = new TempDir();
+        const string contentId = "UP0001-NPUB30910_00-EXAMPLE000000001";
+        string content = Path.Combine(tmp.Path, contentId);
+        Directory.CreateDirectory(Path.Combine(content, "USRDIR"));
+        File.WriteAllBytes(Path.Combine(content, "USRDIR", "EBOOT.BIN"), new SyntheticSelfBuilder
+        {
+            NpdrmContentId = contentId,
+            NpdrmLicenseType = (uint)NpdrmLicenseType.Local,
+        }.Build());
+        string? resolvedContentId = null;
+
+        PackPlan plan = FolderPackage.Plan(content, new PackOptions
+        {
+            Finalization = PkgFinalization.Debug,
+            ResignEboot = true,
+            EbootKlicenseeResolver = id =>
+            {
+                resolvedContentId = id;
+                return new byte[16];
+            },
+        });
+
+        Assert.Equal(contentId, resolvedContentId);
+        Assert.Contains(plan.Notes, note => note.Contains("license resolved from RAP library", StringComparison.Ordinal));
+    }
+
     private sealed class TempDir : IDisposable
     {
         public string Path { get; }

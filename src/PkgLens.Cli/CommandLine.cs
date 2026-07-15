@@ -11,6 +11,7 @@ internal sealed class Options
     public string? OutDir { get; set; }
     public string? Filter { get; set; }
     public string? RapFile { get; set; }
+    public string? RapDirectory { get; set; }
     public string? KlicHex { get; set; }
     public string? Error { get; set; }
 }
@@ -52,6 +53,11 @@ internal static class CommandLine
                 case "--rap":
                     if (i + 1 >= args.Length) { o.Error = "--rap requires a RAP file path."; return o; }
                     o.RapFile = args[++i];
+                    break;
+
+                case "--rap-dir":
+                    if (i + 1 >= args.Length) { o.Error = "--rap-dir requires a directory path."; return o; }
+                    o.RapDirectory = args[++i];
                     break;
 
                 case "--klic":
@@ -129,6 +135,7 @@ internal static class CliHelp
               pkglens psar    info|decrypt <DATA.PSAR> [--out FILE]   decrypt a PSP NPUMDIMG (minis) to .iso (keyless)
               pkglens pack    <folder> [--out FILE] [options]   build a .pkg from a content folder
               pkglens keys    import|status|where           manage an optional override retail key
+              pkglens raps    import|list|status|remove     manage stored RAP licenses
 
             Options:
               --keys DIR   directory holding an override NPDRM PKG PS3 AES key file
@@ -138,6 +145,7 @@ internal static class CliHelp
               --filter GLOB  only extract matching entries, e.g. "*.SFO" or "USRDIR/*"
               --json       machine-readable success output for every command
               --version    print the release-derived binary version
+              --rap-dir DIR  RAP library override (also read from $PKGLENS_RAPS)
 
             pack options (Fast Pack infers these from PARAM.SFO; pass any to Custom Pack):
               --out FILE       output .pkg path (default: <content-id>.pkg)
@@ -149,7 +157,7 @@ internal static class CliHelp
                                Default is retail-encrypted (needs the key) — the format a
                                jailbroken/CFW PS3 installs; unsigned, so stock retail won't take it.
               --resign         fake-sign EBOOT.BIN as it is packed (boots on CFW without a license);
-                               add --rap FILE (or --klic HEX) for a licensed EBOOT to decrypt first.
+                               licensed content auto-resolves from the RAP library; --rap/--klic override it.
 
             Exit codes: 0 ok · 1 usage · 2 parse error · 3 key/decryption error · 4 integrity failure
             """);

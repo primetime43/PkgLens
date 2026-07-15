@@ -114,15 +114,15 @@ public partial class MainWindow
             byte[]? klic = null;
             if (npd.NeedsKlicensee)
             {
-                byte[]? rap = _decryptRap is not null
-                    ? await File.ReadAllBytesAsync(_decryptRap, token)
-                    : PkgLens.Core.Ps3.Npd.RapStore.Find(npd.ContentId);
-                if (rap is null)
+                RapLicenseResolution resolution = RapLicenseService.ResolveContentId(
+                    npd.ContentId, _decryptRap, Vm.RapDirectory);
+                if (resolution.Klicensee is null)
                 {
-                    Vm.Status = $"{npd.ContentId} is a licensed EDAT — choose its RAP (Browse next to “RAP”).";
+                    Vm.Status = $"{npd.ContentId} is a licensed EDAT — import its RAP in Keys → RAP Library, or browse to it here.";
                     return;
                 }
-                klic = PkgLens.Core.Ps3.Npd.NpdKeys.RapToKlicensee(rap);
+                klic = resolution.Klicensee;
+                Vm.RefreshRapStatus();
             }
 
             var save = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
@@ -164,4 +164,3 @@ public partial class MainWindow
         });
     }
 }
-

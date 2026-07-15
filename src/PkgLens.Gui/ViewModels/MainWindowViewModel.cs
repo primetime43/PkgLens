@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
+using PkgLens.Core.Ps3.Npd;
 using PkgLens.Core.Shared.Keys;
 using PkgLens.Gui.Services;
 
@@ -52,6 +53,12 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [ObservableProperty]
     private string _keyStatus = "";
 
+    [ObservableProperty]
+    private string? _rapDirectory = RapLibrarySettings.Load();
+
+    [ObservableProperty]
+    private string _rapStatus = "";
+
     private CancellationTokenSource? _operationCancellation;
 
     public ObservableCollection<RecentPackageItem> RecentPackages { get; } = new();
@@ -64,6 +71,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         foreach (string path in RecentPackageSettings.Load())
             RecentPackages.Add(new RecentPackageItem(path));
         RefreshKeyStatus();
+        RefreshRapStatus();
     }
 
     /// <summary>Two-way bridge for the rail ListBox's SelectedIndex.</summary>
@@ -102,6 +110,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     public bool HasPackage => Package is not null;
     public bool IsNotBusy => !IsBusy;
+    public string RapDirectoryDisplay => RapStore.DirectoryPath(RapDirectory);
 
     partial void OnIsBusyChanged(bool value) => OnPropertyChanged(nameof(IsNotBusy));
 
@@ -120,6 +129,30 @@ public sealed partial class MainWindowViewModel : ObservableObject
             ? "Keys directory cleared (using $PKGLENS_KEYS / ~/.pkglens)."
             : $"Keys directory set: {value}";
         RefreshKeyStatus();
+    }
+
+    partial void OnRapDirectoryChanged(string? value)
+    {
+        RapLibrarySettings.Save(value);
+        OnPropertyChanged(nameof(RapDirectoryDisplay));
+        RefreshRapStatus();
+        Status = $"RAP library set: {RapStore.DirectoryPath(value)}";
+    }
+
+    public void RefreshRapStatus()
+    {
+        try
+        {
+            var entries = RapStore.List(RapDirectory);
+            RapStatus = $"RAP library: {entries.Count(entry => entry.IsValid)} valid" +
+                        (entries.Any(entry => !entry.IsValid)
+                            ? $", {entries.Count(entry => !entry.IsValid)} invalid"
+                            : string.Empty);
+        }
+        catch (Exception ex)
+        {
+            RapStatus = $"RAP library unavailable: {ex.Message}";
+        }
     }
 
     /// <summary>Closes the current package (disposing it) and returns to the empty state.</summary>

@@ -1,0 +1,47 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:PkgLens.Gui.ViewModels"
+        x:Class="PkgLens.Gui.Views.RapManagerDialog"
+        Width="820" Height="520" MinWidth="680" MinHeight="420"
+        WindowStartupLocation="CenterOwner" Title="RAP Library">
+
+  <DockPanel Margin="12">
+    <StackPanel DockPanel.Dock="Top" Spacing="10" Margin="0,0,0,10">
+      <TextBlock Text="Licensed EDATs and EBOOTs are matched to stored RAPs by content ID. RAP bytes are never displayed."
+                 TextWrapping="Wrap" Opacity="0.75" />
+      <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
+        <TextBlock Grid.Column="0" Text="Library" VerticalAlignment="Center" FontWeight="SemiBold" />
+        <TextBlock x:Name="DirectoryText" Grid.Column="1" VerticalAlignment="Center"
+                   TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Text, RelativeSource={RelativeSource Self}}" />
+        <Button Grid.Column="2" Content="Choose folder…" Click="OnChooseDirectory" />
+        <Button Grid.Column="3" Content="Use default" Click="OnUseDefault" />
+      </Grid>
+      <Grid ColumnDefinitions="Auto,260,Auto,Auto,Auto" ColumnSpacing="8">
+        <TextBlock Grid.Column="0" Text="Content ID" VerticalAlignment="Center" />
+        <TextBox x:Name="ContentIdBox" Grid.Column="1" Watermark="optional — infer from RAP filename"
+                 FontFamily="Consolas,monospace" />
+        <Button Grid.Column="2" Content="Import RAP…" Click="OnImport" />
+        <CheckBox x:Name="ReplaceCheck" Grid.Column="3" Content="Replace existing" VerticalAlignment="Center" />
+        <Button Grid.Column="4" Content="Refresh" Click="OnRefresh" />
+      </Grid>
+      <TextBlock x:Name="StatusText" TextWrapping="Wrap" Opacity="0.8" />
+    </StackPanel>
+
+    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right"
+                Spacing="8" Margin="0,10,0,0">
+      <Button x:Name="RemoveButton" Content="Remove selected" Click="OnRemove" IsEnabled="False" />
+      <Button Content="Close" Click="OnClose" IsDefault="True" />
+    </StackPanel>
+
+    <DataGrid x:Name="Grid" IsReadOnly="True" GridLinesVisibility="Horizontal"
+              HeadersVisibility="Column" SelectionMode="Single" SelectionChanged="OnSelectionChanged"
+              CanUserSortColumns="True" CanUserResizeColumns="True">
+      <DataGrid.Columns>
+        <DataGridTextColumn Header="Content ID" Binding="{Binding ContentId}" Width="310" x:DataType="vm:RapStoreRow" />
+        <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="80" x:DataType="vm:RapStoreRow" />
+        <DataGridTextColumn Header="Size" Binding="{Binding Size}" Width="85" x:DataType="vm:RapStoreRow" />
+        <DataGridTextColumn Header="Path / Error" Binding="{Binding Detail}" Width="*" x:DataType="vm:RapStoreRow" />
+      </DataGrid.Columns>
+    </DataGrid>
+  </DockPanel>
+</Window>

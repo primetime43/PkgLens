@@ -83,6 +83,14 @@ public partial class MainWindow
         }
     }
 
+    private async void OnManageRapsClick(object? sender, RoutedEventArgs e)
+    {
+        var dialog = new RapManagerDialog(Vm.RapDirectory);
+        await dialog.ShowDialog(this);
+        Vm.RapDirectory = dialog.SelectedDirectory;
+        Vm.RefreshRapStatus();
+    }
+
     private async void OnExtractClick(object? sender, RoutedEventArgs e)
     {
         if (Vm.Package is not { SelectedItem: { IsDirectory: false, Entry: not null } node } package)
@@ -208,7 +216,8 @@ public partial class MainWindow
         byte[]? klic = null;
         if (npd.NeedsKlicensee)
         {
-            byte[]? rap = PkgLens.Core.Ps3.Npd.RapStore.Find(npd.ContentId) ?? await PromptForRap(npd.ContentId);
+            byte[]? rap = PkgLens.Core.Ps3.Npd.RapStore.Find(npd.ContentId, Vm.RapDirectory) ??
+                          await PromptForRap(npd.ContentId);
             if (rap is null)
             {
                 Vm.Status = $"{npd.ContentId}: licensed EDAT — no RAP provided, showing the raw encrypted file.";
@@ -251,7 +260,12 @@ public partial class MainWindow
             Vm.Status = "That file is not a 16-byte RAP.";
             return null;
         }
-        try { PkgLens.Core.Ps3.Npd.RapStore.Install(contentId, rap); } catch { /* best-effort caching */ }
+        try
+        {
+            PkgLens.Core.Ps3.Npd.RapStore.Install(contentId, rap, Vm.RapDirectory);
+            Vm.RefreshRapStatus();
+        }
+        catch { /* best-effort caching */ }
         return rap;
     }
 }

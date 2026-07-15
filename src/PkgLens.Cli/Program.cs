@@ -31,6 +31,10 @@ string command = args[0].ToLowerInvariant();
 if (command == "keys")
     return KeysCommand.Run(args.AsSpan(1));
 
+// The `raps` command group manages the content-id-indexed RAP library.
+if (command == "raps")
+    return RapsCommand.Run(args.AsSpan(1));
+
 // The `pack` command builds a package from a <folder> and has its own option set.
 if (command == "pack")
     return PackCommand.Run(args.AsSpan(1));
@@ -224,20 +228,25 @@ if (command == "decrypt")
             Console.WriteLine($"{npd.ContentId}  (v{npd.Version}, DRM {npd.LicenseText}{(npd.IsSdat ? ", SDAT" : "")})");
 
         byte[]? klic = null;
+        string? licenseSource = null;
         if (npd.NeedsKlicensee)
         {
             try
             {
-                if (parsed.KlicHex is not null) klic = NpKlic.ParseHex(parsed.KlicHex);
-                else if (parsed.RapFile is not null) klic = NpKlic.FromRapFile(parsed.RapFile);
+                var resolution = NpKlic.Resolve(parsed.KlicHex, parsed.RapFile, npd.ContentId, parsed.RapDirectory);
+                klic = resolution.Klicensee;
+                licenseSource = resolution.Source;
             }
             catch (FormatException ex) { Console.Error.WriteLine($"error: {ex.Message}"); return ExitCode.Usage; }
 
             if (klic is null)
             {
-                Console.Error.WriteLine($"error: '{npd.ContentId}' is a licensed EDAT — supply its RAP with --rap FILE, or the klicensee with --klic HEX.");
+                Console.Error.WriteLine($"error: '{npd.ContentId}' is a licensed EDAT — import its RAP with " +
+                                        $"'pkglens raps import <file> --content-id {npd.ContentId}', or supply --rap/--klic.");
                 return ExitCode.KeyOrDecryptError;
             }
+            if (!parsed.Json && licenseSource == "rap-store")
+                Console.WriteLine("Using RAP from the local library.");
         }
 
         string outPath = parsed.OutDir ?? StripNpdExtension(parsed.Path);
@@ -254,6 +263,7 @@ if (command == "decrypt")
                 npd.ContentId,
                 npd.Version,
                 license = npd.LicenseText,
+                licenseSource,
                 inputSize = npd.FileSize,
                 outputSize = new FileInfo(outPath).Length,
             });

@@ -44,6 +44,7 @@
         <Separator />
         <MenuItem Header="Import _override key…" Click="OnSetKeyClick" />
         <MenuItem Header="Keys _folder…" Click="OnKeysClick" />
+        <MenuItem Header="_RAP library…" Click="OnManageRapsClick" />
       </MenuItem>
       <MenuItem Header="_View">
         <MenuItem Header="_Theme">
@@ -581,9 +582,9 @@
                   <CheckBox x:Name="PackResignCheck"
                             Content="Resign EBOOT.BIN as it packs (boots on CFW without its license)" />
                   <StackPanel Orientation="Horizontal" Spacing="8" Margin="26,0,0,0">
-                    <Button Content="RAP for licensed EBOOT…" Click="OnPackPickRap" />
+                    <Button Content="Override RAP…" Click="OnPackPickRap" />
                     <TextBlock x:Name="PackRapText" VerticalAlignment="Center" FontSize="12" Opacity="0.8"
-                               TextTrimming="CharacterEllipsis" Text="(none — free/debug EBOOTs need no RAP)" />
+                               TextTrimming="CharacterEllipsis" Text="(auto from RAP library)" />
                   </StackPanel>
                 </StackPanel>
               </StackPanel>
@@ -778,15 +779,15 @@
               <StackPanel x:Name="ResignOpDecrypt" IsVisible="False" Spacing="10">
                 <TextBlock Text="Decrypt SELF → ELF" FontWeight="SemiBold" FontSize="14" />
                 <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.75"
-                           Text="Decrypt an encrypted EBOOT.BIN / .self back to a plaintext ELF. Free-license and debug SELFs need no key; a licensed SELF needs its RAP." />
+                           Text="Decrypt an encrypted EBOOT.BIN / .self back to a plaintext ELF. Licensed SELFs resolve RAPs automatically from the library." />
                 <StackPanel Orientation="Horizontal" Spacing="8">
                   <Button Content="Decrypt EBOOT.BIN → ELF…" Click="OnUnself" />
                   <CheckBox x:Name="UnselfThenResignCheck" Content="then fake-sign to fSELF" VerticalAlignment="Center" />
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Spacing="8">
-                  <Button Content="RAP for licensed SELF…" Click="OnPickRap" />
+                  <Button Content="Override RAP…" Click="OnPickRap" />
                   <TextBlock x:Name="UnselfRapText" VerticalAlignment="Center" FontSize="12" Opacity="0.8"
-                             TextTrimming="CharacterEllipsis" Text="(none — free/debug need no RAP)" />
+                             TextTrimming="CharacterEllipsis" Text="(auto from RAP library)" />
                 </StackPanel>
                 <Border x:Name="UnselfBanner" Classes="resultbanner" IsVisible="False">
                   <Grid ColumnDefinitions="Auto,10,*,Auto">
@@ -857,7 +858,7 @@
             <StackPanel Spacing="3">
               <TextBlock Classes="pagetitle" Text="Decrypt EDAT / SDAT" />
               <TextBlock Classes="pagesubtitle"
-                         Text="Decrypt an NPDRM data file. SDAT and free EDATs need no key; a licensed EDAT needs its RAP." />
+                         Text="Decrypt an NPDRM data file. Licensed EDATs resolve RAPs automatically from the library." />
               <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
                 <Border Classes="chip"><TextBlock Text="EDAT" /></Border>
                 <Border Classes="chip"><TextBlock Text="PS3 / PSP" /></Border>
@@ -876,7 +877,7 @@
                                TextTrimming="CharacterEllipsis" Text="(none)" />
                   </StackPanel>
 
-                  <TextBlock Grid.Row="2" Grid.Column="0" Classes="fieldlabel" Text="RAP (opt.)" />
+                  <TextBlock Grid.Row="2" Grid.Column="0" Classes="fieldlabel" Text="RAP override" />
                   <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Spacing="8">
                     <Button Content="Browse…" Click="OnDecryptBrowseRap" />
                     <TextBlock x:Name="DecryptRapText" VerticalAlignment="Center" FontSize="12" Opacity="0.8"
@@ -912,7 +913,7 @@
             <StackPanel Spacing="3">
               <TextBlock Classes="pagetitle" Text="Keys" />
               <TextBlock Classes="pagesubtitle"
-                         Text="The standard NPDRM PKG PS3 AES key is built in, so retail and debug packages open with no setup. Import an override key only for a non-standard package (e.g. an IDU/kiosk key)." />
+                         Text="Package keys are selected automatically. Manage RAP licenses here so licensed EDATs and EBOOTs decrypt without choosing a RAP for every operation." />
               <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
                 <Border Classes="chip"><TextBlock Text="SETUP" /></Border>
               </StackPanel>
@@ -933,8 +934,18 @@
               </StackPanel>
             </Border>
 
+            <Border Classes="panel">
+              <StackPanel Spacing="12">
+                <TextBlock Classes="sectionhead" Text="RAP LIBRARY" />
+                <TextBlock Text="{Binding RapStatus}" FontSize="12" Opacity="0.85" />
+                <TextBlock Text="{Binding RapDirectoryDisplay}"
+                           FontSize="12" Opacity="0.6" TextTrimming="CharacterEllipsis" />
+                <Button Content="Manage RAP library…" Click="OnManageRapsClick" HorizontalAlignment="Left" />
+              </StackPanel>
+            </Border>
+
             <TextBlock Classes="pagesubtitle" Opacity="0.55"
-                       Text="An override key file takes precedence over the built-in key. RAP files for licensed EDATs/EBOOTs are supplied per operation, not here." />
+                       Text="Explicit RAP selections remain available as overrides and are cached into the library by content ID." />
           </StackPanel>
         </ScrollViewer>
 

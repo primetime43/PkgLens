@@ -75,16 +75,10 @@ public partial class MainWindow
             {
                 token.ThrowIfCancellationRequested();
                 byte[] self = File.ReadAllBytes(input);
-                byte[]? klic = null;
-                if (rap is not null)
-                {
-                    byte[] rapBytes = File.ReadAllBytes(rap);
-                    if (rapBytes.Length != 16) throw new PkgLens.Core.PkgFormatException("A RAP file must be exactly 16 bytes.");
-                    klic = PkgLens.Core.Ps3.Npd.NpdKeys.RapToKlicensee(rapBytes);
-                }
-
-                var result = PkgLens.Core.Ps3.Self.SelfDecryptor.Decrypt(self, klic);
+                RapLicenseResolution resolution = RapLicenseService.ResolveSelf(self, rap, Vm.RapDirectory);
+                var result = PkgLens.Core.Ps3.Self.SelfDecryptor.Decrypt(self, resolution.Klicensee);
                 string lic = result.WasNpdrm ? (result.License?.ToString() ?? "NPDRM") : "non-NPDRM";
+                string source = resolution.Source is null ? string.Empty : $", {resolution.Source}";
 
                 if (chain)
                 {
@@ -95,13 +89,14 @@ public partial class MainWindow
                     string elfBeside = Path.Combine(Path.GetDirectoryName(dest) ?? "", baseName + ".ELF");
                     AtomicOutput.EnsureDifferentPath(input, elfBeside);
                     AtomicOutput.WriteAllBytes(elfBeside, result.Elf);
-                    return $"Decrypted ({lic}) → fake-signed fSELF {Path.GetFileName(dest)} ({fself.Length:n0} bytes); ELF beside it.";
+                    return $"Decrypted ({lic}{source}) → fake-signed fSELF {Path.GetFileName(dest)} ({fself.Length:n0} bytes); ELF beside it.";
                 }
 
                 AtomicOutput.EnsureDifferentPath(input, dest);
                 AtomicOutput.WriteAllBytes(dest, result.Elf);
-                return $"Decrypted {self.Length:n0}-byte SELF ({lic}) → {Path.GetFileName(dest)} ({result.Elf.Length:n0} bytes).";
+                return $"Decrypted {self.Length:n0}-byte SELF ({lic}{source}) → {Path.GetFileName(dest)} ({result.Elf.Length:n0} bytes).";
             }, token);
+            Vm.RefreshRapStatus();
             Vm.Status = summary;
             ShowResultBanner("UnselfBanner", ok: true, summary, dest);
         });
@@ -153,4 +148,3 @@ public partial class MainWindow
         }
     }
 }
-

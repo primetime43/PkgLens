@@ -73,14 +73,8 @@ public partial class MainWindow
                 byte[] elf; bool npdrm = false;
                 if (magic == 0x53434500) // SCE — decrypt first
                 {
-                    byte[]? klic = null;
-                    if (rap is not null)
-                    {
-                        byte[] rb = File.ReadAllBytes(rap);
-                        if (rb.Length != 16) throw new PkgLens.Core.PkgFormatException("A RAP must be 16 bytes.");
-                        klic = PkgLens.Core.Ps3.Npd.NpdKeys.RapToKlicensee(rb);
-                    }
-                    var dec = PkgLens.Core.Ps3.Self.SelfDecryptor.Decrypt(raw, klic);
+                    RapLicenseResolution resolution = RapLicenseService.ResolveSelf(raw, rap, Vm.RapDirectory);
+                    var dec = PkgLens.Core.Ps3.Self.SelfDecryptor.Decrypt(raw, resolution.Klicensee);
                     elf = dec.Elf; npdrm = dec.WasNpdrm;
                 }
                 else if (magic == 0x7F454C46) // ELF
@@ -99,6 +93,7 @@ public partial class MainWindow
                 AtomicOutput.WriteAllBytes(dest, fself);
                 return $"Magic-patched → {Path.GetFileName(dest)} ({fself.Length:n0} bytes); {fwNote}.";
             }, token);
+            Vm.RefreshRapStatus();
             Vm.Status = summary;
             ShowMagicNotes(summary + "  Runs on CFW; not on stock retail.");
         });
@@ -190,14 +185,8 @@ public partial class MainWindow
                 byte[] elf; bool wasSelf = false, npdrm = npdrmOverride;
                 if (magic == 0x53434500) // SCE — decrypt first
                 {
-                    byte[]? klic = null;
-                    if (rap is not null)
-                    {
-                        byte[] rb = File.ReadAllBytes(rap);
-                        if (rb.Length != 16) throw new PkgLens.Core.PkgFormatException("A RAP must be 16 bytes.");
-                        klic = PkgLens.Core.Ps3.Npd.NpdKeys.RapToKlicensee(rb);
-                    }
-                    var dec = PkgLens.Core.Ps3.Self.SelfDecryptor.Decrypt(raw, klic);
+                    RapLicenseResolution resolution = RapLicenseService.ResolveSelf(raw, rap, Vm.RapDirectory);
+                    var dec = PkgLens.Core.Ps3.Self.SelfDecryptor.Decrypt(raw, resolution.Klicensee);
                     elf = dec.Elf; wasSelf = true; npdrm = dec.WasNpdrm || npdrmOverride;
                 }
                 else if (magic == 0x7F454C46) // ELF
@@ -226,6 +215,7 @@ public partial class MainWindow
                 string kind = emitSelf ? $"fake-signed {(npdrm ? "NPDRM" : "NON-DRM")} SELF" : "ELF";
                 return $"Patched → {Path.GetFileName(dest)} ({output.Length:n0} bytes) [{kind}]; {string.Join("; ", steps)}.";
             }, token);
+            Vm.RefreshRapStatus();
             Vm.Status = summary;
             ShowBytePatchNotes(summary + (summary.Contains("SELF") ? "  Runs on CFW; not on stock retail." : ""));
         });
@@ -253,4 +243,3 @@ public partial class MainWindow
 
     /// <summary>Reads the optional Custom Sign fields into <paramref name="opts"/>. Blank fields are left at defaults.</summary>
 }
-

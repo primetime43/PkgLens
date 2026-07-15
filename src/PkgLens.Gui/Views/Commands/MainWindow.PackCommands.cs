@@ -132,17 +132,8 @@ public partial class MainWindow
         bool retail = this.FindControl<RadioButton>("PackRetailRadio")!.IsChecked == true;
         bool resign = this.FindControl<CheckBox>("PackResignCheck")!.IsChecked == true;
 
-        byte[]? ebootKlic = null;
-        if (resign && _packRapPath is not null)
-        {
-            try
-            {
-                byte[] rapBytes = File.ReadAllBytes(_packRapPath);
-                if (rapBytes.Length != 16) { Vm.Status = "The chosen RAP is not 16 bytes."; return; }
-                ebootKlic = PkgLens.Core.Ps3.Npd.NpdKeys.RapToKlicensee(rapBytes);
-            }
-            catch (Exception ex) { Vm.ReportError("Could not read the RAP", ex); return; }
-        }
+        string? rapPath = _packRapPath;
+        string? rapDirectory = Vm.RapDirectory;
 
         var options = new PkgLens.Core.Shared.PackOptions
         {
@@ -152,7 +143,9 @@ public partial class MainWindow
             DrmType = (uint)(this.FindControl<NumericUpDown>("PackDrmBox")!.Value ?? 3),
             Finalization = retail ? PkgFinalization.Retail : PkgFinalization.Debug,
             ResignEboot = resign,
-            EbootKlicensee = ebootKlic,
+            EbootKlicenseeResolver = resign
+                ? id => RapLicenseService.ResolveContentId(id, rapPath, rapDirectory).Klicensee
+                : null,
         };
 
         var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
@@ -178,6 +171,7 @@ public partial class MainWindow
                 return p;
             }, token);
 
+            Vm.RefreshRapStatus();
             Vm.Status = retail
                 ? $"Packed {plan.FileCount} file(s) → {Path.GetFileName(dest)} — retail-encrypted (installs on CFW)."
                 : $"Packed {plan.FileCount} file(s) → {Path.GetFileName(dest)} — non-finalized (debug; RPCS3 / dev).";
