@@ -67,7 +67,12 @@ internal static class ScanCommand
 
         if (files.Count == 0)
         {
-            Console.Error.WriteLine($"No .pkg files found in {dir}{(recursive ? " (recursive)" : "")}.");
+            if (format == Format.Json)
+                CliJson.Write(Array.Empty<PackageScanRow>());
+            else if (format == Format.Csv)
+                Console.Write(PackageScanner.ToCsv(Array.Empty<PackageScanRow>()));
+            else
+                Console.Error.WriteLine($"No .pkg files found in {dir}{(recursive ? " (recursive)" : "")}.");
             return ExitCode.Ok;
         }
 

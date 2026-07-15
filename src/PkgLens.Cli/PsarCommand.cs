@@ -23,12 +23,14 @@ internal static class PsarCommand
 
         string sub = args[0].ToLowerInvariant();
         string? input = null, outPath = null;
+        bool json = false;
         for (int i = 1; i < args.Length; i++)
         {
             string a = args[i];
             switch (a)
             {
                 case "--out": if (++i >= args.Length) { return Missing("--out"); } outPath = args[i]; break;
+                case "--json": json = true; break;
                 default:
                     if (a.StartsWith("--", StringComparison.Ordinal)) { Console.Error.WriteLine($"error: unknown option '{a}'."); return ExitCode.Usage; }
                     if (input is not null) { Console.Error.WriteLine($"error: unexpected extra argument '{a}'."); return ExitCode.Usage; }
@@ -49,15 +51,36 @@ internal static class PsarCommand
                 var head = new byte[0x100];
                 src.ReadExactly(head, 0, head.Length);
                 var info = NpumdImg.ParseHeader(head);
-                Console.WriteLine($"Content ID : {info.ContentId}");
-                Console.WriteLine($"Disc ID    : {info.DiscId}");
-                Console.WriteLine($"NP flags   : 0x{info.NpFlags:X}");
-                Console.WriteLine($"Sector size: 0x{info.SectorSize:X}");
-                Console.WriteLine($"Block basis: {info.BlockBasis} sectors ({info.BlockSize:n0} bytes/block)");
-                Console.WriteLine($"Sectors    : {info.TotalSectors:n0}");
-                Console.WriteLine($"Blocks     : {info.BlockCount:n0}");
-                Console.WriteLine($"ISO size   : {info.IsoSize:n0} bytes");
-                Console.WriteLine($"Header     : {(info.HeaderValid ? "decrypted OK (version key recovered)" : "INVALID (corrupt/unsupported)")}");
+                if (json)
+                {
+                    CliJson.Write(new
+                    {
+                        command = "psar.info",
+                        input = Path.GetFullPath(input),
+                        info.ContentId,
+                        info.DiscId,
+                        info.NpFlags,
+                        info.SectorSize,
+                        info.BlockBasis,
+                        info.BlockSize,
+                        info.TotalSectors,
+                        info.BlockCount,
+                        info.IsoSize,
+                        info.HeaderValid,
+                    });
+                }
+                else
+                {
+                    Console.WriteLine($"Content ID : {info.ContentId}");
+                    Console.WriteLine($"Disc ID    : {info.DiscId}");
+                    Console.WriteLine($"NP flags   : 0x{info.NpFlags:X}");
+                    Console.WriteLine($"Sector size: 0x{info.SectorSize:X}");
+                    Console.WriteLine($"Block basis: {info.BlockBasis} sectors ({info.BlockSize:n0} bytes/block)");
+                    Console.WriteLine($"Sectors    : {info.TotalSectors:n0}");
+                    Console.WriteLine($"Blocks     : {info.BlockCount:n0}");
+                    Console.WriteLine($"ISO size   : {info.IsoSize:n0} bytes");
+                    Console.WriteLine($"Header     : {(info.HeaderValid ? "decrypted OK (version key recovered)" : "INVALID (corrupt/unsupported)")}");
+                }
                 return info.HeaderValid ? ExitCode.Ok : ExitCode.KeyOrDecryptError;
             }
 
@@ -66,7 +89,11 @@ internal static class PsarCommand
                 string dest = outPath ?? Path.ChangeExtension(input, ".iso");
                 AtomicOutput.EnsureDifferentPath(input, dest);
                 AtomicOutput.Write(dest, dst => NpumdImg.DecryptToIso(src, dst));
-                Console.WriteLine($"Decrypted NPUMDIMG → {Path.GetFullPath(dest)} ({new FileInfo(dest).Length:n0} bytes)");
+                long outputSize = new FileInfo(dest).Length;
+                if (json)
+                    CliJson.Write(new { command = "psar.decrypt", input = Path.GetFullPath(input), output = Path.GetFullPath(dest), outputSize });
+                else
+                    Console.WriteLine($"Decrypted NPUMDIMG → {Path.GetFullPath(dest)} ({outputSize:n0} bytes)");
                 return ExitCode.Ok;
             }
 

@@ -15,6 +15,7 @@ internal static class UnselfCommand
     public static int Run(ReadOnlySpan<string> args)
     {
         string? input = null, outPath = null, rap = null, klicHex = null;
+        bool json = false;
 
         for (int i = 0; i < args.Length; i++)
         {
@@ -33,6 +34,9 @@ internal static class UnselfCommand
                 case "--klicensee":
                     if (i + 1 >= args.Length) { Console.Error.WriteLine($"error: {a} requires a 32-hex-char key."); return ExitCode.Usage; }
                     klicHex = args[++i];
+                    break;
+                case "--json":
+                    json = true;
                     break;
                 default:
                     if (a.StartsWith("--", StringComparison.Ordinal))
@@ -80,10 +84,28 @@ internal static class UnselfCommand
             AtomicOutput.WriteAllBytes(outPath, result.Elf);
 
             string lic = result.WasNpdrm ? (result.License?.ToString() ?? "NPDRM") : "non-NPDRM";
-            Console.WriteLine($"Decrypted {self.Length:n0}-byte SELF → {Path.GetFullPath(outPath)} ({result.Elf.Length:n0} bytes)");
-            Console.WriteLine($"  key revision : 0x{result.KeyRevision:X4}   license: {lic}" +
-                              (result.ContentId is { Length: > 0 } ? $"   content id: {result.ContentId}" : ""));
-            Console.WriteLine("  fake-sign it for CFW with:  pkglens resign " + Path.GetFileName(outPath));
+            if (json)
+            {
+                CliJson.Write(new
+                {
+                    command = "unself",
+                    input = Path.GetFullPath(input),
+                    output = Path.GetFullPath(outPath),
+                    inputSize = self.LongLength,
+                    outputSize = result.Elf.LongLength,
+                    result.KeyRevision,
+                    result.WasNpdrm,
+                    license = lic,
+                    result.ContentId,
+                });
+            }
+            else
+            {
+                Console.WriteLine($"Decrypted {self.Length:n0}-byte SELF → {Path.GetFullPath(outPath)} ({result.Elf.Length:n0} bytes)");
+                Console.WriteLine($"  key revision : 0x{result.KeyRevision:X4}   license: {lic}" +
+                                  (result.ContentId is { Length: > 0 } ? $"   content id: {result.ContentId}" : ""));
+                Console.WriteLine("  fake-sign it for CFW with:  pkglens resign " + Path.GetFileName(outPath));
+            }
             return ExitCode.Ok;
         }
         catch (PkgFormatException ex)

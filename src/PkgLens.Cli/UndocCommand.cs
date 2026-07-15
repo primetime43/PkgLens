@@ -15,6 +15,7 @@ internal static class UndocCommand
     public static int Run(ReadOnlySpan<string> args)
     {
         string? input = null, docinfo = null, outDir = null;
+        bool json = false;
 
         for (int i = 0; i < args.Length; i++)
         {
@@ -28,6 +29,9 @@ internal static class UndocCommand
                 case "--out":
                     if (i + 1 >= args.Length) { Console.Error.WriteLine("error: --out requires a directory path."); return ExitCode.Usage; }
                     outDir = args[++i];
+                    break;
+                case "--json":
+                    json = true;
                     break;
                 default:
                     if (a.StartsWith("--", StringComparison.Ordinal)) { Console.Error.WriteLine($"error: unknown option '{a}'."); return ExitCode.Usage; }
@@ -61,9 +65,10 @@ internal static class UndocCommand
         {
             byte[] doc = File.ReadAllBytes(input);
             byte[]? edat = docinfo is not null ? File.ReadAllBytes(docinfo) : null;
-            Console.WriteLine(edat is not null
-                ? $"Using key from {Path.GetFileName(docinfo)}."
-                : "No DOCINFO.EDAT found — trying the fixed default key.");
+            if (!json)
+                Console.WriteLine(edat is not null
+                    ? $"Using key from {Path.GetFileName(docinfo)}."
+                    : "No DOCINFO.EDAT found — trying the fixed default key.");
 
             var pages = PspDocument.DecryptPages(doc, edat);
             if (pages.Count == 0)
@@ -78,9 +83,25 @@ internal static class UndocCommand
             {
                 string dest = Path.Combine(dir, $"page_{i + 1:D3}.png");
                 AtomicOutput.WriteAllBytes(dest, pages[i]);
-                Console.WriteLine($"  page_{i + 1:D3}.png  ({pages[i].Length:n0} bytes)");
+                if (!json)
+                    Console.WriteLine($"  page_{i + 1:D3}.png  ({pages[i].Length:n0} bytes)");
             }
-            Console.WriteLine($"Decrypted {pages.Count} manual page(s) → {Path.GetFullPath(dir)}");
+            if (json)
+            {
+                CliJson.Write(new
+                {
+                    command = "undoc",
+                    input = Path.GetFullPath(input),
+                    docInfo = docinfo is null ? null : Path.GetFullPath(docinfo),
+                    outputDirectory = Path.GetFullPath(dir),
+                    pageCount = pages.Count,
+                    pages = pages.Select((page, index) => new { name = $"page_{index + 1:D3}.png", size = page.LongLength }),
+                });
+            }
+            else
+            {
+                Console.WriteLine($"Decrypted {pages.Count} manual page(s) → {Path.GetFullPath(dir)}");
+            }
             return ExitCode.Ok;
         }
         catch (PkgKeyException ex) { Console.Error.WriteLine($"key error: {ex.Message}"); return ExitCode.KeyOrDecryptError; }

@@ -38,7 +38,10 @@ jobs:
       - name: Resolve version
         id: ver
         shell: bash
-        run: echo "version=${{ github.event.inputs.version || github.ref_name }}" >> "$GITHUB_OUTPUT"
+        env:
+          RAW_VERSION: ${{ github.event.inputs.version || github.ref_name }}
+        run: |
+          echo "version=${RAW_VERSION#v}" >> "$GITHUB_OUTPUT"
 
       - name: Publish CLI (pkglens)
         run: >
@@ -46,6 +49,9 @@ jobs:
           -c Release -r ${{ matrix.rid }}
           --self-contained true
           -p:PublishSingleFile=true
+          -p:Version=${{ steps.ver.outputs.version }}
+          -p:InformationalVersion=${{ steps.ver.outputs.version }}
+          -p:IncludeSourceRevisionInInformationalVersion=false
           -p:DebugType=none -p:DebugSymbols=false
           -o publish/cli
 
@@ -56,8 +62,20 @@ jobs:
           --self-contained true
           -p:PublishSingleFile=true
           -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:Version=${{ steps.ver.outputs.version }}
+          -p:InformationalVersion=${{ steps.ver.outputs.version }}
+          -p:IncludeSourceRevisionInInformationalVersion=false
           -p:DebugType=none -p:DebugSymbols=false
           -o publish/gui
+
+      - name: Verify embedded version
+        shell: pwsh
+        run: |
+          $name = if ($IsWindows) { 'pkglens.exe' } else { 'pkglens' }
+          $executable = Join-Path 'publish/cli' $name
+          $actual = (& $executable --version).Trim()
+          $expected = 'pkglens ${{ steps.ver.outputs.version }}'
+          if ($actual -ne $expected) { throw "Expected '$expected', got '$actual'." }
 
       - name: Package (Windows)
         if: runner.os == 'Windows'

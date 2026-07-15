@@ -107,13 +107,14 @@ internal static class CliHelp
             pkglens — inspect PS3 .pkg packages
 
             Usage:
+              pkglens --version
               pkglens info    <pkg> [--keys DIR] [--json]   header + content-id + SFO summary
               pkglens list    <pkg> [--keys DIR] [--json]   entry table
               pkglens sfo     <pkg> [--keys DIR] [--json]   dump PARAM.SFO key/values
               pkglens verify  <pkg> [--keys DIR] [--json]   check header CMAC/SHA-1 + structure
-              pkglens extract <pkg> [--out DIR] [--filter GLOB] [--keys DIR]   unpack files to a folder
-              pkglens decrypt <edat> [--rap FILE | --klic HEX] [--out FILE]   decrypt an EDAT/SDAT file
-              pkglens self    <eboot>                        inspect a SELF/EBOOT.BIN header
+              pkglens extract <pkg> [--out DIR] [--filter GLOB] [--keys DIR] [--json]   unpack files to a folder
+              pkglens decrypt <edat> [--rap FILE | --klic HEX] [--out FILE] [--json]   decrypt an EDAT/SDAT file
+              pkglens self    <eboot> [--json]               inspect a SELF/EBOOT.BIN header
               pkglens unself  <eboot> [--out FILE] [--rap FILE | --klic HEX]   decrypt a SELF → plaintext ELF
               pkglens resign  <elf> [--out FILE] [--npdrm]   ELF → fake-signed SELF (fSELF) for CFW
                        custom sign: [--auth-id HEX] [--vendor-id HEX] [--app-version HEX] [--type N] [--content-id CID]
@@ -135,7 +136,8 @@ internal static class CliHelp
                            key is bundled, so this is only needed for a non-standard key.
               --out DIR    extract destination (default: a folder named after the package)
               --filter GLOB  only extract matching entries, e.g. "*.SFO" or "USRDIR/*"
-              --json       machine-readable output
+              --json       machine-readable success output for every command
+              --version    print the release-derived binary version
 
             pack options (Fast Pack infers these from PARAM.SFO; pass any to Custom Pack):
               --out FILE       output .pkg path (default: <content-id>.pkg)

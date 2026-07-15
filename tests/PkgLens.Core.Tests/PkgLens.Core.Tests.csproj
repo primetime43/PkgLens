@@ -21,6 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\PkgLens.Cli\PkgLens.Cli.csproj" />
     <ProjectReference Include="..\..\src\PkgLens.Core\PkgLens.Core.csproj" />
   </ItemGroup>
 

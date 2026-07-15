@@ -23,7 +23,7 @@ internal static class PatchCommand
         string? input = null, outPath = null, sdk = null, rap = null, klicHex = null;
         var patterns = new List<(byte[] find, byte[] replace)>();
         var offsets = new List<(int at, byte[] bytes)>();
-        bool resign = false, npdrmOverride = false;
+        bool resign = false, npdrmOverride = false, json = false;
 
         for (int i = 0; i < args.Length; i++)
         {
@@ -36,6 +36,7 @@ internal static class PatchCommand
                 case "--klic": if (!Take(args, ref i, a, out klicHex)) return ExitCode.Usage; break;
                 case "--resign": resign = true; break;
                 case "--npdrm": npdrmOverride = true; break;
+                case "--json": json = true; break;
 
                 case "--find":
                 {
@@ -103,6 +104,7 @@ internal static class PatchCommand
         try
         {
             byte[] raw = File.ReadAllBytes(input);
+            var changes = new List<object>();
             if (raw.Length < 4) { Console.Error.WriteLine("error: file is too small."); return ExitCode.ParseError; }
             uint magic = BinaryPrimitives.ReadUInt32BigEndian(raw);
 
@@ -114,7 +116,8 @@ internal static class PatchCommand
                 elf = dec.Elf;
                 wasSelf = true;
                 npdrm = dec.WasNpdrm || npdrmOverride;
-                Console.WriteLine($"Decrypted SELF → ELF ({elf.Length:n0} bytes).");
+                if (!json)
+                    Console.WriteLine($"Decrypted SELF → ELF ({elf.Length:n0} bytes).");
             }
             else if (magic == ElfMagic)
             {
@@ -131,22 +134,32 @@ internal static class PatchCommand
                 SdkVersion? prev = ApplySdkVersion(elf, sdk, out string? err);
                 if (err is not null) { Console.Error.WriteLine($"error: {err}"); return ExitCode.Usage; }
                 if (prev is null)
-                    Console.WriteLine("  sdk-version: no sys_process_param in this ELF — skipped.");
+                {
+                    changes.Add(new { type = "sdkVersion", applied = false });
+                    if (!json)
+                        Console.WriteLine("  sdk-version: no sys_process_param in this ELF — skipped.");
+                }
                 else
                 {
                     var now = EbootPatcher.FindSdkVersion(elf)!;
-                    Console.WriteLine($"  sdk-version: {prev.Display} (0x{prev.Value:X8}) → {now.Display} (0x{now.Value:X8})");
+                    changes.Add(new { type = "sdkVersion", applied = true, previous = prev.Display, current = now.Display, previousRaw = prev.Value, currentRaw = now.Value });
+                    if (!json)
+                        Console.WriteLine($"  sdk-version: {prev.Display} (0x{prev.Value:X8}) → {now.Display} (0x{now.Value:X8})");
                 }
             }
             foreach (var (find, replace) in patterns)
             {
                 int n = EbootPatcher.PatchPattern(elf, find, replace);
-                Console.WriteLine($"  find/replace: {n} occurrence(s) of {Convert.ToHexString(find)}");
+                changes.Add(new { type = "findReplace", find = Convert.ToHexString(find), replace = Convert.ToHexString(replace), occurrences = n });
+                if (!json)
+                    Console.WriteLine($"  find/replace: {n} occurrence(s) of {Convert.ToHexString(find)}");
             }
             foreach (var (at, bytes) in offsets)
             {
                 EbootPatcher.PatchAt(elf, at, bytes);
-                Console.WriteLine($"  at 0x{at:X}: wrote {bytes.Length} byte(s)");
+                changes.Add(new { type = "offset", offset = at, bytes = Convert.ToHexString(bytes) });
+                if (!json)
+                    Console.WriteLine($"  at 0x{at:X}: wrote {bytes.Length} byte(s)");
             }
 
             // ---- output: re-fake-sign if the input was a SELF or --resign was asked ----
@@ -157,10 +170,28 @@ internal static class PatchCommand
             AtomicOutput.EnsureDifferentPath(input, outPath);
             AtomicOutput.WriteAllBytes(outPath, output);
 
-            Console.WriteLine($"Patched → {Path.GetFullPath(outPath)} ({output.Length:n0} bytes)" +
-                              (emitSelf ? $"  [fake-signed {(npdrm ? "NPDRM" : "NON-DRM")} SELF]" : "  [ELF]"));
-            if (emitSelf)
-                Console.WriteLine("Note: runs on a jailbroken (CFW) PS3 — not on stock retail.");
+            if (json)
+            {
+                CliJson.Write(new
+                {
+                    command = "patch",
+                    input = Path.GetFullPath(input),
+                    output = Path.GetFullPath(outPath),
+                    inputKind = wasSelf ? "self" : "elf",
+                    outputKind = emitSelf ? "fake-signed-self" : "elf",
+                    npdrm = emitSelf && npdrm,
+                    inputSize = raw.LongLength,
+                    outputSize = output.LongLength,
+                    changes,
+                });
+            }
+            else
+            {
+                Console.WriteLine($"Patched → {Path.GetFullPath(outPath)} ({output.Length:n0} bytes)" +
+                                  (emitSelf ? $"  [fake-signed {(npdrm ? "NPDRM" : "NON-DRM")} SELF]" : "  [ELF]"));
+                if (emitSelf)
+                    Console.WriteLine("Note: runs on a jailbroken (CFW) PS3 — not on stock retail.");
+            }
             return ExitCode.Ok;
         }
         catch (PkgFormatException ex) { Console.Error.WriteLine($"patch error: {ex.Message}"); return ExitCode.ParseError; }

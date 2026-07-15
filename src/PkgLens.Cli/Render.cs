@@ -1,4 +1,3 @@
-using System.Text.Json;
 using PkgLens.Core;
 using PkgLens.Core.Shared;
 using PkgLens.Core.Shared.Models;
@@ -8,20 +7,12 @@ namespace PkgLens.Cli;
 /// <summary>Human-readable and <c>--json</c> renderers for each subcommand.</summary>
 internal static class Render
 {
-    private static readonly JsonSerializerOptions JsonOpts = new()
-    {
-        WriteIndented = true,
-        Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() },
-    };
-
-    private static void WriteJson(object value) => Console.WriteLine(JsonSerializer.Serialize(value, JsonOpts));
-
     public static void Info(PkgInfo info, Options o)
     {
         var h = info.Header;
         if (o.Json)
         {
-            WriteJson(new
+            CliJson.Write(new
             {
                 contentId = new
                 {
@@ -101,7 +92,7 @@ internal static class Render
     {
         if (o.Json)
         {
-            WriteJson(info.Entries.Select(e => new
+            CliJson.Write(info.Entries.Select(e => new
             {
                 name = e.Name,
                 kind = e.Kind.ToString(),
@@ -136,7 +127,7 @@ internal static class Render
     {
         if (o.Json)
         {
-            WriteJson(new
+            CliJson.Write(new
             {
                 passed = report.Passed,
                 failures = report.Failures,
@@ -161,8 +152,50 @@ internal static class Render
             : $"Integrity: FAILED — {report.Failures} check(s) failed");
     }
 
-    public static void Self(PkgLens.Core.Ps3.Self.SelfInfo self)
+    public static void Self(PkgLens.Core.Ps3.Self.SelfInfo self, bool json)
     {
+        if (json)
+        {
+            CliJson.Write(new
+            {
+                fileSize = self.FileSize,
+                programType = self.ProgramTypeText,
+                npdrm = self.IsNpdrm,
+                keyRevision = self.KeyRevision,
+                likelyFakeSigned = self.IsLikelyFakeSigned,
+                version = self.VersionText,
+                authId = self.AuthId,
+                vendorId = self.VendorId,
+                metadataOffset = self.MetadataOffset,
+                elfSize = self.DataLength,
+                elf = self.Elf is null ? null : new
+                {
+                    is64Bit = self.Elf.Is64Bit,
+                    isBigEndian = self.Elf.IsBigEndian,
+                    type = self.Elf.TypeText,
+                    machine = self.Elf.Machine,
+                },
+                controlBlocks = self.ControlBlocks.Select(block => block.TypeText),
+                controlFlags = self.ControlFlags is null ? null : Convert.ToHexString(self.ControlFlags),
+                firmwareVersion = self.FirmwareVersionText,
+                segments = self.Segments.Select(segment => new
+                {
+                    segment.Index,
+                    segment.Offset,
+                    segment.Size,
+                    compression = segment.CompressedText,
+                    encryption = segment.EncryptedText,
+                }),
+                npdrmInfo = self.Npdrm is null ? null : new
+                {
+                    self.Npdrm.ContentId,
+                    license = self.Npdrm.LicenseText,
+                    self.Npdrm.AppType,
+                },
+            });
+            return;
+        }
+
         Console.WriteLine($"SELF       : {self.FileSize:n0} bytes");
         Console.WriteLine($"Program    : {self.ProgramTypeText}" + (self.IsNpdrm ? "  (NPDRM)" : ""));
         Console.WriteLine($"Key rev    : 0x{self.KeyRevision:X4}" + (self.IsLikelyFakeSigned ? "  (fake-signed / fSELF)" : ""));
@@ -204,7 +237,7 @@ internal static class Render
 
     public static void FolderInfo(GameFolderReport r, bool json)
     {
-        if (json) { WriteJson(r); return; }
+        if (json) { CliJson.Write(r); return; }
 
         Console.WriteLine($"Folder       : {r.Folder}");
         Console.WriteLine($"Content ID   : {r.ContentId ?? "(unknown)"}");
@@ -249,7 +282,7 @@ internal static class Render
         var sfo = info.Sfo!;
         if (o.Json)
         {
-            WriteJson(sfo.Entries.Select(e => new
+            CliJson.Write(sfo.Entries.Select(e => new
             {
                 key = e.Key,
                 format = e.Format.ToString(),

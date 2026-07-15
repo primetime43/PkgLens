@@ -29,7 +29,7 @@ internal static class KeysCommand
         {
             "import" => Import(rest),
             "status" => Status(rest),
-            "where" => Where(),
+            "where" => Where(rest),
             _ => Unknown(sub),
         };
     }
@@ -55,48 +55,75 @@ internal static class KeysCommand
         }
 
         string path = KeyStore.Install(key, o.KeysDir);
-        Console.WriteLine($"Installed override key → {path}");
-        Console.WriteLine($"  {(KeyStore.IsKnownGpkgKey(key) ? "✓" : "⚠")} {KeyStore.Describe(key)}");
-        Console.WriteLine("This file overrides the bundled key for retail packages.");
+        bool known = KeyStore.IsKnownGpkgKey(key);
+        if (o.Json)
+            CliJson.Write(new { command = "keys.import", path, knownStandardKey = known, description = KeyStore.Describe(key) });
+        else
+        {
+            Console.WriteLine($"Installed override key → {path}");
+            Console.WriteLine($"  {(known ? "✓" : "⚠")} {KeyStore.Describe(key)}");
+            Console.WriteLine("This file overrides the bundled key for retail packages.");
+        }
         return ExitCode.Ok;
     }
 
     private static int Status(Options o)
     {
         var provider = new FileKeyProvider(o.KeysDir);
+        string[] searchDirectories = provider.SearchDirectories().ToArray();
 
-        Console.WriteLine("Bundled: standard NPDRM PKG PS3 AES key (retail packages decrypt out of the box).");
-        Console.WriteLine();
-        Console.WriteLine("Override search order (first match wins):");
-        foreach (string dir in provider.SearchDirectories())
-            Console.WriteLine($"  {dir}");
-        Console.WriteLine($"Recognized filenames: {string.Join(", ", FileKeyProvider.KeyFileNames)}");
-        Console.WriteLine();
+        if (!o.Json)
+        {
+            Console.WriteLine("Bundled: standard NPDRM PKG PS3 AES key (retail packages decrypt out of the box).");
+            Console.WriteLine();
+            Console.WriteLine("Override search order (first match wins):");
+            foreach (string dir in searchDirectories)
+                Console.WriteLine($"  {dir}");
+            Console.WriteLine($"Recognized filenames: {string.Join(", ", FileKeyProvider.KeyFileNames)}");
+            Console.WriteLine();
+        }
 
         if (provider.TryLocateKeyFile(out string found))
         {
             try
             {
                 byte[] key = KeyStore.ResolveKeyArgument(found);
-                Console.WriteLine($"Override key in use: {found}");
-                Console.WriteLine($"  {(KeyStore.IsKnownGpkgKey(key) ? "✓" : "⚠")} {KeyStore.Describe(key)}");
+                if (o.Json)
+                    CliJson.Write(new { command = "keys.status", bundledKey = true, searchDirectories, recognizedFileNames = FileKeyProvider.KeyFileNames, overridePath = found, overrideValid = true, knownStandardKey = KeyStore.IsKnownGpkgKey(key), description = KeyStore.Describe(key) });
+                else
+                {
+                    Console.WriteLine($"Override key in use: {found}");
+                    Console.WriteLine($"  {(KeyStore.IsKnownGpkgKey(key) ? "✓" : "⚠")} {KeyStore.Describe(key)}");
+                }
                 return ExitCode.Ok;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Found override key file {found}, but it is invalid: {ex.Message}");
+                if (o.Json)
+                    CliJson.Write(new { command = "keys.status", bundledKey = true, searchDirectories, recognizedFileNames = FileKeyProvider.KeyFileNames, overridePath = found, overrideValid = false, error = ex.Message });
+                else
+                    Console.WriteLine($"Found override key file {found}, but it is invalid: {ex.Message}");
                 return ExitCode.KeyOrDecryptError;
             }
         }
 
-        Console.WriteLine("No override installed — using the bundled key.");
-        Console.WriteLine($"Add an override with:  pkglens keys import <32-hex-key>   (writes to {KeyStore.DefaultDirectory})");
+        if (o.Json)
+            CliJson.Write(new { command = "keys.status", bundledKey = true, searchDirectories, recognizedFileNames = FileKeyProvider.KeyFileNames, overridePath = (string?)null });
+        else
+        {
+            Console.WriteLine("No override installed — using the bundled key.");
+            Console.WriteLine($"Add an override with:  pkglens keys import <32-hex-key>   (writes to {KeyStore.DefaultDirectory})");
+        }
         return ExitCode.Ok;
     }
 
-    private static int Where()
+    private static int Where(Options options)
     {
-        Console.WriteLine(System.IO.Path.Combine(KeyStore.DefaultDirectory, KeyStore.PrimaryFileName));
+        string path = System.IO.Path.Combine(KeyStore.DefaultDirectory, KeyStore.PrimaryFileName);
+        if (options.Json)
+            CliJson.Write(new { command = "keys.where", path });
+        else
+            Console.WriteLine(path);
         return ExitCode.Ok;
     }
 

@@ -13,6 +13,12 @@ catch { /* no console or output redirected */ }
 try
 {
 
+if (args.Length == 1 && args[0] is "--version" or "-V")
+{
+    Console.WriteLine($"pkglens {CliVersion.Value}");
+    return ExitCode.Ok;
+}
+
 if (args.Length == 0 || args[0] is "-h" or "--help" or "help")
 {
     CliHelp.PrintUsage();
@@ -111,6 +117,7 @@ if (command == "extract")
         }
 
         string outDir = parsed.OutDir ?? Path.GetFileNameWithoutExtension(parsed.Path);
+        var extracted = new List<string>();
         Func<PkgLens.Core.Shared.Models.PkgEntry, bool>? filter = null;
         if (parsed.Filter is not null)
         {
@@ -119,8 +126,29 @@ if (command == "extract")
         }
 
         int n = PkgReader.ExtractAll(stream, info, outDir, keys, filter,
-            e => Console.WriteLine($"  {e.Name}"));
-        Console.WriteLine($"Extracted {n} file(s) to {Path.GetFullPath(outDir)}");
+            e =>
+            {
+                if (parsed.Json)
+                    extracted.Add(e.Name);
+                else
+                    Console.WriteLine($"  {e.Name}");
+            });
+        string fullOutputDirectory = Path.GetFullPath(outDir);
+        if (parsed.Json)
+        {
+            CliJson.Write(new
+            {
+                command = "extract",
+                input = Path.GetFullPath(parsed.Path),
+                outputDirectory = fullOutputDirectory,
+                fileCount = n,
+                files = extracted,
+            });
+        }
+        else
+        {
+            Console.WriteLine($"Extracted {n} file(s) to {fullOutputDirectory}");
+        }
         return ExitCode.Ok;
     }
     catch (PkgKeyException ex) { Console.Error.WriteLine($"key error: {ex.Message}"); return ExitCode.KeyOrDecryptError; }
@@ -133,7 +161,7 @@ if (command == "self")
     {
         using var s = File.OpenRead(parsed.Path);
         var info = PkgLens.Core.Ps3.Self.SelfReader.ParseInfo(s);
-        Render.Self(info);
+        Render.Self(info, parsed.Json);
         return ExitCode.Ok;
     }
     catch (PkgFormatException ex) { Console.Error.WriteLine($"parse error: {ex.Message}"); return ExitCode.ParseError; }
@@ -149,24 +177,51 @@ if (command == "decrypt")
         if (PkgLens.Core.Psp.PspEdatFile.IsPspEncrypted(src))
         {
             byte[] allBytes = File.ReadAllBytes(parsed.Path);
+            string? pspContentId = null;
+            int? pspDrmType = null;
+            string pspKind;
             if (PkgLens.Core.Psp.PspEdatFile.IsPspEdat(allBytes))
             {
                 var pspInfo = PkgLens.Core.Psp.PspEdatFile.ParseHeader(allBytes);
-                Console.WriteLine($"{pspInfo.ContentId}  (PSP EDAT, DRM {pspInfo.DrmType})");
+                pspContentId = pspInfo.ContentId;
+                pspDrmType = pspInfo.DrmType;
+                pspKind = "psp-edat";
+                if (!parsed.Json)
+                    Console.WriteLine($"{pspInfo.ContentId}  (PSP EDAT, DRM {pspInfo.DrmType})");
             }
             else
             {
-                Console.WriteLine("(bare PSP PGD)");
+                pspKind = "psp-pgd";
+                if (!parsed.Json)
+                    Console.WriteLine("(bare PSP PGD)");
             }
             string pspOut = parsed.OutDir ?? StripNpdExtension(parsed.Path);
             AtomicOutput.EnsureDifferentPath(parsed.Path, pspOut);
             AtomicOutput.Write(pspOut, dst => PkgLens.Core.Psp.PspEdatFile.Decrypt(src, dst));
-            Console.WriteLine($"Decrypted → {pspOut}");
+            if (parsed.Json)
+            {
+                CliJson.Write(new
+                {
+                    command = "decrypt",
+                    kind = pspKind,
+                    input = Path.GetFullPath(parsed.Path),
+                    output = Path.GetFullPath(pspOut),
+                    contentId = pspContentId,
+                    drmType = pspDrmType,
+                    inputSize = allBytes.LongLength,
+                    outputSize = new FileInfo(pspOut).Length,
+                });
+            }
+            else
+            {
+                Console.WriteLine($"Decrypted → {pspOut}");
+            }
             return ExitCode.Ok;
         }
 
         var npd = PkgLens.Core.Ps3.Npd.EdatFile.ParseHeader(src);
-        Console.WriteLine($"{npd.ContentId}  (v{npd.Version}, DRM {npd.LicenseText}{(npd.IsSdat ? ", SDAT" : "")})");
+        if (!parsed.Json)
+            Console.WriteLine($"{npd.ContentId}  (v{npd.Version}, DRM {npd.LicenseText}{(npd.IsSdat ? ", SDAT" : "")})");
 
         byte[]? klic = null;
         if (npd.NeedsKlicensee)
@@ -188,7 +243,25 @@ if (command == "decrypt")
         string outPath = parsed.OutDir ?? StripNpdExtension(parsed.Path);
         AtomicOutput.EnsureDifferentPath(parsed.Path, outPath);
         AtomicOutput.Write(outPath, dst => PkgLens.Core.Ps3.Npd.EdatFile.Decrypt(src, dst, klic));
-        Console.WriteLine($"Decrypted {npd.FileSize:n0} bytes → {outPath}");
+        if (parsed.Json)
+        {
+            CliJson.Write(new
+            {
+                command = "decrypt",
+                kind = npd.IsSdat ? "sdat" : "edat",
+                input = Path.GetFullPath(parsed.Path),
+                output = Path.GetFullPath(outPath),
+                npd.ContentId,
+                npd.Version,
+                license = npd.LicenseText,
+                inputSize = npd.FileSize,
+                outputSize = new FileInfo(outPath).Length,
+            });
+        }
+        else
+        {
+            Console.WriteLine($"Decrypted {npd.FileSize:n0} bytes → {outPath}");
+        }
         return ExitCode.Ok;
     }
     catch (PkgKeyException ex) { Console.Error.WriteLine($"key error: {ex.Message}"); return ExitCode.KeyOrDecryptError; }

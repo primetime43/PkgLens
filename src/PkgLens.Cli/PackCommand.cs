@@ -17,6 +17,7 @@ internal static class PackCommand
     public static int Run(ReadOnlySpan<string> args)
     {
         string? folder = null, outPath = null, keysDir = null;
+        bool json = false;
         // Default to retail-encrypted: it's the format a jailbroken (CFW) PS3 installs. Use --debug for
         // a self-contained non-finalized package (RPCS3 / dev consoles, no key needed).
         var options = new PackOptions { Finalization = PkgFinalization.Retail };
@@ -29,6 +30,7 @@ internal static class PackCommand
                 case "--retail": options.Finalization = PkgFinalization.Retail; break;
                 case "--debug": options.Finalization = PkgFinalization.Debug; break;
                 case "--resign": options.ResignEboot = true; break;
+                case "--json": json = true; break;
 
                 case "--rap":
                     if (!Next(args, ref i, a, out var rapPath)) return ExitCode.Usage;
@@ -109,24 +111,52 @@ internal static class PackCommand
             if (outputWasInferred && File.Exists(outPath))
                 plan = FolderPackage.Plan(folder, options, outPath);
 
-            Console.WriteLine($"Packing {plan.FileCount} file(s), {plan.DirectoryCount} folder(s) — {plan.TotalBytes:n0} bytes");
-            Console.WriteLine($"  content id   : {plan.ContentId}");
-            Console.WriteLine($"  install dir  : {plan.InstallDirectory}");
-            Console.WriteLine($"  content type : {ContentTypeName(plan.ContentType)}");
-            Console.WriteLine($"  drm type     : {plan.DrmType} ({PkgLens.Core.Shared.Models.DrmType.Name(plan.DrmType)})");
-            Console.WriteLine($"  finalization : {(plan.Finalization == PkgFinalization.Retail ? "retail (unsigned)" : "non-finalized (debug)")}");
-            foreach (var note in plan.Notes)
-                Console.WriteLine($"  · {note}");
+            if (!json)
+            {
+                Console.WriteLine($"Packing {plan.FileCount} file(s), {plan.DirectoryCount} folder(s) — {plan.TotalBytes:n0} bytes");
+                Console.WriteLine($"  content id   : {plan.ContentId}");
+                Console.WriteLine($"  install dir  : {plan.InstallDirectory}");
+                Console.WriteLine($"  content type : {ContentTypeName(plan.ContentType)}");
+                Console.WriteLine($"  drm type     : {plan.DrmType} ({PkgLens.Core.Shared.Models.DrmType.Name(plan.DrmType)})");
+                Console.WriteLine($"  finalization : {(plan.Finalization == PkgFinalization.Retail ? "retail (unsigned)" : "non-finalized (debug)")}");
+                foreach (var note in plan.Notes)
+                    Console.WriteLine($"  · {note}");
+            }
 
             AtomicOutput.Write(outPath, dst => plan.Builder.Build(dst, keys));
 
             long size = new FileInfo(outPath).Length;
-            Console.WriteLine($"Wrote {size:n0} bytes → {Path.GetFullPath(outPath)}");
-            if (plan.Finalization == PkgFinalization.Retail)
-                Console.WriteLine("Note: retail-encrypted, unsigned. Installs on a jailbroken (CFW) PS3 — the CFW patches skip " +
-                                  "the signature check. It will NOT install on a stock retail console.");
+            if (json)
+            {
+                CliJson.Write(new
+                {
+                    command = "pack",
+                    inputDirectory = Path.GetFullPath(folder),
+                    output = Path.GetFullPath(outPath),
+                    plan.ContentId,
+                    plan.InstallDirectory,
+                    contentType = plan.ContentType,
+                    contentTypeName = ContentTypeName(plan.ContentType),
+                    plan.DrmType,
+                    drmTypeName = PkgLens.Core.Shared.Models.DrmType.Name(plan.DrmType),
+                    finalization = plan.Finalization.ToString(),
+                    plan.FileCount,
+                    plan.DirectoryCount,
+                    inputSize = plan.TotalBytes,
+                    outputSize = size,
+                    resignedEboot = options.ResignEboot,
+                    plan.Notes,
+                });
+            }
             else
-                Console.WriteLine("Note: non-finalized (debug) package — for RPCS3 / dev consoles. For a CFW console use --retail.");
+            {
+                Console.WriteLine($"Wrote {size:n0} bytes → {Path.GetFullPath(outPath)}");
+                if (plan.Finalization == PkgFinalization.Retail)
+                    Console.WriteLine("Note: retail-encrypted, unsigned. Installs on a jailbroken (CFW) PS3 — the CFW patches skip " +
+                                      "the signature check. It will NOT install on a stock retail console.");
+                else
+                    Console.WriteLine("Note: non-finalized (debug) package — for RPCS3 / dev consoles. For a CFW console use --retail.");
+            }
             return ExitCode.Ok;
         }
         catch (PkgKeyException ex) { Console.Error.WriteLine($"key error: {ex.Message}"); return ExitCode.KeyOrDecryptError; }

@@ -98,13 +98,14 @@ byte-for-byte against real retail dumps.
 ## CLI
 
 ```
+pkglens --version                                         # print the embedded release version
 pkglens info   <pkg> [--keys DIR] [--json]              # header + content-id + SFO summary
 pkglens list   <pkg> [--keys DIR] [--json]              # entry table
 pkglens sfo    <pkg> [--keys DIR] [--json]              # dump PARAM.SFO key/values
-pkglens extract <pkg> [--out DIR] [--filter GLOB]       # extract entries
-pkglens verify <pkg>                                    # integrity check (SHA-1 + CMAC + ECDSA)
-pkglens decrypt <edat> [--rap FILE]                     # decrypt an EDAT/SDAT
-pkglens self   <eboot>                                  # inspect a SELF/EBOOT.BIN header (no keys)
+pkglens extract <pkg> [--out DIR] [--filter GLOB] [--json]   # extract entries
+pkglens verify <pkg> [--json]                           # integrity check (SHA-1 + CMAC + ECDSA)
+pkglens decrypt <edat> [--rap FILE] [--json]            # decrypt an EDAT/SDAT
+pkglens self   <eboot> [--json]                         # inspect a SELF/EBOOT.BIN header (no keys)
 pkglens unself <eboot> [--rap FILE | --klic HEX] [--out FILE]   # decrypt a SELF → plaintext ELF
 pkglens resign <elf> [--out FILE] [--npdrm]             # ELF → fake-signed SELF (fSELF) for CFW
 pkglens patch  <eboot> [--sdk-version 4.00] [--find HEX --replace HEX] [--at OFF=HEX]
@@ -116,6 +117,9 @@ pkglens undoc  <DOCUMENT.DAT> [--docinfo FILE] [--out DIR]   # decrypt a PSP man
 pkglens psar   decrypt <DATA.PSAR> [--out FILE]         # decrypt a PSP NPUMDIMG to .iso (keyless)
 pkglens keys   import|status|where                      # manage an optional override key
 ```
+
+Every command accepts `--json`. Successful JSON mode writes exactly one JSON value to stdout;
+diagnostics remain on stderr and exit codes remain unchanged.
 
 Exit codes: `0` ok · `1` usage · `2` parse error · `3` key/decryption error · `4` integrity failure.
 

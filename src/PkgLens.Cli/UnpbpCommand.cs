@@ -15,7 +15,7 @@ internal static class UnpbpCommand
     public static int Run(ReadOnlySpan<string> args)
     {
         string? input = null, outDir = null;
-        bool list = false;
+        bool list = false, json = false;
 
         for (int i = 0; i < args.Length; i++)
         {
@@ -23,6 +23,7 @@ internal static class UnpbpCommand
             switch (a)
             {
                 case "--list": list = true; break;
+                case "--json": json = true; break;
                 case "--out":
                     if (i + 1 >= args.Length) { Console.Error.WriteLine("error: --out requires a directory path."); return ExitCode.Usage; }
                     outDir = args[++i];
@@ -48,12 +49,19 @@ internal static class UnpbpCommand
             using var stream = File.OpenRead(input);
             var pbp = PbpArchive.Parse(stream);
 
-            Console.WriteLine($"PBP version 0x{pbp.Version:X}, {pbp.Entries.Count} section(s):");
-            foreach (var e in pbp.Entries)
-                Console.WriteLine($"  {e.Name,-12} {e.Size,14:n0}  @ 0x{e.Offset:X}");
+            if (!json)
+            {
+                Console.WriteLine($"PBP version 0x{pbp.Version:X}, {pbp.Entries.Count} section(s):");
+                foreach (var e in pbp.Entries)
+                    Console.WriteLine($"  {e.Name,-12} {e.Size,14:n0}  @ 0x{e.Offset:X}");
+            }
 
             if (list)
+            {
+                if (json)
+                    WriteResult(input, pbp, null);
                 return ExitCode.Ok;
+            }
 
             string dir = outDir ?? Path.GetFileNameWithoutExtension(input) + "_pbp";
             Directory.CreateDirectory(dir);
@@ -63,9 +71,16 @@ internal static class UnpbpCommand
                 AtomicOutput.Write(dest, d => PbpArchive.Extract(stream, e, d));
             }
 
-            Console.WriteLine($"Extracted {pbp.Entries.Count} section(s) to {Path.GetFullPath(dir)}");
-            if (pbp.Entries.Any(e => e.Name == "DATA.PSP"))
-                Console.WriteLine("Note: DATA.PSP is still an encrypted PSP executable (a separate decryption step).");
+            if (json)
+            {
+                WriteResult(input, pbp, Path.GetFullPath(dir));
+            }
+            else
+            {
+                Console.WriteLine($"Extracted {pbp.Entries.Count} section(s) to {Path.GetFullPath(dir)}");
+                if (pbp.Entries.Any(e => e.Name == "DATA.PSP"))
+                    Console.WriteLine("Note: DATA.PSP is still an encrypted PSP executable (a separate decryption step).");
+            }
             return ExitCode.Ok;
         }
         catch (PkgFormatException ex)
@@ -74,4 +89,15 @@ internal static class UnpbpCommand
             return ExitCode.ParseError;
         }
     }
+
+    private static void WriteResult(string input, PbpArchive pbp, string? outputDirectory) =>
+        CliJson.Write(new
+        {
+            command = "unpbp",
+            input = Path.GetFullPath(input),
+            pbp.Version,
+            outputDirectory,
+            extracted = outputDirectory is not null,
+            sections = pbp.Entries.Select(entry => new { entry.Name, entry.Offset, entry.Size }),
+        });
 }

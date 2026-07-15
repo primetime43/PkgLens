@@ -14,6 +14,7 @@ internal static class ResignCommand
     public static int Run(ReadOnlySpan<string> args)
     {
         string? input = null, outPath = null;
+        bool json = false;
         var opts = new SelfBuilder.FakeSelfOptions();
 
         for (int i = 0; i < args.Length; i++)
@@ -22,6 +23,7 @@ internal static class ResignCommand
             switch (a)
             {
                 case "--npdrm": opts.Npdrm = true; break;
+                case "--json": json = true; break;
                 case "--out":
                     if (i + 1 >= args.Length) { Console.Error.WriteLine("error: --out requires a file path."); return ExitCode.Usage; }
                     outPath = args[++i];
@@ -97,9 +99,26 @@ internal static class ResignCommand
             AtomicOutput.EnsureDifferentPath(input, outPath);
             AtomicOutput.WriteAllBytes(outPath, fself);
 
-            Console.WriteLine($"Resigned {elf.Length:n0}-byte ELF → {Path.GetFullPath(outPath)} ({fself.Length:n0} bytes)");
-            Console.WriteLine($"  type : fake-signed {(npdrm ? "NPDRM" : "NON-DRM")} SELF (key revision 0x8000)");
-            Console.WriteLine("Note: runs on a jailbroken (CFW) PS3 — signature checks patched. Not valid on stock retail.");
+            if (json)
+            {
+                CliJson.Write(new
+                {
+                    command = "resign",
+                    input = Path.GetFullPath(input),
+                    output = Path.GetFullPath(outPath),
+                    inputSize = elf.LongLength,
+                    outputSize = fself.LongLength,
+                    npdrm,
+                    fakeSigned = true,
+                    keyRevision = 0x8000,
+                });
+            }
+            else
+            {
+                Console.WriteLine($"Resigned {elf.Length:n0}-byte ELF → {Path.GetFullPath(outPath)} ({fself.Length:n0} bytes)");
+                Console.WriteLine($"  type : fake-signed {(npdrm ? "NPDRM" : "NON-DRM")} SELF (key revision 0x8000)");
+                Console.WriteLine("Note: runs on a jailbroken (CFW) PS3 — signature checks patched. Not valid on stock retail.");
+            }
             return ExitCode.Ok;
         }
         catch (PkgFormatException ex)
