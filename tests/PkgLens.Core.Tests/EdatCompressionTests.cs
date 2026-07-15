@@ -3,6 +3,7 @@ using System;
 using System.Buffers.Binary;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using PkgLens.Core;
 using PkgLens.Core.Shared;
 using PkgLens.Core.Ps3.Npd;
@@ -90,15 +91,13 @@ public class EdatCompressionTests
     }
 
     [Fact]
-    public void Decrypt_CompressedBlock_InvalidLength_FailsCleanly()
+    public void Decrypt_CompressedBlock_CorruptMetadata_FailsIntegrityCheck()
     {
-        // A wrong RAP produces garbage per-block metadata. A block length beyond the block size must
-        // raise a clear key error, not an OverflowException from `new byte[negative]`.
         byte[] edat = BuildCompressedStoredSdat(Enumerable.Range(0, 20).Select(i => (byte)i).ToArray());
-        // len field (v1, direct) sits at metadataOffset + 0x18.
         BinaryPrimitives.WriteInt32BigEndian(edat.AsSpan(0x100 + 0x18), 0x7FFFFFFF);
 
-        Assert.Throws<PkgKeyException>(() => EdatFile.DecryptToArray(new MemoryStream(edat)));
+        var ex = Assert.Throws<PkgFormatException>(() => EdatFile.DecryptToArray(new MemoryStream(edat)));
+        Assert.Contains("metadata", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
@@ -145,6 +144,15 @@ public class EdatCompressionTests
         BinaryPrimitives.WriteInt32BigEndian(b.AsSpan(metadataOffset + 0x1C), 1); // compression_end != 0 => decompress
 
         compressedBlock.CopyTo(b, (int)dataOffset);
+
+        using var aes = Aes.Create();
+        aes.Mode = CipherMode.ECB;
+        aes.Padding = PaddingMode.None;
+        aes.Key = NpdKeys.SdatKey;
+        byte[] blockKey = aes.EncryptEcb(new byte[16], PaddingMode.None);
+        AesCmac.Compute(blockKey, b.AsSpan((int)dataOffset, readLen)).CopyTo(b.AsSpan(metadataOffset, 16));
+        AesCmac.Compute(NpdKeys.SdatKey, b.AsSpan(metadataOffset, 0x20)).CopyTo(b.AsSpan(0x90, 16));
+        AesCmac.Compute(NpdKeys.SdatKey, b.AsSpan(0, 0xA0)).CopyTo(b.AsSpan(0xA0, 16));
         return b;
     }
 }

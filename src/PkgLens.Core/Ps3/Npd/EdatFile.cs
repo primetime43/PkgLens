@@ -42,6 +42,11 @@ public static class EdatFile
     private const int NpdSize = 0x80;
     private const int EdatSize = 0x10;
     private const int MetadataOffset = 0x100;
+    private const uint PlainDataFlag = 0x00000002;
+    private const uint EncryptedKeyFlag = 0x00000008;
+    private const uint HmacFlag = 0x00000010;
+    private const uint InterleavedMetadataFlag = 0x00000020;
+    private const uint DebugDataFlag = 0x80000000;
     /// <summary>Upper bound on a sane EDAT/SDAT block size (real files use ~0x4000).</summary>
     private const int MaxBlockSize = 0x10000000; // 256 MiB
 
@@ -110,7 +115,10 @@ public static class EdatFile
         return ms.ToArray();
     }
 
-    /// <summary>Decrypts the file, writing the plaintext to <paramref name="destination"/>.</summary>
+    /// <summary>
+    /// Verifies the authenticated header, metadata, and each encrypted block, then writes plaintext
+    /// to <paramref name="destination"/>.
+    /// </summary>
     public static void Decrypt(Stream source, Stream destination, byte[]? klicensee = null)
     {
         // PSP EDATs ("\0PSPEDAT") and bare PGDs ("\0PGD") are a different DRM format — route them to the
@@ -143,18 +151,29 @@ public static class EdatFile
         }
 
         byte[] edatKey = npd.Version == 4 ? NpdKeys.EdatKey1 : NpdKeys.EdatKey0;
-        bool encryptedKey = (npd.Flags & 0x00000008) != 0;
-        bool aesCbc = (npd.Flags & 0x00000002) == 0; // else data is plain
+        bool encryptedKey = (npd.Flags & EncryptedKeyFlag) != 0;
+        bool debugData = (npd.Flags & DebugDataFlag) != 0;
+        bool aesCbc = !debugData && (npd.Flags & PlainDataFlag) == 0;
         bool compressed = npd.IsCompressed;
-        bool flag0x20 = (npd.Flags & 0x00000020) != 0;
+        bool flag0x20 = (npd.Flags & InterleavedMetadataFlag) != 0;
         // COMPRESSED takes precedence over FLAG 0x20 for the metadata layout (matches RPCS3).
         int metadataEntry = (compressed || flag0x20) ? 0x20 : 0x10;
 
-        int numBlocks = (int)((npd.FileSize + npd.BlockSize - 1) / npd.BlockSize);
+        long blockCount = npd.FileSize == 0 ? 0 : ((npd.FileSize - 1) / npd.BlockSize) + 1;
+        if (blockCount > int.MaxValue)
+            throw new PkgFormatException($"EDAT contains too many blocks ({blockCount:n0}).");
+        int numBlocks = (int)blockCount;
         byte[] iv = npd.Version <= 1 ? new byte[16] : npd.Digest;
 
         using var aes = Aes.Create();
         aes.Padding = PaddingMode.None;
+
+        if (!debugData)
+        {
+            byte[] headerHashKey = ResolveHashKey(aes, cryptKey, edatKey, encryptedKey);
+            VerifyHeaderHash(source, npd, headerHashKey);
+            VerifyMetadataHash(source, npd, headerHashKey, numBlocks, metadataEntry, flag0x20);
+        }
 
         for (int i = 0; i < numBlocks; i++)
         {
@@ -162,23 +181,20 @@ public static class EdatFile
             int readLen;    // bytes of ciphertext to read (16-aligned)
             int payloadLen; // meaningful decrypted bytes before optional decompression
             bool decompressBlock = false;
+            byte[] metadata;
 
             if (compressed)
             {
                 // Per-block metadata (0x20) is decrypted (unshuffled) into offset/length/compression_end.
-                byte[] meta = ReadAt(source, MetadataOffset + (long)i * 0x20, 0x20);
+                metadata = ReadAt(source, MetadataOffset + (long)i * 0x20, 0x20);
                 (long off, int len, int compEnd) = npd.Version <= 1
-                    ? (BinaryPrimitives.ReadInt64BigEndian(meta.AsSpan(0x10)),
-                       BinaryPrimitives.ReadInt32BigEndian(meta.AsSpan(0x18)),
-                       BinaryPrimitives.ReadInt32BigEndian(meta.AsSpan(0x1C)))
-                    : DecSection(meta);
-                // off/len come from the per-block metadata; a wrong RAP/klicensee yields garbage here.
-                // Validate before allocating/reading so we fail with a clear message rather than an
-                // OverflowException on `new byte[negative]` or a wild seek.
+                    ? (BinaryPrimitives.ReadInt64BigEndian(metadata.AsSpan(0x10)),
+                       BinaryPrimitives.ReadInt32BigEndian(metadata.AsSpan(0x18)),
+                       BinaryPrimitives.ReadInt32BigEndian(metadata.AsSpan(0x1C)))
+                    : DecSection(metadata);
                 if (len < 0 || len > npd.BlockSize || off < 0 || off > source.Length)
-                    throw new PkgKeyException(
-                        $"EDAT block {i} metadata is invalid (offset 0x{off:X}, length 0x{len:X}) — " +
-                        "likely a wrong or missing RAP/klicensee.");
+                    throw new PkgFormatException(
+                        $"EDAT block {i} metadata is corrupt (offset 0x{off:X}, length 0x{len:X}).");
                 dataOffset = off;
                 payloadLen = len;
                 readLen = (len + 15) & ~15;
@@ -186,6 +202,10 @@ public static class EdatFile
             }
             else
             {
+                long metadataOffset = flag0x20
+                    ? MetadataOffset + (long)i * (metadataEntry + npd.BlockSize)
+                    : MetadataOffset + (long)i * metadataEntry;
+                metadata = ReadAt(source, metadataOffset, metadataEntry);
                 payloadLen = (int)Math.Min(npd.BlockSize, npd.FileSize - (long)i * npd.BlockSize);
                 readLen = (payloadLen + 15) & ~15;
                 dataOffset = flag0x20
@@ -203,6 +223,19 @@ public static class EdatFile
             byte[] keyResult = EcbEncrypt(aes, cryptKey, bKey);
             byte[] dataKey = encryptedKey ? CbcDecrypt(aes, edatKey, new byte[16], keyResult) : keyResult;
 
+            if (!debugData)
+            {
+                byte[] expectedHash = ExtractBlockHash(npd.Flags, metadata, compressed);
+                byte[] hashSeed = (npd.Flags & HmacFlag) != 0
+                    ? EcbEncrypt(aes, cryptKey, keyResult)
+                    : keyResult;
+                byte[] hashKey = ResolveHashKey(aes, hashSeed, edatKey, encryptedKey);
+                byte[] actualHash = ComputeBlockHash(npd.Flags, hashKey, enc);
+                if (!CryptographicOperations.FixedTimeEquals(actualHash, expectedHash))
+                    throw new PkgFormatException(
+                        $"EDAT block {i} integrity check failed at offset 0x{dataOffset:X}; the encrypted data is corrupted.");
+            }
+
             byte[] dec = aesCbc ? CbcDecrypt(aes, dataKey, iv, enc) : enc;
 
             if (decompressBlock)
@@ -218,6 +251,68 @@ public static class EdatFile
                 destination.Write(dec, 0, payloadLen);
             }
         }
+    }
+
+    private static void VerifyHeaderHash(Stream source, NpdInfo npd, byte[] hashKey)
+    {
+        byte[] header = ReadAt(source, 0, 0xA0);
+        byte[] expected = ReadAt(source, 0xA0, 0x10);
+        byte[] actual = AesCmac.Compute(hashKey, header);
+        if (CryptographicOperations.FixedTimeEquals(actual, expected)) return;
+
+        if (npd.NeedsKlicensee)
+            throw new PkgKeyException(
+                $"EDAT header integrity check failed for '{npd.ContentId}'; the RAP/klicensee is wrong.");
+
+        throw new PkgFormatException("EDAT header integrity check failed; the file header is corrupted.");
+    }
+
+    private static void VerifyMetadataHash(
+        Stream source,
+        NpdInfo npd,
+        byte[] hashKey,
+        int numBlocks,
+        int metadataEntry,
+        bool flag0x20)
+    {
+        using var cmac = new AesCmacAccumulator(hashKey);
+        for (int i = 0; i < numBlocks; i++)
+        {
+            long offset = flag0x20
+                ? MetadataOffset + (long)i * (metadataEntry + npd.BlockSize)
+                : MetadataOffset + (long)i * metadataEntry;
+            cmac.Append(ReadAt(source, offset, metadataEntry));
+        }
+
+        byte[] actual = cmac.FinalizeHash();
+        byte[] expected = ReadAt(source, 0x90, 0x10);
+        if (!CryptographicOperations.FixedTimeEquals(actual, expected))
+            throw new PkgFormatException("EDAT metadata integrity check failed; the file metadata is corrupted.");
+    }
+
+    private static byte[] ResolveHashKey(Aes aes, byte[] hash, byte[] edatKey, bool encryptedKey) =>
+        encryptedKey ? CbcDecrypt(aes, edatKey, new byte[16], hash) : hash;
+
+    private static byte[] ExtractBlockHash(uint flags, byte[] metadata, bool compressed)
+    {
+        bool flag0x20 = (flags & InterleavedMetadataFlag) != 0;
+        int hashLength = flag0x20 && (flags & HmacFlag) != 0 ? 20 : 16;
+        var hash = new byte[hashLength];
+        metadata.AsSpan(0, Math.Min(16, hashLength)).CopyTo(hash);
+        if (!flag0x20 || compressed) return hash;
+
+        metadata.AsSpan(0, hashLength).CopyTo(hash);
+        for (int i = 0; i < 16; i++) hash[i] ^= metadata[i + 16];
+        return hash;
+    }
+
+    private static byte[] ComputeBlockHash(uint flags, byte[] hashKey, byte[] encryptedData)
+    {
+        if ((flags & HmacFlag) == 0)
+            return AesCmac.Compute(hashKey, encryptedData);
+
+        byte[] hash = HMACSHA1.HashData(hashKey, encryptedData);
+        return (flags & InterleavedMetadataFlag) != 0 ? hash : hash[..16];
     }
 
     /// <summary>
