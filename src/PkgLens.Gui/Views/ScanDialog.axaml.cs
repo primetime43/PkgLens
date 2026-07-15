@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
@@ -27,6 +28,10 @@ public partial class ScanDialog : Window
     private CheckBox _recursive = null!;
     private DataGrid _grid = null!;
     private Button _scanBtn = null!, _csvBtn = null!, _jsonBtn = null!;
+    private StackPanel _inputPanel = null!;
+    private Button _cancelBtn = null!;
+    private ProgressBar _progress = null!;
+    private CancellationTokenSource? _cancellation;
 
     public ScanDialog() : this(null) { }
 
@@ -41,6 +46,9 @@ public partial class ScanDialog : Window
         _scanBtn = this.FindControl<Button>("ScanBtn")!;
         _csvBtn = this.FindControl<Button>("CsvBtn")!;
         _jsonBtn = this.FindControl<Button>("JsonBtn")!;
+        _inputPanel = this.FindControl<StackPanel>("InputPanel")!;
+        _cancelBtn = this.FindControl<Button>("CancelBtn")!;
+        _progress = this.FindControl<ProgressBar>("ScanProgress")!;
     }
 
     private void InitializeComponent() => AvaloniaXamlLoader.Load(this);
@@ -63,24 +71,41 @@ public partial class ScanDialog : Window
     {
         if (_folder is null) return;
 
-        _scanBtn.IsEnabled = false;
-        _status.Text = "Scanning…";
         string folder = _folder;
         bool recursive = _recursive.IsChecked == true;
         string? keysDir = _keysDir;
+        using var cancellation = new CancellationTokenSource();
+        _cancellation = cancellation;
+        SetBusy(true, "Scanning…", indeterminate: true);
+        IProgress<(int Completed, int Total, string Name)> progress =
+            new Progress<(int Completed, int Total, string Name)>(value =>
+        {
+            _progress.IsIndeterminate = false;
+            _progress.Value = value.Total == 0 ? 100 : value.Completed * 100d / value.Total;
+            _status.Text = $"Scanning {value.Name} ({value.Completed}/{value.Total})…";
+        });
 
         try
         {
             var rows = await Task.Run(() =>
             {
+                cancellation.Token.ThrowIfCancellationRequested();
                 var search = recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
                 var files = Directory.EnumerateFiles(folder, "*", search)
                     .Where(f => Path.GetExtension(f).Equals(".pkg", StringComparison.OrdinalIgnoreCase))
                     .OrderBy(f => f, StringComparer.OrdinalIgnoreCase)
                     .ToList();
                 IKeyProvider keys = new FileKeyProvider(keysDir);
-                return files.Select(f => PackageScanner.Inspect(f, keys)).ToList();
-            });
+                var results = new List<PackageScanRow>(files.Count);
+                for (int index = 0; index < files.Count; index++)
+                {
+                    cancellation.Token.ThrowIfCancellationRequested();
+                    string path = files[index];
+                    results.Add(PackageScanner.Inspect(path, keys));
+                    progress.Report((index + 1, files.Count, Path.GetFileName(path)));
+                }
+                return results;
+            }, cancellation.Token);
 
             _rows = rows;
             _grid.ItemsSource = rows.Select(ScanResultRow.From).ToList();
@@ -91,13 +116,20 @@ public partial class ScanDialog : Window
                 : $"{rows.Count} package(s), {total:n0} bytes — {ok} decrypted" + (failed > 0 ? $", {failed} unreadable" : "") + ".";
             _csvBtn.IsEnabled = _jsonBtn.IsEnabled = rows.Count > 0;
         }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+            _status.Text = "Scan cancelled.";
+        }
         catch (Exception ex)
         {
             _status.Text = $"Scan failed: {ex.Message}";
+            await ShowError("Scan failed", ex);
         }
         finally
         {
-            _scanBtn.IsEnabled = true;
+            if (ReferenceEquals(_cancellation, cancellation))
+                _cancellation = null;
+            SetBusy(false, _status.Text ?? string.Empty);
         }
     }
 
@@ -114,15 +146,54 @@ public partial class ScanDialog : Window
         });
         if (file?.TryGetLocalPath() is not { } dest)
             return;
+        using var cancellation = new CancellationTokenSource();
+        _cancellation = cancellation;
+        SetBusy(true, $"Saving {Path.GetFileName(dest)}…", indeterminate: true);
         try
         {
-            await AtomicOutput.WriteAllTextAsync(dest, content);
+            await AtomicOutput.WriteAllTextAsync(dest, content, cancellation.Token);
             _status.Text = $"Saved {Path.GetFileName(dest)}.";
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+            _status.Text = "Save cancelled.";
         }
         catch (Exception ex)
         {
             _status.Text = $"Save failed: {ex.Message}";
+            await ShowError("Save failed", ex);
         }
+        finally
+        {
+            if (ReferenceEquals(_cancellation, cancellation))
+                _cancellation = null;
+            SetBusy(false, _status.Text ?? string.Empty);
+        }
+    }
+
+    private void SetBusy(bool busy, string status, bool indeterminate = false)
+    {
+        _status.Text = status;
+        _inputPanel.IsEnabled = !busy;
+        _grid.IsEnabled = !busy;
+        _csvBtn.IsEnabled = !busy && _rows.Count > 0;
+        _jsonBtn.IsEnabled = !busy && _rows.Count > 0;
+        _cancelBtn.IsVisible = busy;
+        _cancelBtn.IsEnabled = busy;
+        _progress.IsVisible = busy;
+        _progress.IsIndeterminate = indeterminate;
+        if (!busy)
+            _progress.Value = 0;
+    }
+
+    private async Task ShowError(string title, Exception exception) =>
+        await new ErrorDialog(new GuiErrorReport(title, exception.Message, exception.ToString())).ShowDialog(this);
+
+    private void OnCancel(object? sender, RoutedEventArgs e)
+    {
+        _cancelBtn.IsEnabled = false;
+        _status.Text = "Cancelling…";
+        _cancellation?.Cancel();
     }
 
     private void OnClose(object? sender, RoutedEventArgs e) => Close();

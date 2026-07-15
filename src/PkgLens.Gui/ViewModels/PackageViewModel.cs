@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using PkgLens.Core;
@@ -179,11 +180,13 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
     /// Writes a repacked copy of the package to <paramref name="destinationPath"/>, applying any
     /// queued replacements. The signature is not recomputed (retail output is unsigned).
     /// </summary>
-    public void SaveAs(string destinationPath)
+    public void SaveAs(string destinationPath, CancellationToken cancellationToken = default,
+        IProgress<PkgOperationProgress>? progress = null)
     {
         AtomicOutput.EnsureDifferentPath(FilePath, destinationPath);
         AtomicOutput.Write(destinationPath,
-            dest => PkgWriter.Repack(_stream, _info, _replacements, _keys, dest));
+            dest => PkgWriter.Repack(_stream, _info, _replacements, _keys, dest,
+                cancellationToken, progress));
     }
 
     private PackageViewModel(string path, Stream stream, PkgInfo info, IKeyProvider keys)
@@ -230,12 +233,14 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>Opens and parses a package, keeping the stream open for on-demand extraction.</summary>
-    public static PackageViewModel Load(string path, IKeyProvider keys)
+    public static PackageViewModel Load(string path, IKeyProvider keys, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var stream = File.OpenRead(path);
         try
         {
             var info = PkgReader.Read(stream, keys);
+            cancellationToken.ThrowIfCancellationRequested();
             return new PackageViewModel(path, stream, info, keys);
         }
         catch
@@ -253,17 +258,22 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>Extracts every file to <paramref name="directory"/>, rebuilding the tree. Returns the file count.</summary>
-    public int ExtractAllTo(string directory) => PkgReader.ExtractAll(_stream, _info, directory, _keys);
+    public int ExtractAllTo(string directory, CancellationToken cancellationToken = default,
+        IProgress<PkgOperationProgress>? progress = null) =>
+        PkgReader.ExtractAll(_stream, _info, directory, _keys,
+            cancellationToken: cancellationToken, progress: progress);
 
     /// <summary>Streams the currently selected entry's decrypted data to <paramref name="destinationPath"/>.</summary>
-    public void ExtractSelectedTo(string destinationPath)
+    public void ExtractSelectedTo(string destinationPath, CancellationToken cancellationToken = default,
+        IProgress<long>? progress = null)
     {
         if (SelectedItem?.Entry is not { } entry)
             throw new InvalidOperationException("No extractable file is selected.");
 
         AtomicOutput.EnsureDifferentPath(FilePath, destinationPath);
         AtomicOutput.Write(destinationPath,
-            dest => PkgReader.ExtractEntry(_stream, _header, entry, dest, _keys));
+            dest => PkgReader.ExtractEntry(_stream, _header, entry, dest, _keys,
+                cancellationToken, progress));
     }
 
     /// <summary>Decrypts the selected DOCUMENT.DAT into its manual pages (each a PNG), using the sibling DOCINFO.EDAT.</summary>
@@ -278,7 +288,8 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>Extracts and splits the selected PBP into its parts under <paramref name="destinationDir"/>.</summary>
-    public IReadOnlyList<string> UnpackSelectedPbpTo(string destinationDir)
+    public IReadOnlyList<string> UnpackSelectedPbpTo(string destinationDir,
+        CancellationToken cancellationToken = default)
     {
         if (SelectedItem is not { IsDirectory: false, Name: { } leaf, Entry: { } entry })
             throw new InvalidOperationException("Select a .PBP file.");
@@ -288,7 +299,7 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
         try
         {
             using (var d = File.Create(temp))
-                PkgReader.ExtractEntry(_stream, _header, entry, d, _keys);
+                PkgReader.ExtractEntry(_stream, _header, entry, d, _keys, cancellationToken);
 
             var written = new List<string>();
             using (var src = File.OpenRead(temp))
@@ -296,6 +307,7 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
                 var pbp = PbpArchive.Parse(src);
                 foreach (var e in pbp.Entries)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     AtomicOutput.Write(Path.Combine(destinationDir, e.Name),
                         dst => PbpArchive.Extract(src, e, dst));
                     written.Add(e.Name);
@@ -313,7 +325,8 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
     /// Extracts the selected EBOOT.PBP, unpacks its DATA.PSAR (an NPUMDIMG), and decrypts it to a PSP
     /// ISO at <paramref name="isoPath"/> — no RAP/license needed. Throws if there's no NPUMDIMG inside.
     /// </summary>
-    public void ExtractSelectedPspIsoTo(string isoPath)
+    public void ExtractSelectedPspIsoTo(string isoPath, CancellationToken cancellationToken = default,
+        IProgress<double>? progress = null)
     {
         if (SelectedItem is not { IsDirectory: false, Name: { } leaf, Entry: { } entry })
             throw new InvalidOperationException("Select an EBOOT.PBP file.");
@@ -324,7 +337,7 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
         try
         {
             using (var d = File.Create(pbpTmp))
-                PkgReader.ExtractEntry(_stream, _header, entry, d, _keys);
+                PkgReader.ExtractEntry(_stream, _header, entry, d, _keys, cancellationToken);
 
             using (var src = File.OpenRead(pbpTmp))
             {
@@ -342,7 +355,8 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
                 throw new InvalidOperationException("DATA.PSAR is not an NPUMDIMG (this game isn't a UMD/minis image).");
             psarStream.Position = 0;
 
-            AtomicOutput.Write(isoPath, iso => NpumdImg.DecryptToIso(psarStream, iso));
+            AtomicOutput.Write(isoPath, iso => NpumdImg.DecryptToIso(psarStream, iso,
+                cancellationToken, progress));
         }
         finally
         {

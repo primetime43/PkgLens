@@ -37,10 +37,12 @@ public static class PkgReader
     }
 
     /// <summary>Streams a single entry's decrypted data to <paramref name="destination"/>.</summary>
-    public static void ExtractEntry(Stream stream, PkgHeader header, PkgEntry entry, Stream destination, IKeyProvider keys)
+    public static void ExtractEntry(Stream stream, PkgHeader header, PkgEntry entry, Stream destination,
+        IKeyProvider keys, CancellationToken cancellationToken = default, IProgress<long>? progress = null)
     {
         using var decryptors = ResolveDecryptorSet(header, keys);
-        PkgContainerReader.CopyEntryTo(stream, header, decryptors.For(entry), entry, destination);
+        PkgContainerReader.CopyEntryTo(stream, header, decryptors.For(entry), entry, destination,
+            cancellationToken: cancellationToken, progress: progress);
     }
 
     /// <summary>
@@ -50,7 +52,8 @@ public static class PkgReader
     /// escape the output directory are rejected.
     /// </summary>
     public static int ExtractAll(Stream stream, PkgInfo info, string outputDir, IKeyProvider keys,
-        Func<PkgEntry, bool>? filter = null, Action<PkgEntry>? onExtracted = null)
+        Func<PkgEntry, bool>? filter = null, Action<PkgEntry>? onExtracted = null,
+        CancellationToken cancellationToken = default, IProgress<PkgOperationProgress>? progress = null)
     {
         ArgumentNullException.ThrowIfNull(stream);
         ArgumentNullException.ThrowIfNull(info);
@@ -63,9 +66,13 @@ public static class PkgReader
         string rootWithSep = root.EndsWith(Path.DirectorySeparatorChar) ? root : root + Path.DirectorySeparatorChar;
 
         using var decryptors = ResolveDecryptorSet(info.Header, keys);
+        long totalBytes = info.Entries.Where(entry => entry.IsFile && (filter is null || filter(entry)))
+            .Sum(entry => checked((long)entry.FileSize));
+        long completedBytes = 0;
         int count = 0;
         foreach (var entry in info.Entries)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (filter is not null && !filter(entry)) continue;
 
             string dest = SafeCombine(rootWithSep, entry.Name);
@@ -79,12 +86,22 @@ public static class PkgReader
 
             Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
             EnsureNoLinkedDescendant(root, Path.GetDirectoryName(dest)!);
+            long entryBase = completedBytes;
+            var entryProgress = progress is null ? null : new InlineProgress<long>(bytes =>
+                progress.Report(new PkgOperationProgress(entryBase + bytes, totalBytes, entry.Name)));
             WriteAtomically(dest, fs =>
-                PkgContainerReader.CopyEntryTo(stream, info.Header, decryptors.For(entry), entry, fs));
+                PkgContainerReader.CopyEntryTo(stream, info.Header, decryptors.For(entry), entry, fs,
+                    cancellationToken: cancellationToken, progress: entryProgress));
+            completedBytes += checked((long)entry.FileSize);
             onExtracted?.Invoke(entry);
             count++;
         }
         return count;
+    }
+
+    private sealed class InlineProgress<T>(Action<T> report) : IProgress<T>
+    {
+        public void Report(T value) => report(value);
     }
 
     private static string SafeCombine(string rootWithSep, string relative)

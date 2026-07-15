@@ -1,0 +1,26 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="PkgLens.Gui.Views.ErrorDialog"
+        Width="520" SizeToContent="Height" MaxHeight="520" CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        Title="Operation failed">
+  <Grid Margin="18" RowDefinitions="Auto,Auto,Auto" RowSpacing="14">
+    <StackPanel Grid.Row="0" Spacing="6">
+      <TextBlock Text="The operation could not be completed." FontSize="16" FontWeight="SemiBold" />
+      <TextBlock x:Name="MessageText" TextWrapping="Wrap" />
+    </StackPanel>
+
+    <Expander Grid.Row="1" Header="Technical details">
+      <Border Margin="0,8,0,0" Padding="8" MaxHeight="260"
+              Background="{DynamicResource SystemControlBackgroundBaseLowBrush}">
+        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+          <TextBlock x:Name="DetailsText" FontFamily="Consolas, monospace" FontSize="11"
+                     TextWrapping="NoWrap" />
+        </ScrollViewer>
+      </Border>
+    </Expander>
+
+    <Button Grid.Row="2" Content="OK" Click="OnClose" HorizontalAlignment="Right"
+            IsDefault="True" MinWidth="76" />
+  </Grid>
+</Window>

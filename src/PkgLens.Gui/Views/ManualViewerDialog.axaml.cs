@@ -8,6 +8,7 @@ using Avalonia.Markup.Xaml;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using PkgLens.Gui.Services;
+using PkgLens.Gui.ViewModels;
 
 namespace PkgLens.Gui.Views;
 
@@ -75,6 +76,8 @@ public partial class ManualViewerDialog : Window
         catch (Exception ex)
         {
             _label.Text = $"Save failed: {ex.Message}";
+            await new ErrorDialog(new GuiErrorReport(
+                "Save failed", ex.Message, ex.ToString())).ShowDialog(this);
         }
     }
 }

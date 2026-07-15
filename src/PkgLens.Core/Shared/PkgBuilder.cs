@@ -75,10 +75,12 @@ public sealed class PkgBuilder
     }
 
     /// <summary>Writes the assembled package to <paramref name="destination"/>. The stream is written sequentially.</summary>
-    public void Build(Stream destination, IKeyProvider keys)
+    public void Build(Stream destination, IKeyProvider keys, CancellationToken cancellationToken = default,
+        IProgress<PkgOperationProgress>? progress = null)
     {
         ArgumentNullException.ThrowIfNull(destination);
         ArgumentNullException.ThrowIfNull(keys);
+        cancellationToken.ThrowIfCancellationRequested();
         if (_entries.Count == 0)
             throw new PkgFormatException("Nothing to pack: no entries were added.");
 
@@ -204,7 +206,8 @@ public sealed class PkgBuilder
             {
                 var e = _entries[i];
                 if (e.Kind == PkgEntryType.Folder || e.Size == 0) continue;
-                EncryptCopy(e, fileOffset[i], cipher, destination);
+                EncryptCopy(e, fileOffset[i], cipher, destination, cancellationToken, progress,
+                    fileOffset[i] - (tableLen + namesLen), dataSize - (tableLen + namesLen));
             }
         }
         finally
@@ -213,7 +216,9 @@ public sealed class PkgBuilder
         }
     }
 
-    private static void EncryptCopy(Entry entry, long regionOffset, IPkgDecryptor cipher, Stream destination)
+    private static void EncryptCopy(Entry entry, long regionOffset, IPkgDecryptor cipher, Stream destination,
+        CancellationToken cancellationToken, IProgress<PkgOperationProgress>? progress,
+        long completedBeforeEntry, long totalFileBytes)
     {
         using var src = entry.Open!();
         var buffer = new byte[(int)Math.Min(1 << 20, Math.Max(entry.Size, 1))];
@@ -221,6 +226,7 @@ public sealed class PkgBuilder
         long remaining = entry.Size;
         while (remaining > 0)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             int want = (int)Math.Min(buffer.Length, remaining);
             int read = 0;
             while (read < want)
@@ -233,6 +239,8 @@ public sealed class PkgBuilder
             }
             cipher.DecryptInPlace(buffer.AsSpan(0, want), offset);
             destination.Write(buffer, 0, want);
+            progress?.Report(new PkgOperationProgress(completedBeforeEntry + entry.Size - remaining + want,
+                totalFileBytes, entry.Name));
             offset += want;
             remaining -= want;
         }

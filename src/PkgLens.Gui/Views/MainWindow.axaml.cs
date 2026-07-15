@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
@@ -20,6 +21,7 @@ namespace PkgLens.Gui.Views;
 public partial class MainWindow : Window
 {
     private Border? _dropOverlay;
+    private MainWindowViewModel? _subscribedViewModel;
 
     public MainWindow()
     {
@@ -57,6 +59,30 @@ public partial class MainWindow : Window
 
     private MainWindowViewModel Vm => (MainWindowViewModel)DataContext!;
 
+    protected override void OnDataContextChanged(EventArgs e)
+    {
+        if (_subscribedViewModel is not null)
+            _subscribedViewModel.ErrorRequested -= OnErrorRequested;
+
+        base.OnDataContextChanged(e);
+        _subscribedViewModel = DataContext as MainWindowViewModel;
+        if (_subscribedViewModel is not null)
+            _subscribedViewModel.ErrorRequested += OnErrorRequested;
+    }
+
+    private async void OnErrorRequested(object? sender, GuiErrorReport error) =>
+        await new ErrorDialog(error).ShowDialog(this);
+
+    private void OnCancelOperation(object? sender, RoutedEventArgs e) => Vm.CancelOperation();
+
+    private Task RunOperationAsync(string message, string errorTitle,
+        Func<CancellationToken, IProgress<GuiOperationProgress>, Task> operation,
+        bool canCancel = true) =>
+        Vm.RunOperationAsync(message, errorTitle, operation, canCancel);
+
+    private static GuiOperationProgress ToGuiProgress(PkgLens.Core.Shared.PkgOperationProgress progress) =>
+        new(progress.Item is null ? null : $"Processing {progress.Item}…", progress.Percent);
+
     private async void OnOpenClick(object? sender, RoutedEventArgs e)
     {
         var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
@@ -90,7 +116,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            Vm.Status = $"Could not save key: {ex.Message}";
+            Vm.ReportError("Could not save key", ex);
         }
     }
 
@@ -124,15 +150,14 @@ public partial class MainWindow : Window
         if (file?.TryGetLocalPath() is not { } dest)
             return;
 
-        try
+        await RunOperationAsync($"Extracting {node.Name}…", "Extract failed", async (token, progress) =>
         {
-            await Task.Run(() => package.ExtractSelectedTo(dest));
+            var byteProgress = new Progress<long>(bytes =>
+                progress.Report(new GuiOperationProgress($"Extracting {node.Name}…",
+                    node.Size == 0 ? 100 : bytes * 100d / node.Size)));
+            await Task.Run(() => package.ExtractSelectedTo(dest, token, byteProgress), token);
             Vm.Status = $"Extracted {node.Name} → {dest}";
-        }
-        catch (Exception ex)
-        {
-            Vm.Status = $"Extract failed: {ex.Message}";
-        }
+        });
     }
 
     // Right-click selects the row under the cursor so the context menu acts on it.
@@ -162,16 +187,13 @@ public partial class MainWindow : Window
         // Extract into a subfolder named after the package, so files don't spill into the chosen dir.
         string dest = Path.Combine(dir, Path.GetFileNameWithoutExtension(package.FilePath));
 
-        try
+        await RunOperationAsync("Extracting all files…", "Extract all failed", async (token, progress) =>
         {
-            Vm.Status = "Extracting all files…";
-            int n = await Task.Run(() => package.ExtractAllTo(dest));
+            var packageProgress = new Progress<PkgLens.Core.Shared.PkgOperationProgress>(value =>
+                progress.Report(ToGuiProgress(value)));
+            int n = await Task.Run(() => package.ExtractAllTo(dest, token, packageProgress), token);
             Vm.Status = $"Extracted {n} file(s) to {dest}";
-        }
-        catch (Exception ex)
-        {
-            Vm.Status = $"Extract all failed: {ex.Message}";
-        }
+        });
     }
 
     private void OnGridDoubleTapped(object? sender, TappedEventArgs e)
@@ -202,9 +224,9 @@ public partial class MainWindow : Window
             return;
         }
 
-        try
+        await RunOperationAsync($"Reading {node.Name}…", $"Could not read {node.Name}", async (token, _) =>
         {
-            byte[] data = await Task.Run(package.ReadSelectedBytes);
+            byte[] data = await Task.Run(package.ReadSelectedBytes, token);
             string title = node.Name;
 
             // If it's an EDAT/SDAT (PS3 NPDRM or PSP EDAT/PGD), decrypt it so the viewer shows the real contents.
@@ -212,11 +234,7 @@ public partial class MainWindow : Window
                 (data, title) = await DecryptEdatForView(data, node.Name);
 
             await new FileViewerDialog(title, data).ShowDialog(this);
-        }
-        catch (Exception ex)
-        {
-            Vm.Status = $"Could not read {node.Name}: {ex.Message}";
-        }
+        });
     }
 
     /// <summary>Decrypts an EDAT/SDAT for viewing (SDAT/free automatic; licensed resolves a RAP).</summary>
@@ -233,7 +251,7 @@ public partial class MainWindow : Window
             }
             catch (Exception ex)
             {
-                Vm.Status = $"PSP EDAT decrypt failed: {ex.Message}";
+                Vm.ReportError("PSP EDAT decrypt failed", ex);
                 return (data, name);
             }
         }
@@ -260,7 +278,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            Vm.Status = $"EDAT decrypt failed: {ex.Message}";
+            Vm.ReportError("EDAT decrypt failed", ex);
             return (data, name);
         }
     }
@@ -341,18 +359,13 @@ public partial class MainWindow : Window
 
         var box = this.FindControl<Border>("FolderInfoBox")!;
         var text = this.FindControl<TextBlock>("FolderInfoText")!;
-        try
+        await RunOperationAsync("Inspecting folder…", "Folder inspection failed", async (token, _) =>
         {
-            var report = await Task.Run(() => PkgLens.Core.Shared.GameFolderInfo.Describe(_packFolder));
+            var report = await Task.Run(() => PkgLens.Core.Shared.GameFolderInfo.Describe(_packFolder), token);
             text.Text = DescribeFolder(report);
             box.IsVisible = true;
             Vm.Status = $"Folder: {report.FileCount} file(s), {report.TotalBytes:n0} bytes.";
-        }
-        catch (Exception ex)
-        {
-            box.IsVisible = false;
-            Vm.Status = $"Couldn't read folder: {ex.Message}";
-        }
+        });
     }
 
     private static string DescribeFolder(PkgLens.Core.Shared.GameFolderReport r)
@@ -407,20 +420,16 @@ public partial class MainWindow : Window
         this.FindControl<TextBlock>("PackFolderText")!.Text = folder;
 
         // Fast-Pack inference to pre-fill the fields (blank fallback if it can't infer).
-        try
+        await RunOperationAsync("Inspecting package folder…", "Folder inference failed", async (token, _) =>
         {
-            var plan = await Task.Run(() => PkgLens.Core.Shared.FolderPackage.Plan(folder));
+            var plan = await Task.Run(() => PkgLens.Core.Shared.FolderPackage.Plan(folder), token);
             this.FindControl<TextBox>("PackContentIdBox")!.Text = plan.ContentId;
             this.FindControl<TextBox>("PackInstallDirBox")!.Text = plan.InstallDirectory;
             this.FindControl<NumericUpDown>("PackDrmBox")!.Value = plan.DrmType;
             SelectPackContentType(plan.ContentType);
             ShowPackNotes(plan.Notes.Count > 0 ? "Inferred: " + string.Join("; ", plan.Notes) : null);
             Vm.Status = $"Ready to pack {plan.FileCount} file(s) from {Path.GetFileName(folder)}.";
-        }
-        catch (Exception ex)
-        {
-            ShowPackNotes($"Couldn't infer from PARAM.SFO — enter the content id manually. ({ex.Message})");
-        }
+        });
     }
 
     private async void OnPackBuild(object? sender, RoutedEventArgs e)
@@ -451,7 +460,7 @@ public partial class MainWindow : Window
                 if (rapBytes.Length != 16) { Vm.Status = "The chosen RAP is not 16 bytes."; return; }
                 ebootKlic = PkgLens.Core.Ps3.Npd.NpdKeys.RapToKlicensee(rapBytes);
             }
-            catch (Exception ex) { Vm.Status = $"Couldn't read the RAP: {ex.Message}"; return; }
+            catch (Exception ex) { Vm.ReportError("Could not read the RAP", ex); return; }
         }
 
         var options = new PkgLens.Core.Shared.PackOptions
@@ -476,26 +485,23 @@ public partial class MainWindow : Window
             return;
 
         string folder = _packFolder;
-        try
+        await RunOperationAsync("Packing…", "Pack failed", async (token, progress) =>
         {
-            Vm.Status = "Packing…";
+            var packageProgress = new Progress<PkgLens.Core.Shared.PkgOperationProgress>(value =>
+                progress.Report(ToGuiProgress(value)));
             var plan = await Task.Run(() =>
             {
                 var p = PkgLens.Core.Shared.FolderPackage.Plan(folder, options, dest);
                 IKeyProvider keys = new FileKeyProvider(Vm.KeysDirectory);
-                AtomicOutput.Write(dest, dst => p.Builder.Build(dst, keys));
+                AtomicOutput.Write(dest, dst => p.Builder.Build(dst, keys, token, packageProgress));
                 return p;
-            });
+            }, token);
 
             Vm.Status = retail
                 ? $"Packed {plan.FileCount} file(s) → {Path.GetFileName(dest)} — retail-encrypted (installs on CFW)."
                 : $"Packed {plan.FileCount} file(s) → {Path.GetFileName(dest)} — non-finalized (debug; RPCS3 / dev).";
             ShowPackNotes($"Wrote {new FileInfo(dest).Length:n0} bytes to {dest}");
-        }
-        catch (Exception ex)
-        {
-            Vm.Status = $"Pack failed: {ex.Message}";
-        }
+        });
     }
 
     private void SelectPackContentType(uint value)
@@ -576,9 +582,9 @@ public partial class MainWindow : Window
             return;
         }
 
-        try
+        await RunOperationAsync("Decrypting data file…", "Decrypt failed", async (token, _) =>
         {
-            byte[] bytes = await File.ReadAllBytesAsync(_decryptFile);
+            byte[] bytes = await File.ReadAllBytesAsync(_decryptFile, token);
 
             // PSP EDAT / bare PGD: decrypt via the PSP path (fixed key, no RAP).
             if (PkgLens.Core.Psp.PspEdatFile.IsPspEncrypted(bytes))
@@ -593,11 +599,12 @@ public partial class MainWindow : Window
                 string pspSrc = _decryptFile;
                 await Task.Run(() =>
                 {
+                    token.ThrowIfCancellationRequested();
                     AtomicOutput.EnsureDifferentPath(pspSrc, pspDest);
                     using var input = File.OpenRead(pspSrc);
                     AtomicOutput.Write(pspDest,
                         output => PkgLens.Core.Psp.PspEdatFile.Decrypt(input, output));
-                });
+                }, token);
                 Vm.Status = $"Decrypted PSP EDAT → {Path.GetFileName(pspDest)}";
                 ShowResultBanner("DecryptBanner", ok: true,
                     $"Decrypted PSP EDAT — wrote {new FileInfo(pspDest).Length:n0} bytes.", pspDest);
@@ -611,7 +618,7 @@ public partial class MainWindow : Window
             if (npd.NeedsKlicensee)
             {
                 byte[]? rap = _decryptRap is not null
-                    ? await File.ReadAllBytesAsync(_decryptRap)
+                    ? await File.ReadAllBytesAsync(_decryptRap, token)
                     : PkgLens.Core.Ps3.Npd.RapStore.Find(npd.ContentId);
                 if (rap is null)
                 {
@@ -633,22 +640,17 @@ public partial class MainWindow : Window
             byte[]? k = klic;
             await Task.Run(() =>
             {
+                token.ThrowIfCancellationRequested();
                 AtomicOutput.EnsureDifferentPath(src, dest);
                 using var input = File.OpenRead(src);
                 AtomicOutput.Write(dest,
                     output => PkgLens.Core.Ps3.Npd.EdatFile.Decrypt(input, output, k));
-            });
+            }, token);
             Vm.Status = $"Decrypted {npd.ContentId} → {Path.GetFileName(dest)}";
             ShowResultBanner("DecryptBanner", ok: true,
                 $"Decrypted {npd.ContentId} — wrote {new FileInfo(dest).Length:n0} bytes.", dest);
             SetDecryptResult(dest);
-        }
-        catch (Exception ex)
-        {
-            Vm.Status = $"Decrypt failed: {ex.Message}";
-            ShowResultBanner("DecryptBanner", ok: false, $"Decrypt failed: {ex.Message}", null);
-            SetDecryptResult(null);
-        }
+        });
     }
 
     private async void OnDecryptView(object? sender, RoutedEventArgs e)
@@ -658,15 +660,11 @@ public partial class MainWindow : Window
             Vm.Status = "No decrypted file to view — run Decrypt first.";
             return;
         }
-        try
+        await RunOperationAsync("Opening decrypted file…", "Could not open the decrypted file", async (token, _) =>
         {
-            byte[] data = await File.ReadAllBytesAsync(path);
+            byte[] data = await File.ReadAllBytesAsync(path, token);
             await new FileViewerDialog(Path.GetFileName(path), data).ShowDialog(this);
-        }
-        catch (Exception ex)
-        {
-            Vm.Status = $"Could not open the decrypted file: {ex.Message}";
-        }
+        });
     }
 
 
@@ -740,22 +738,18 @@ public partial class MainWindow : Window
         var box = this.FindControl<Border>("SelfInfoBox")!;
         var text = this.FindControl<TextBlock>("SelfInfoText")!;
 
-        try
+        await RunOperationAsync("Inspecting SELF…", "SELF inspection failed", async (token, _) =>
         {
             var info = await Task.Run(() =>
             {
+                token.ThrowIfCancellationRequested();
                 using var s = File.OpenRead(path);
                 return PkgLens.Core.Ps3.Self.SelfReader.ParseInfo(s);
-            });
+            }, token);
             text.Text = DescribeSelf(info);
             box.IsVisible = true;
             Vm.Status = $"Read SELF header: {info.ProgramTypeText}" + (info.IsNpdrm ? " (NPDRM)" : "");
-        }
-        catch (Exception ex)
-        {
-            box.IsVisible = false;
-            Vm.Status = $"Not a readable SELF: {ex.Message}";
-        }
+        });
     }
 
     private async void OnMakeFself(object? sender, RoutedEventArgs e)
@@ -792,24 +786,20 @@ public partial class MainWindow : Window
         if (save?.TryGetLocalPath() is not { } dest)
             return;
 
-        try
+        await RunOperationAsync("Fake-signing SELF…", "Fake-sign failed", async (token, _) =>
         {
             long size = await Task.Run(() =>
             {
+                token.ThrowIfCancellationRequested();
                 byte[] elf = File.ReadAllBytes(input);
                 byte[] fself = PkgLens.Core.Ps3.Self.SelfBuilder.MakeFakeSelf(elf, opts);
                 AtomicOutput.EnsureDifferentPath(input, dest);
                 AtomicOutput.WriteAllBytes(dest, fself);
                 return (long)fself.Length;
-            });
+            }, token);
             Vm.Status = $"Fake-signed → {Path.GetFileName(dest)} ({size:n0} bytes).";
             ShowFselfNotes($"Wrote a {(npdrm ? "NPDRM" : "NON-DRM")} fSELF (key rev 0x8000). Runs on CFW; not on stock retail.");
-        }
-        catch (Exception ex)
-        {
-            Vm.Status = $"Fake-sign failed: {ex.Message}";
-            ShowFselfNotes(ex.Message);
-        }
+        });
     }
 
     private void ShowFselfNotes(string? text)
@@ -861,10 +851,11 @@ public partial class MainWindow : Window
         if (save?.TryGetLocalPath() is not { } dest)
             return;
 
-        try
+        await RunOperationAsync("Magic-patching executable…", "Magic patch failed", async (token, _) =>
         {
             string summary = await Task.Run(() =>
             {
+                token.ThrowIfCancellationRequested();
                 byte[] raw = File.ReadAllBytes(input);
                 uint magic = System.Buffers.Binary.BinaryPrimitives.ReadUInt32BigEndian(raw);
 
@@ -896,15 +887,10 @@ public partial class MainWindow : Window
                 AtomicOutput.EnsureDifferentPath(input, dest);
                 AtomicOutput.WriteAllBytes(dest, fself);
                 return $"Magic-patched → {Path.GetFileName(dest)} ({fself.Length:n0} bytes); {fwNote}.";
-            });
+            }, token);
             Vm.Status = summary;
             ShowMagicNotes(summary + "  Runs on CFW; not on stock retail.");
-        }
-        catch (Exception ex)
-        {
-            Vm.Status = $"Magic patch failed: {ex.Message}";
-            ShowMagicNotes(ex.Message);
-        }
+        });
     }
 
     private void ShowBytePatchNotes(string? text)
@@ -981,10 +967,11 @@ public partial class MainWindow : Window
         if (save?.TryGetLocalPath() is not { } dest)
             return;
 
-        try
+        await RunOperationAsync("Byte-patching executable…", "Byte patch failed", async (token, _) =>
         {
             string summary = await Task.Run(() =>
             {
+                token.ThrowIfCancellationRequested();
                 byte[] raw = File.ReadAllBytes(input);
                 if (raw.Length < 4) throw new PkgLens.Core.PkgFormatException("File is too small.");
                 uint magic = System.Buffers.Binary.BinaryPrimitives.ReadUInt32BigEndian(raw);
@@ -1027,15 +1014,10 @@ public partial class MainWindow : Window
 
                 string kind = emitSelf ? $"fake-signed {(npdrm ? "NPDRM" : "NON-DRM")} SELF" : "ELF";
                 return $"Patched → {Path.GetFileName(dest)} ({output.Length:n0} bytes) [{kind}]; {string.Join("; ", steps)}.";
-            });
+            }, token);
             Vm.Status = summary;
             ShowBytePatchNotes(summary + (summary.Contains("SELF") ? "  Runs on CFW; not on stock retail." : ""));
-        }
-        catch (Exception ex)
-        {
-            Vm.Status = $"Byte patch failed: {ex.Message}";
-            ShowBytePatchNotes(ex.Message);
-        }
+        });
 
         void Fail(string message) { Vm.Status = message; ShowBytePatchNotes(message); }
     }
@@ -1186,10 +1168,11 @@ public partial class MainWindow : Window
         if (save?.TryGetLocalPath() is not { } dest)
             return;
 
-        try
+        await RunOperationAsync("Decrypting SELF…", "SELF decrypt failed", async (token, _) =>
         {
             var summary = await Task.Run(() =>
             {
+                token.ThrowIfCancellationRequested();
                 byte[] self = File.ReadAllBytes(input);
                 byte[]? klic = null;
                 if (rap is not null)
@@ -1217,15 +1200,10 @@ public partial class MainWindow : Window
                 AtomicOutput.EnsureDifferentPath(input, dest);
                 AtomicOutput.WriteAllBytes(dest, result.Elf);
                 return $"Decrypted {self.Length:n0}-byte SELF ({lic}) → {Path.GetFileName(dest)} ({result.Elf.Length:n0} bytes).";
-            });
+            }, token);
             Vm.Status = summary;
             ShowResultBanner("UnselfBanner", ok: true, summary, dest);
-        }
-        catch (Exception ex)
-        {
-            Vm.Status = $"Decrypt failed: {ex.Message}";
-            ShowResultBanner("UnselfBanner", ok: false, $"Decrypt failed: {ex.Message}", null);
-        }
+        });
     }
 
     /// <summary>
@@ -1270,7 +1248,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            Vm.Status = $"Could not open the folder: {ex.Message}";
+            Vm.ReportError("Could not open the folder", ex);
         }
     }
 
@@ -1328,16 +1306,12 @@ public partial class MainWindow : Window
         if (folders.FirstOrDefault()?.TryGetLocalPath() is not { } dir)
             return;
 
-        try
+        await RunOperationAsync("Inspecting folder…", "Folder inspection failed", async (token, _) =>
         {
-            var report = await Task.Run(() => PkgLens.Core.Shared.GameFolderInfo.Describe(dir));
+            var report = await Task.Run(() => PkgLens.Core.Shared.GameFolderInfo.Describe(dir), token);
             await new FolderInfoDialog(dir, DescribeFolder(report)).ShowDialog(this);
             Vm.Status = $"Folder: {report.FileCount} file(s), {report.TotalBytes:n0} bytes.";
-        }
-        catch (Exception ex)
-        {
-            Vm.Status = $"Couldn't read folder: {ex.Message}";
-        }
+        });
     }
 
     private void OnScanFolderClick(object? sender, RoutedEventArgs e) =>
@@ -1355,10 +1329,9 @@ public partial class MainWindow : Window
         }
 
         string name = package.SelectedItem?.Name ?? "DOCUMENT.DAT";
-        try
+        await RunOperationAsync("Decrypting manual…", "Manual decrypt failed", async (token, _) =>
         {
-            Vm.Status = "Decrypting manual…";
-            var pages = await Task.Run(package.DecryptSelectedDocument);
+            var pages = await Task.Run(package.DecryptSelectedDocument, token);
             if (pages.Count == 0)
             {
                 Vm.Status = "No manual pages were found in this DOCUMENT.DAT.";
@@ -1366,11 +1339,7 @@ public partial class MainWindow : Window
             }
             Vm.Status = $"Decrypted {pages.Count} manual page(s).";
             await new ManualViewerDialog(name, pages).ShowDialog(this);
-        }
-        catch (Exception ex)
-        {
-            Vm.Status = $"Manual decrypt failed: {ex.Message}";
-        }
+        });
     }
 
     private async void OnUnpackPbp(object? sender, RoutedEventArgs e)
@@ -1389,16 +1358,11 @@ public partial class MainWindow : Window
         if (folders.FirstOrDefault()?.TryGetLocalPath() is not { } dir)
             return;
 
-        try
+        await RunOperationAsync("Unpacking PBP…", "PBP unpack failed", async (token, _) =>
         {
-            Vm.Status = "Unpacking PBP…";
-            var written = await Task.Run(() => package.UnpackSelectedPbpTo(dir));
+            var written = await Task.Run(() => package.UnpackSelectedPbpTo(dir, token), token);
             Vm.Status = $"Unpacked {written.Count} section(s) → {dir}";
-        }
-        catch (Exception ex)
-        {
-            Vm.Status = $"Unpack failed: {ex.Message}";
-        }
+        });
     }
 
     private async void OnExtractPspIso(object? sender, RoutedEventArgs e)
@@ -1420,17 +1384,14 @@ public partial class MainWindow : Window
         if (file?.TryGetLocalPath() is not { } dest)
             return;
 
-        try
+        await RunOperationAsync("Decrypting PSP ISO…", "ISO extraction failed", async (token, progress) =>
         {
-            Vm.Status = "Decrypting PSP ISO (this can take a minute)…";
-            await Task.Run(() => package.ExtractSelectedPspIsoTo(dest));
+            var isoProgress = new Progress<double>(percent =>
+                progress.Report(new GuiOperationProgress("Decrypting PSP ISO…", percent)));
+            await Task.Run(() => package.ExtractSelectedPspIsoTo(dest, token, isoProgress), token);
             Vm.Status = $"Saved PSP ISO → {Path.GetFileName(dest)} — ready to run in a PSP emulator " +
                         "(the EBOOT/.prx executables inside stay encrypted until the emulator loads them).";
-        }
-        catch (Exception ex)
-        {
-            Vm.Status = $"ISO extract failed: {ex.Message}";
-        }
+        });
     }
 
     private void OnEditSfoClick(object? sender, RoutedEventArgs e) => EditSfo();
@@ -1451,7 +1412,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            Vm.Status = $"SFO edit failed: {ex.Message}";
+            Vm.ReportError("SFO edit failed", ex);
         }
     }
 
@@ -1459,15 +1420,11 @@ public partial class MainWindow : Window
     {
         if (Vm.Package is not { } package)
             return;
-        try
+        await RunOperationAsync("Verifying package…", "Verify failed", async (token, _) =>
         {
-            var report = await Task.Run(package.Verify);
+            var report = await Task.Run(package.Verify, token);
             await new VerifyDialog(report).ShowDialog(this);
-        }
-        catch (Exception ex)
-        {
-            Vm.Status = $"Verify failed: {ex.Message}";
-        }
+        });
     }
 
     private void OnAboutClick(object? sender, RoutedEventArgs e) =>
@@ -1487,18 +1444,14 @@ public partial class MainWindow : Window
         if (files.FirstOrDefault()?.TryGetLocalPath() is not { } path)
             return;
 
-        try
+        await RunOperationAsync($"Reading {Path.GetFileName(path)}…", "Replace failed", async (token, _) =>
         {
-            byte[] content = await File.ReadAllBytesAsync(path);
+            byte[] content = await File.ReadAllBytesAsync(path, token);
             package.ReplaceSelected(content);
             Vm.Status = $"Replaced {node.Name} ({EntryNode.FormatSize(node.Size)} → " +
-                        $"{EntryNode.FormatSize((ulong)content.Length)}). {package.PendingChangeCount} pending change(s) — " +
-                        "use File → Save As to write a new .pkg.";
-        }
-        catch (Exception ex)
-        {
-            Vm.Status = $"Replace failed: {ex.Message}";
-        }
+                         $"{EntryNode.FormatSize((ulong)content.Length)}). {package.PendingChangeCount} pending change(s) — " +
+                         "use File → Save As to write a new .pkg.";
+        });
     }
 
     private static readonly string[] ImageExtensions =
@@ -1549,18 +1502,15 @@ public partial class MainWindow : Window
         if (file?.TryGetLocalPath() is not { } dest)
             return;
 
-        try
+        await RunOperationAsync("Repacking…", "Save failed", async (token, progress) =>
         {
-            Vm.Status = "Repacking…";
-            await Task.Run(() => package.SaveAs(dest));
+            var packageProgress = new Progress<PkgLens.Core.Shared.PkgOperationProgress>(value =>
+                progress.Report(ToGuiProgress(value)));
+            await Task.Run(() => package.SaveAs(dest, token, packageProgress), token);
             Vm.Status = package.IsRetail
                 ? $"Saved {System.IO.Path.GetFileName(dest)} — UNSIGNED (retail: invalid CMAC/signature; won't install on a real console)."
                 : $"Saved {System.IO.Path.GetFileName(dest)}.";
-        }
-        catch (Exception ex)
-        {
-            Vm.Status = $"Save failed: {ex.Message}";
-        }
+        });
     }
 
     private void OnCloseClick(object? sender, RoutedEventArgs e) => Vm.CloseFile();

@@ -28,13 +28,16 @@ public static class PkgWriter
         PkgInfo info,
         IReadOnlyDictionary<PkgEntry, byte[]> replacements,
         IKeyProvider keys,
-        Stream destination)
+        Stream destination,
+        CancellationToken cancellationToken = default,
+        IProgress<PkgOperationProgress>? progress = null)
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(info);
         ArgumentNullException.ThrowIfNull(replacements);
         ArgumentNullException.ThrowIfNull(keys);
         ArgumentNullException.ThrowIfNull(destination);
+        cancellationToken.ThrowIfCancellationRequested();
         if (!source.CanSeek)
             throw new PkgFormatException("A seekable source stream is required to repack a package.");
         if (!destination.CanWrite)
@@ -101,7 +104,7 @@ public static class PkgWriter
             tableLength, decryptors.Table);
         WriteNames(destination, entries, names, nameOffsets, decryptors);
         WriteFiles(source, destination, header, entries, replacements, fileOffsets, fileSizes,
-            decryptors, buffer);
+            decryptors, buffer, cancellationToken, progress);
     }
 
     private static long ReplacementOrOriginalSize(PkgEntry entry,
@@ -169,37 +172,49 @@ public static class PkgWriter
     private static void WriteFiles(Stream source, Stream destination, PkgHeader header,
         IReadOnlyList<PkgEntry> entries, IReadOnlyDictionary<PkgEntry, byte[]> replacements,
         IReadOnlyList<long> fileOffsets, IReadOnlyList<long> fileSizes,
-        PkgDecryptorSet decryptors, byte[] buffer)
+        PkgDecryptorSet decryptors, byte[] buffer, CancellationToken cancellationToken,
+        IProgress<PkgOperationProgress>? progress)
     {
+        long totalBytes = fileSizes.Sum();
+        long completedBytes = 0;
         for (int i = 0; i < entries.Count; i++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (fileSizes[i] == 0) continue;
 
             PkgEntry entry = entries[i];
             IPkgDecryptor decryptor = decryptors.For(entry);
             if (replacements.TryGetValue(entry, out byte[]? replacement) && !entry.IsDirectory)
-                WriteReplacement(destination, replacement, fileOffsets[i], decryptor, buffer);
+                WriteReplacement(destination, replacement, fileOffsets[i], decryptor, buffer,
+                    cancellationToken, progress, completedBytes, totalBytes, entry.Name);
             else
-                CopyOriginalEntry(source, destination, header, entry, fileOffsets[i], decryptor, buffer);
+                CopyOriginalEntry(source, destination, header, entry, fileOffsets[i], decryptor, buffer,
+                    cancellationToken, progress, completedBytes, totalBytes);
+            completedBytes += fileSizes[i];
         }
     }
 
     private static void WriteReplacement(Stream destination, byte[] replacement, long newOffset,
-        IPkgDecryptor decryptor, byte[] buffer)
+        IPkgDecryptor decryptor, byte[] buffer, CancellationToken cancellationToken,
+        IProgress<PkgOperationProgress>? progress, long completedBeforeEntry, long totalBytes, string name)
     {
         int sourceOffset = 0;
         while (sourceOffset < replacement.Length)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             int count = Math.Min(buffer.Length, replacement.Length - sourceOffset);
             replacement.AsSpan(sourceOffset, count).CopyTo(buffer);
             decryptor.DecryptInPlace(buffer.AsSpan(0, count), checked(newOffset + sourceOffset));
             destination.Write(buffer, 0, count);
             sourceOffset += count;
+            progress?.Report(new PkgOperationProgress(completedBeforeEntry + sourceOffset, totalBytes, name));
         }
     }
 
     private static void CopyOriginalEntry(Stream source, Stream destination, PkgHeader header,
-        PkgEntry entry, long newOffset, IPkgDecryptor decryptor, byte[] buffer)
+        PkgEntry entry, long newOffset, IPkgDecryptor decryptor, byte[] buffer,
+        CancellationToken cancellationToken, IProgress<PkgOperationProgress>? progress,
+        long completedBeforeEntry, long totalBytes)
     {
         ValidateOriginalRange(source, header, entry, out long absoluteOffset, out long size);
         source.Position = absoluteOffset;
@@ -207,12 +222,14 @@ public static class PkgWriter
         long copied = 0;
         while (copied < size)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             int count = (int)Math.Min(buffer.Length, size - copied);
             ReadExact(source, buffer, count, $"entry '{entry.Name}'");
             decryptor.DecryptInPlace(buffer.AsSpan(0, count), checked((long)entry.FileOffset + copied));
             decryptor.DecryptInPlace(buffer.AsSpan(0, count), checked(newOffset + copied));
             destination.Write(buffer, 0, count);
             copied += count;
+            progress?.Report(new PkgOperationProgress(completedBeforeEntry + copied, totalBytes, entry.Name));
         }
     }
 

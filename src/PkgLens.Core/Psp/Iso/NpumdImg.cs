@@ -93,10 +93,12 @@ public static class NpumdImg
     /// <paramref name="destination"/>. No license/RAP is needed — the version key is recovered from
     /// the header itself (AMCTRL bbmac_getkey). Streams block-by-block; the source must be seekable.
     /// </summary>
-    public static void DecryptToIso(Stream source, Stream destination)
+    public static void DecryptToIso(Stream source, Stream destination,
+        CancellationToken cancellationToken = default, IProgress<double>? progress = null)
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(destination);
+        cancellationToken.ThrowIfCancellationRequested();
 
         var header = new byte[HeaderSize];
         source.Position = 0;
@@ -122,6 +124,7 @@ public static class NpumdImg
 
         for (int i = 0; i < info.BlockCount; i++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var entry = table.AsSpan(i * TableEntrySize, TableEntrySize);
             DescrambleTableEntry(entry);
             uint offset = BinaryPrimitives.ReadUInt32LittleEndian(entry[0x10..]);
@@ -161,6 +164,7 @@ public static class NpumdImg
                 }
             }
             destination.Write(outBuf, 0, outLen);
+            progress?.Report((i + 1) * 100d / info.BlockCount);
         }
     }
 

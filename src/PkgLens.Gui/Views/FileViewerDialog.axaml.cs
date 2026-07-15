@@ -8,6 +8,7 @@ using Avalonia.Markup.Xaml;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using PkgLens.Gui.Services;
+using PkgLens.Gui.ViewModels;
 
 namespace PkgLens.Gui.Views;
 
@@ -92,7 +93,12 @@ public partial class FileViewerDialog : Window
         if (file?.TryGetLocalPath() is { } dest)
         {
             try { await AtomicOutput.WriteAllBytesAsync(dest, _data); }
-            catch (Exception ex) { _header.Text = $"Extract failed: {ex.Message}"; }
+            catch (Exception ex)
+            {
+                _header.Text = $"Extract failed: {ex.Message}";
+                await new ErrorDialog(new GuiErrorReport(
+                    "Extract failed", ex.Message, ex.ToString())).ShowDialog(this);
+            }
         }
     }
 

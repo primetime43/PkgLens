@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using PkgLens.Core.Shared.Keys;
@@ -8,6 +9,10 @@ namespace PkgLens.Gui.ViewModels;
 
 /// <summary>The tool pages shown in the left rail, in rail order.</summary>
 public enum ToolPage { Home, Package, Pack, Resign, Decrypt, Keys }
+
+public sealed record GuiOperationProgress(string? Message = null, double? Percent = null);
+
+public sealed record GuiErrorReport(string Title, string Message, string Details);
 
 public sealed partial class MainWindowViewModel : ObservableObject
 {
@@ -24,6 +29,18 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private bool _isBusy;
 
     [ObservableProperty]
+    private string _busyMessage = "Working…";
+
+    [ObservableProperty]
+    private double _progressValue;
+
+    [ObservableProperty]
+    private bool _isProgressIndeterminate = true;
+
+    [ObservableProperty]
+    private bool _canCancel;
+
+    [ObservableProperty]
     private string _windowTitle = "PkgLens";
 
     [ObservableProperty]
@@ -31,6 +48,10 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     [ObservableProperty]
     private string _keyStatus = "";
+
+    private CancellationTokenSource? _operationCancellation;
+
+    public event EventHandler<GuiErrorReport>? ErrorRequested;
 
     public MainWindowViewModel() => RefreshKeyStatus();
 
@@ -69,6 +90,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
     }
 
     public bool HasPackage => Package is not null;
+    public bool IsNotBusy => !IsBusy;
+
+    partial void OnIsBusyChanged(bool value) => OnPropertyChanged(nameof(IsNotBusy));
 
     partial void OnPackageChanged(PackageViewModel? oldValue, PackageViewModel? newValue)
     {
@@ -96,29 +120,94 @@ public sealed partial class MainWindowViewModel : ObservableObject
         Status = "Open or drag a .pkg file to begin.";
     }
 
+    public void CancelOperation()
+    {
+        if (_operationCancellation is { IsCancellationRequested: false })
+        {
+            BusyMessage = "Cancelling…";
+            CanCancel = false;
+            _operationCancellation.Cancel();
+        }
+    }
+
+    public async Task RunOperationAsync(
+        string message,
+        string errorTitle,
+        Func<CancellationToken, IProgress<GuiOperationProgress>, Task> operation,
+        bool canCancel = true)
+    {
+        if (IsBusy)
+            return;
+
+        using var cancellation = new CancellationTokenSource();
+        _operationCancellation = cancellation;
+        IsBusy = true;
+        BusyMessage = message;
+        Status = message;
+        ProgressValue = 0;
+        IsProgressIndeterminate = true;
+        CanCancel = canCancel;
+
+        var progress = new Progress<GuiOperationProgress>(UpdateProgress);
+        try
+        {
+            await operation(cancellation.Token, progress);
+            cancellation.Token.ThrowIfCancellationRequested();
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+            Status = $"{message.TrimEnd('…', '.', ' ')} cancelled.";
+        }
+        catch (Exception ex)
+        {
+            Status = $"{errorTitle}: {ex.Message}";
+            ErrorRequested?.Invoke(this, new GuiErrorReport(errorTitle, ex.Message, ex.ToString()));
+        }
+        finally
+        {
+            if (ReferenceEquals(_operationCancellation, cancellation))
+                _operationCancellation = null;
+            CanCancel = false;
+            IsBusy = false;
+            IsProgressIndeterminate = true;
+            ProgressValue = 0;
+        }
+    }
+
+    public void ReportError(string title, Exception exception)
+    {
+        Status = $"{title}: {exception.Message}";
+        ErrorRequested?.Invoke(this, new GuiErrorReport(title, exception.Message, exception.ToString()));
+    }
+
+    private void UpdateProgress(GuiOperationProgress progress)
+    {
+        if (!string.IsNullOrWhiteSpace(progress.Message))
+        {
+            BusyMessage = progress.Message;
+            Status = progress.Message;
+        }
+
+        if (progress.Percent is { } percent)
+        {
+            ProgressValue = Math.Clamp(percent, 0, 100);
+            IsProgressIndeterminate = false;
+        }
+    }
+
     /// <summary>Loads a package off the UI thread and swaps it in (disposing any prior one).</summary>
     public async Task LoadAsync(string path)
     {
-        if (IsBusy) return;
-        IsBusy = true;
-        Status = $"Opening {Path.GetFileName(path)}…";
-        try
+        string fileName = Path.GetFileName(path);
+        await RunOperationAsync($"Opening {fileName}…", "Package open failed", async (token, _) =>
         {
             IKeyProvider keys = new FileKeyProvider(KeysDirectory);
-            var vm = await Task.Run(() => PackageViewModel.Load(path, keys));
+            var vm = await Task.Run(() => PackageViewModel.Load(path, keys, token), token);
             Package = vm;
             ActiveTool = ToolPage.Package; // a freshly opened package lands on the inspector
             Status = vm.IsDecrypted
                 ? vm.StatusCounts
                 : "Header only — this package's contents could not be decrypted.";
-        }
-        catch (Exception ex)
-        {
-            Status = $"Failed to open {Path.GetFileName(path)}: {ex.Message}";
-        }
-        finally
-        {
-            IsBusy = false;
-        }
+        });
     }
 }

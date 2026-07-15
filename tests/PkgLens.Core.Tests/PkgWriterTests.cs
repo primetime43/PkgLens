@@ -134,6 +134,42 @@ public class PkgWriterTests
         Assert.Equal(payload, PkgReader.ExtractEntryBytes(repacked, repackedInfo.Header, large, keys));
     }
 
+    [Fact]
+    public void Repack_CancelledToken_StopsBeforeWriting()
+    {
+        byte[] pkg = new SyntheticPkgBuilder().AddFile("DATA.BIN", new byte[1024]).Build();
+        using var source = new MemoryStream(pkg);
+        var keys = new InMemoryKeyProvider();
+        var info = PkgReader.Read(source, keys);
+        using var destination = new MemoryStream();
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+
+        Assert.Throws<OperationCanceledException>(() =>
+            PkgWriter.Repack(source, info, new Dictionary<PkgEntry, byte[]>(), keys, destination,
+                cancellation.Token));
+        Assert.Equal(0, destination.Length);
+    }
+
+    [Fact]
+    public void Repack_ReportsByteProgress()
+    {
+        byte[] pkg = new SyntheticPkgBuilder().AddFile("DATA.BIN", new byte[2 * 1024 * 1024]).Build();
+        using var source = new MemoryStream(pkg);
+        var keys = new InMemoryKeyProvider();
+        var info = PkgReader.Read(source, keys);
+        using var destination = new MemoryStream();
+        PkgOperationProgress last = default;
+        var progress = new InlineProgress<PkgOperationProgress>(value => last = value);
+
+        PkgWriter.Repack(source, info, new Dictionary<PkgEntry, byte[]>(), keys, destination,
+            progress: progress);
+
+        Assert.Equal(last.Total, last.Completed);
+        Assert.Equal(100, last.Percent);
+        Assert.Equal("DATA.BIN", last.Item);
+    }
+
     private sealed class MaxReadSizeStream(Stream inner, int maximumRead) : Stream
     {
         public int MaxObservedRead { get; private set; }
@@ -156,5 +192,10 @@ public class PkgWriterTests
         public override void SetLength(long value) => throw new NotSupportedException();
         public override void Flush() { }
         public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+    }
+
+    private sealed class InlineProgress<T>(Action<T> report) : IProgress<T>
+    {
+        public void Report(T value) => report(value);
     }
 }

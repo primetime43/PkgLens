@@ -12,7 +12,7 @@
   <DockPanel>
 
     <!-- Menu -->
-    <Menu DockPanel.Dock="Top">
+    <Menu DockPanel.Dock="Top" IsEnabled="{Binding IsNotBusy}">
       <MenuItem Header="_File">
         <MenuItem Header="_Open .pkg…" Click="OnOpenClick" />
         <MenuItem Header="_Close" Click="OnCloseClick" IsEnabled="{Binding HasPackage}" />
@@ -58,7 +58,7 @@
     </Menu>
 
     <!-- Toolbar (package-page actions) -->
-    <Border DockPanel.Dock="Top" Padding="4,3"
+    <Border DockPanel.Dock="Top" Padding="4,3" IsEnabled="{Binding IsNotBusy}"
             Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
             BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="0,0,0,1">
       <StackPanel Orientation="Horizontal" Spacing="3">
@@ -86,14 +86,24 @@
     <Border DockPanel.Dock="Bottom" Padding="6,3"
             Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
             BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="0,1,0,0">
-      <Grid ColumnDefinitions="*,Auto">
-        <TextBlock Grid.Column="0" Text="{Binding Status}" FontSize="12" TextTrimming="CharacterEllipsis" />
-        <TextBlock Grid.Column="1" Text="{Binding KeyStatus}" FontSize="12" Opacity="0.7" Margin="12,0,0,0" />
+      <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto">
+        <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding Status}" FontSize="12" TextTrimming="CharacterEllipsis" />
+        <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding KeyStatus}" FontSize="12" Opacity="0.7" Margin="12,0,0,0" />
+        <Grid Grid.Row="1" Grid.ColumnSpan="2" ColumnDefinitions="*,Auto" Margin="0,5,0,1"
+              IsVisible="{Binding IsBusy}">
+          <StackPanel Grid.Column="0" Spacing="3">
+            <TextBlock Text="{Binding BusyMessage}" FontSize="11" TextTrimming="CharacterEllipsis" />
+            <ProgressBar Minimum="0" Maximum="100" Value="{Binding ProgressValue}"
+                         IsIndeterminate="{Binding IsProgressIndeterminate}" Height="4" />
+          </StackPanel>
+          <Button Grid.Column="1" Content="Cancel" Click="OnCancelOperation" Margin="10,0,0,0"
+                  Padding="10,2" IsEnabled="{Binding CanCancel}" VerticalAlignment="Center" />
+        </Grid>
       </Grid>
     </Border>
 
     <!-- Rail + content -->
-    <Grid ColumnDefinitions="148,*">
+    <Grid ColumnDefinitions="148,*" IsEnabled="{Binding IsNotBusy}">
 
       <!-- Left tool rail -->
       <DockPanel Grid.Column="0"

@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace PkgLens.Gui.Services;
@@ -42,7 +43,8 @@ internal static class AtomicOutput
         Write(path, destination => destination.Write(bytes));
     }
 
-    public static async Task WriteAllBytesAsync(string path, byte[] data)
+    public static async Task WriteAllBytesAsync(string path, byte[] data,
+        CancellationToken cancellationToken = default)
     {
         string fullPath = Path.GetFullPath(path);
         string temp = TempPath(fullPath);
@@ -51,9 +53,10 @@ internal static class AtomicOutput
             await using (var file = new FileStream(temp, FileMode.CreateNew, FileAccess.Write,
                              FileShare.None, 81920, FileOptions.Asynchronous))
             {
-                await file.WriteAsync(data);
-                await file.FlushAsync();
+                await file.WriteAsync(data, cancellationToken);
+                await file.FlushAsync(cancellationToken);
             }
+            cancellationToken.ThrowIfCancellationRequested();
             File.Move(temp, fullPath, overwrite: true);
         }
         finally
@@ -62,13 +65,15 @@ internal static class AtomicOutput
         }
     }
 
-    public static async Task WriteAllTextAsync(string path, string content)
+    public static async Task WriteAllTextAsync(string path, string content,
+        CancellationToken cancellationToken = default)
     {
         string fullPath = Path.GetFullPath(path);
         string temp = TempPath(fullPath);
         try
         {
-            await File.WriteAllTextAsync(temp, content, new UTF8Encoding(false));
+            await File.WriteAllTextAsync(temp, content, new UTF8Encoding(false), cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
             File.Move(temp, fullPath, overwrite: true);
         }
         finally

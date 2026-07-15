@@ -226,8 +226,10 @@ public sealed class PkgContainerReader : IPackageReader
 
     /// <summary>Streams an entry's decrypted data to <paramref name="destination"/> without buffering it whole.</summary>
     public static void CopyEntryTo(Stream stream, PkgHeader header, IPkgDecryptor decryptor, PkgEntry entry,
-        Stream destination, int bufferSize = 1 << 20)
+        Stream destination, int bufferSize = 1 << 20, CancellationToken cancellationToken = default,
+        IProgress<long>? progress = null)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         if (entry.IsDirectory || entry.FileSize == 0)
             return;
 
@@ -247,6 +249,7 @@ public sealed class PkgContainerReader : IPackageReader
 
         while (remaining > 0)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             int want = (int)Math.Min(buffer.Length, remaining);
             int read = 0;
             while (read < want)
@@ -261,6 +264,7 @@ public sealed class PkgContainerReader : IPackageReader
             destination.Write(buffer, 0, want);
             pos += want;
             remaining -= want;
+            progress?.Report((long)entry.FileSize - remaining);
         }
     }
 
