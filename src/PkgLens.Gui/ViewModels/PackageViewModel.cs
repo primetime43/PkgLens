@@ -68,6 +68,17 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private EntryNode? _selectedFolder;
 
+    [ObservableProperty]
+    private string _fileFilter = string.Empty;
+
+    [ObservableProperty]
+    private int _filterMatchCount;
+
+    public bool HasFileFilter => !string.IsNullOrWhiteSpace(FileFilter);
+    public string FilterSummary => HasFileFilter
+        ? $"{FilterMatchCount} matching {Plural(FilterMatchCount, "file")}"
+        : string.Empty;
+
     /// <summary>Contents (files + sub-folders) of the selected folder.</summary>
     public ObservableCollection<EntryNode> CurrentItems { get; } = new();
 
@@ -77,10 +88,93 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
 
     partial void OnSelectedFolderChanged(EntryNode? value)
     {
+        RefreshCurrentItems(value);
+    }
+
+    partial void OnFileFilterChanged(string value)
+    {
+        ApplyFileFilter();
+        OnPropertyChanged(nameof(HasFileFilter));
+        OnPropertyChanged(nameof(FilterSummary));
+    }
+
+    partial void OnFilterMatchCountChanged(int value) => OnPropertyChanged(nameof(FilterSummary));
+
+    public void ClearFileFilter() => FileFilter = string.Empty;
+
+    private void RefreshCurrentItems(EntryNode? folder)
+    {
         CurrentItems.Clear();
-        foreach (var child in (value ?? RootFolder).Children)
+        EntryNode selected = folder ?? RootFolder;
+        IEnumerable<EntryNode> items = HasFileFilter
+            ? DescendantFiles(selected).OrderBy(node => node.FullPath, StringComparer.OrdinalIgnoreCase)
+            : selected.Children;
+        foreach (var child in items)
             CurrentItems.Add(child);
         SelectedItem = null;
+    }
+
+    private void ApplyFileFilter()
+    {
+        string filter = FileFilter.Trim();
+        FolderRoots.Clear();
+
+        if (filter.Length == 0)
+        {
+            FilterMatchCount = 0;
+            RootFolder.IsExpanded = true;
+            FolderRoots.Add(RootFolder);
+            SelectedFolder = RootFolder;
+            RefreshCurrentItems(RootFolder);
+            return;
+        }
+
+        var matches = _info.Entries
+            .Where(entry => entry.IsFile && entry.Name.Contains(filter, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        FilterMatchCount = matches.Count;
+
+        var filteredRoot = new EntryNode
+        {
+            Name = RootFolder.Name,
+            FullPath = string.Empty,
+            IsDirectory = true,
+            IsExpanded = true,
+        };
+        foreach (var node in EntryNode.BuildTree(matches))
+        {
+            ExpandDirectories(node);
+            filteredRoot.Children.Add(node);
+        }
+
+        FolderRoots.Add(filteredRoot);
+        SelectedFolder = filteredRoot;
+        RefreshCurrentItems(filteredRoot);
+    }
+
+    private static IEnumerable<EntryNode> DescendantFiles(EntryNode node)
+    {
+        foreach (var child in node.Children)
+        {
+            if (child.IsDirectory)
+            {
+                foreach (var descendant in DescendantFiles(child))
+                    yield return descendant;
+            }
+            else
+            {
+                yield return child;
+            }
+        }
+    }
+
+    private static void ExpandDirectories(EntryNode node)
+    {
+        if (!node.IsDirectory)
+            return;
+        node.IsExpanded = true;
+        foreach (var child in node.Children)
+            ExpandDirectories(child);
     }
 
     partial void OnSelectedItemChanged(EntryNode? value)

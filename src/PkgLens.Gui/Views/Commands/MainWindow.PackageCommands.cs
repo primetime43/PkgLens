@@ -20,6 +20,16 @@ namespace PkgLens.Gui.Views;
 
 public partial class MainWindow
 {
+    private async void OnRecentPackageClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: RecentPackageItem recent })
+            await Vm.LoadRecentAsync(recent);
+    }
+
+    private void OnClearRecentPackages(object? sender, RoutedEventArgs e) => Vm.ClearRecentPackages();
+
+    private void OnClearFileFilter(object? sender, RoutedEventArgs e) => Vm.Package?.ClearFileFilter();
+
     private async void OnOpenClick(object? sender, RoutedEventArgs e)
     {
         var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
@@ -245,4 +255,3 @@ public partial class MainWindow
         return rap;
     }
 }
-

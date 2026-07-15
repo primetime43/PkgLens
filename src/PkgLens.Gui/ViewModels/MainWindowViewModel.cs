@@ -1,9 +1,12 @@
 using System;
+using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using PkgLens.Core.Shared.Keys;
+using PkgLens.Gui.Services;
 
 namespace PkgLens.Gui.ViewModels;
 
@@ -51,9 +54,17 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     private CancellationTokenSource? _operationCancellation;
 
+    public ObservableCollection<RecentPackageItem> RecentPackages { get; } = new();
+    public bool HasRecentPackages => RecentPackages.Count > 0;
+
     public event EventHandler<GuiErrorReport>? ErrorRequested;
 
-    public MainWindowViewModel() => RefreshKeyStatus();
+    public MainWindowViewModel()
+    {
+        foreach (string path in RecentPackageSettings.Load())
+            RecentPackages.Add(new RecentPackageItem(path));
+        RefreshKeyStatus();
+    }
 
     /// <summary>Two-way bridge for the rail ListBox's SelectedIndex.</summary>
     public int SelectedToolIndex
@@ -118,6 +129,53 @@ public sealed partial class MainWindowViewModel : ObservableObject
             return;
         Package = null; // OnPackageChanged disposes it and resets the window title
         Status = "Open or drag a .pkg file to begin.";
+    }
+
+    public async Task LoadRecentAsync(RecentPackageItem recent)
+    {
+        if (!File.Exists(recent.FilePath))
+        {
+            RemoveRecentPackage(recent.FilePath);
+            ReportError("Recent package not found",
+                new FileNotFoundException($"The package no longer exists: {recent.FilePath}", recent.FilePath));
+            return;
+        }
+
+        await LoadAsync(recent.FilePath);
+    }
+
+    public void ClearRecentPackages()
+    {
+        RecentPackages.Clear();
+        RecentPackageSettings.Save(Array.Empty<string>());
+        OnPropertyChanged(nameof(HasRecentPackages));
+        Status = "Recent package history cleared.";
+    }
+
+    private void RecordRecentPackage(string path)
+    {
+        string fullPath = Path.GetFullPath(path);
+        RecentPackageItem? existing = RecentPackages.FirstOrDefault(item =>
+            RecentPackageSettings.PathComparer.Equals(item.FilePath, fullPath));
+        if (existing is not null)
+            RecentPackages.Remove(existing);
+
+        RecentPackages.Insert(0, new RecentPackageItem(fullPath));
+        while (RecentPackages.Count > RecentPackageSettings.MaximumCount)
+            RecentPackages.RemoveAt(RecentPackages.Count - 1);
+
+        RecentPackageSettings.Save(RecentPackages.Select(item => item.FilePath));
+        OnPropertyChanged(nameof(HasRecentPackages));
+    }
+
+    private void RemoveRecentPackage(string path)
+    {
+        RecentPackageItem? existing = RecentPackages.FirstOrDefault(item =>
+            RecentPackageSettings.PathComparer.Equals(item.FilePath, path));
+        if (existing is not null)
+            RecentPackages.Remove(existing);
+        RecentPackageSettings.Save(RecentPackages.Select(item => item.FilePath));
+        OnPropertyChanged(nameof(HasRecentPackages));
     }
 
     public void CancelOperation()
@@ -204,6 +262,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             IKeyProvider keys = new FileKeyProvider(KeysDirectory);
             var vm = await Task.Run(() => PackageViewModel.Load(path, keys, token), token);
             Package = vm;
+            RecordRecentPackage(path);
             ActiveTool = ToolPage.Package; // a freshly opened package lands on the inspector
             Status = vm.IsDecrypted
                 ? vm.StatusCounts
