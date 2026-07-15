@@ -229,6 +229,9 @@ public sealed class PkgContainerReader : IPackageReader
         Stream destination, int bufferSize = 1 << 20, CancellationToken cancellationToken = default,
         IProgress<long>? progress = null)
     {
+        if (bufferSize <= 0)
+            throw new ArgumentOutOfRangeException(nameof(bufferSize), bufferSize,
+                "The extraction buffer size must be positive.");
         cancellationToken.ThrowIfCancellationRequested();
         if (entry.IsDirectory || entry.FileSize == 0)
             return;

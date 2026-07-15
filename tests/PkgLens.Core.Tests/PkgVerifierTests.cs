@@ -100,14 +100,28 @@ public class PkgVerifierTests
         Assert.Equal(PkgCheckStatus.Fail, Check(report, "Data region").Status);
     }
 
+    [Fact]
+    public void Verify_TotalSizeAboveLongMax_FailsWithoutSignedWraparound()
+    {
+        byte[] header = BuildBareHeader(dataOffset: 0xC0, dataSize: 0, totalSize: ulong.MaxValue);
+
+        using var stream = new MemoryStream(header);
+        var report = PkgVerifier.Verify(stream, new InMemoryKeyProvider());
+
+        var check = Check(report, "Total size");
+        Assert.Equal(PkgCheckStatus.Fail, check.Status);
+        Assert.Contains(ulong.MaxValue.ToString("n0"), check.Detail);
+    }
+
     /// <summary>A minimal 0xC0-byte debug PKG header (valid magic, no real body) for bounds-check tests.</summary>
-    private static byte[] BuildBareHeader(ulong dataOffset, ulong dataSize)
+    private static byte[] BuildBareHeader(ulong dataOffset, ulong dataSize, ulong? totalSize = null)
     {
         var h = new byte[0xC0];
         System.Buffers.Binary.BinaryPrimitives.WriteUInt32BigEndian(h.AsSpan(0x00), PkgHeader.Magic);
         System.Buffers.Binary.BinaryPrimitives.WriteUInt16BigEndian(h.AsSpan(0x04), 0x0000); // debug
         System.Buffers.Binary.BinaryPrimitives.WriteUInt16BigEndian(h.AsSpan(0x06), 0x0001); // PS3
-        System.Buffers.Binary.BinaryPrimitives.WriteUInt64BigEndian(h.AsSpan(0x18), (ulong)h.Length); // total_size
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt64BigEndian(
+            h.AsSpan(0x18), totalSize ?? (ulong)h.Length); // total_size
         System.Buffers.Binary.BinaryPrimitives.WriteUInt64BigEndian(h.AsSpan(0x20), dataOffset);
         System.Buffers.Binary.BinaryPrimitives.WriteUInt64BigEndian(h.AsSpan(0x28), dataSize);
         return h;

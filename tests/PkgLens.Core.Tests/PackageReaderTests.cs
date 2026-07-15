@@ -124,6 +124,26 @@ public class PackageReaderTests
         Assert.Equal(payload, dest.ToArray());
     }
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void CopyEntryTo_NonpositiveBufferSize_ThrowsEvenForEmptyEntry(int bufferSize)
+    {
+        byte[] pkg = new SyntheticPkgBuilder().AddFile("EMPTY.BIN", Array.Empty<byte>()).Build();
+        var header = PkgHeader.Parse(pkg);
+        using var stream = new MemoryStream(pkg);
+        var info = PkgReader.Read(stream, new InMemoryKeyProvider());
+        var entry = info.Entries.Single(item => item.Name == "EMPTY.BIN");
+        using var destination = new MemoryStream();
+        var decryptor = DecryptionContext.ForDebug(header).CreateDecryptor();
+
+        var exception = Assert.Throws<ArgumentOutOfRangeException>(() =>
+            PkgLens.Core.Shared.Formats.PkgContainerReader.CopyEntryTo(
+                stream, header, decryptor, entry, destination, bufferSize));
+
+        Assert.Equal("bufferSize", exception.ParamName);
+    }
+
     [Fact]
     public void Read_BadMagic_Throws()
     {

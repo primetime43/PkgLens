@@ -62,13 +62,14 @@ public static class PkgVerifier
         checks.Add(new PkgCheck("Magic", PkgCheckStatus.Pass, "0x7F504B47 (.PKG)"));
 
         // Total size vs actual file length.
-        long total = (long)header.TotalSize;
-        if (total > fileLen)
+        ulong total = header.TotalSize;
+        ulong actualLength = (ulong)fileLen;
+        if (total > actualLength)
             checks.Add(new PkgCheck("Total size", PkgCheckStatus.Fail,
                 $"header claims {total:n0} bytes but the file is only {fileLen:n0} (truncated)"));
-        else if (total < fileLen)
+        else if (total < actualLength)
             checks.Add(new PkgCheck("Total size", PkgCheckStatus.Pass,
-                $"{total:n0} bytes ({fileLen - total:n0} trailing bytes present)"));
+                $"{total:n0} bytes ({actualLength - total:n0} trailing bytes present)"));
         else
             checks.Add(new PkgCheck("Total size", PkgCheckStatus.Pass, $"{total:n0} bytes == file length"));
 
