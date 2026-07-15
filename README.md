@@ -188,12 +188,13 @@ SELF-header inspect, a batch `scan` catalog, `--json` output, and cross-platform
 
 ## Keys
 
-The standard NPDRM PKG AES key is a public decryption key and is bundled, so retail and debug
-packages open with no setup. The only thing you supply yourself is a **RAP** for licensed
-EDAT/EBOOT content (`--rap FILE`) — it's tied to your purchase, so it can't be bundled.
+The standard and IDU/kiosk PS3 keys plus PSP/PSX and Vita package keys are bundled and selected
+automatically, so supported retail and debug packages open with no setup. The only thing you supply
+yourself is a **RAP** for licensed EDAT/EBOOT content (`--rap FILE`) — it's tied to your purchase,
+so it can't be bundled.
 
-You rarely need to override the bundled key — only for a non-standard package such as an IDU/kiosk
-key:
+You rarely need to add a custom package key. When installed, it joins the automatic candidate ring
+without masking the bundled keys:
 
 ```
 pkglens keys status                # show the bundled key + any override

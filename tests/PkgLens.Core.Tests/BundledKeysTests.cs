@@ -68,6 +68,70 @@ public class BundledKeysTests
             PkgReader.ExtractEntryBytes(stream, info.Header, entry, provider));
     }
 
+    [Fact]
+    public void FileKeyProvider_AutoDetectsIduPackage()
+    {
+        var builder = new SyntheticPkgBuilder
+        {
+            Finalization = PkgFinalization.Retail,
+            RetailAesKey = BundledKeys.Ps3IduAesKey,
+        };
+        builder.AddFile("USRDIR/KIOSK.BIN", new byte[] { 4, 3, 2, 1 });
+        byte[] pkg = builder.Build();
+
+        using var emptyDir = new TempDir();
+        using var stream = new MemoryStream(pkg);
+        var info = PkgReader.Read(stream, new FileKeyProvider(emptyDir.Path));
+
+        Assert.True(info.IsDecrypted);
+        var entry = Assert.Single(info.Entries);
+        Assert.Equal("USRDIR/KIOSK.BIN", entry.Name);
+        Assert.Equal(new byte[] { 4, 3, 2, 1 },
+            PkgReader.ExtractEntryBytes(stream, info.Header, entry, new FileKeyProvider(emptyDir.Path)));
+    }
+
+    [Fact]
+    public void FileKeyProvider_UsesStructuralFallback_WhenHeaderCmacIsMissing()
+    {
+        var builder = new SyntheticPkgBuilder
+        {
+            Finalization = PkgFinalization.Retail,
+            RetailAesKey = BundledKeys.Ps3IduAesKey,
+        };
+        builder.AddFile("USRDIR/KIOSK.BIN", new byte[] { 7, 8, 9 });
+        byte[] pkg = builder.Build();
+        Array.Clear(pkg, 0x80, 0x10);
+
+        using var emptyDir = new TempDir();
+        var provider = new FileKeyProvider(emptyDir.Path);
+        using var stream = new MemoryStream(pkg);
+        var info = PkgReader.Read(stream, provider);
+
+        Assert.True(info.IsDecrypted);
+        var entry = Assert.Single(info.Entries);
+        Assert.Equal(new byte[] { 7, 8, 9 },
+            PkgReader.ExtractEntryBytes(stream, info.Header, entry, provider));
+    }
+
+    [Fact]
+    public void FileKeyProvider_CustomKey_DoesNotMaskBundledKeys()
+    {
+        var builder = new SyntheticPkgBuilder
+        {
+            Finalization = PkgFinalization.Retail,
+            RetailAesKey = BundledKeys.Ps3GpkgAesKey,
+        };
+        builder.AddFile("USRDIR/STANDARD.BIN", new byte[] { 1, 3, 5 });
+
+        using var dir = new TempDir();
+        KeyStore.Install(Enumerable.Repeat((byte)0x55, 16).ToArray(), dir.Path);
+        using var stream = new MemoryStream(builder.Build());
+        var info = PkgReader.Read(stream, new FileKeyProvider(dir.Path));
+
+        Assert.True(info.IsDecrypted);
+        Assert.Equal("USRDIR/STANDARD.BIN", Assert.Single(info.Entries).Name);
+    }
+
     private sealed class TempDir : IDisposable
     {
         public string Path { get; } =

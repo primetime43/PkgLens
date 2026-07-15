@@ -62,7 +62,7 @@ internal static class KeysCommand
         {
             Console.WriteLine($"Installed override key → {path}");
             Console.WriteLine($"  {(known ? "✓" : "⚠")} {KeyStore.Describe(key)}");
-            Console.WriteLine("This file overrides the bundled key for retail packages.");
+            Console.WriteLine("This key joins the automatic package-key candidate ring.");
         }
         return ExitCode.Ok;
     }
@@ -74,7 +74,7 @@ internal static class KeysCommand
 
         if (!o.Json)
         {
-            Console.WriteLine("Bundled: standard NPDRM PKG PS3 AES key (retail packages decrypt out of the box).");
+            Console.WriteLine("Bundled: standard + IDU NPDRM PKG PS3 AES keys (selected automatically).");
             Console.WriteLine();
             Console.WriteLine("Override search order (first match wins):");
             foreach (string dir in searchDirectories)
@@ -89,10 +89,10 @@ internal static class KeysCommand
             {
                 byte[] key = KeyStore.ResolveKeyArgument(found);
                 if (o.Json)
-                    CliJson.Write(new { command = "keys.status", bundledKey = true, searchDirectories, recognizedFileNames = FileKeyProvider.KeyFileNames, overridePath = found, overrideValid = true, knownStandardKey = KeyStore.IsKnownGpkgKey(key), description = KeyStore.Describe(key) });
+                    CliJson.Write(new { command = "keys.status", bundledKey = true, automaticIduKey = true, searchDirectories, recognizedFileNames = FileKeyProvider.KeyFileNames, overridePath = found, overrideValid = true, knownStandardKey = KeyStore.IsKnownGpkgKey(key), description = KeyStore.Describe(key) });
                 else
                 {
-                    Console.WriteLine($"Override key in use: {found}");
+                    Console.WriteLine($"Additional candidate key: {found}");
                     Console.WriteLine($"  {(KeyStore.IsKnownGpkgKey(key) ? "✓" : "⚠")} {KeyStore.Describe(key)}");
                 }
                 return ExitCode.Ok;
@@ -100,7 +100,7 @@ internal static class KeysCommand
             catch (Exception ex)
             {
                 if (o.Json)
-                    CliJson.Write(new { command = "keys.status", bundledKey = true, searchDirectories, recognizedFileNames = FileKeyProvider.KeyFileNames, overridePath = found, overrideValid = false, error = ex.Message });
+                    CliJson.Write(new { command = "keys.status", bundledKey = true, automaticIduKey = true, searchDirectories, recognizedFileNames = FileKeyProvider.KeyFileNames, overridePath = found, overrideValid = false, error = ex.Message });
                 else
                     Console.WriteLine($"Found override key file {found}, but it is invalid: {ex.Message}");
                 return ExitCode.KeyOrDecryptError;
@@ -108,11 +108,11 @@ internal static class KeysCommand
         }
 
         if (o.Json)
-            CliJson.Write(new { command = "keys.status", bundledKey = true, searchDirectories, recognizedFileNames = FileKeyProvider.KeyFileNames, overridePath = (string?)null });
+            CliJson.Write(new { command = "keys.status", bundledKey = true, automaticIduKey = true, searchDirectories, recognizedFileNames = FileKeyProvider.KeyFileNames, overridePath = (string?)null });
         else
         {
-            Console.WriteLine("No override installed — using the bundled key.");
-            Console.WriteLine($"Add an override with:  pkglens keys import <32-hex-key>   (writes to {KeyStore.DefaultDirectory})");
+            Console.WriteLine("No additional candidate installed — using the bundled key ring.");
+            Console.WriteLine($"Add a custom candidate with:  pkglens keys import <32-hex-key>   (writes to {KeyStore.DefaultDirectory})");
         }
         return ExitCode.Ok;
     }

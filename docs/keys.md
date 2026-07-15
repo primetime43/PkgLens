@@ -13,7 +13,9 @@ private or signing key.
 | Key | Used for | Source in code |
 |---|---|---|
 | NPDRM PKG PS3 AES key | Decrypt retail `.pkg` data + header CMAC | `BundledKeys.Ps3GpkgAesKey` |
-| NPDRM PKG PS3 IDU AES key | IDU/kiosk packages (override only) | `BundledKeys.Ps3IduAesKey` |
+| NPDRM PKG PS3 IDU AES key | Decrypt IDU/kiosk packages automatically | `BundledKeys.Ps3IduAesKey` |
+| PSP / PSX PKG AES key | Decrypt PSP and PSX package data | `BundledKeys.PspPkgAesKey` |
+| PSVita PKG AES keys 2–4 | Decrypt Vita package revisions selected by `key_type` | `BundledKeys.VitaPkgAesKey2`–`4` |
 | appldr / NPDRM SELF keysets | Decrypt SELF/EBOOT.BIN → ELF | `Self.SelfKeyset` |
 | EDAT/SDAT keys + free klicensee | Decrypt NPDRM data files | `Npd.NpdKeys` |
 
@@ -29,17 +31,18 @@ QA digest.
 - **Per-console secrets (IDPS / EID)** are out of scope and never needed by any PkgLens feature. A
   workflow that would require them isn't something PkgLens does.
 
-## Overriding the bundled PKG key
+## Adding a custom PKG key
 
-You rarely need this — only for a package the standard key doesn't cover (e.g. an IDU/kiosk key).
-An override key file, if present, takes precedence over the bundled key:
+You rarely need this. Standard PS3, IDU/kiosk, PSP/PSX, and Vita key revisions 2–4 are selected
+automatically. A custom key file joins the candidate ring for a non-standard PS3 package; it no
+longer masks packages covered by a bundled key:
 
 ```
 pkglens keys import <32-hex-key>      # install an override (the key, or a path to a key file)
 pkglens keys status                    # show the bundled key + any override
 ```
 
-PkgLens looks for an override file, in order, in:
+PkgLens looks for a custom key file, in order, in:
 
 1. the `--keys DIR` option,
 2. the `PKGLENS_KEYS` environment variable,
@@ -54,7 +57,9 @@ whitespace are tolerated).
 | Package kind | Header flag (0x04) | Decryption |
 |---|---|---|
 | **Debug** (non-finalized) | `0x0000` | Self-contained SHA-1 keystream from the header QA digest. |
-| **Retail** (finalized) | `0x8000` | AES-128-CTR with the bundled NPDRM PKG PS3 AES key, seeded by `data_riv`. |
+| **Retail** (finalized) | `0x8000` | AES-128-CTR with an automatically selected standard, IDU, PSP, or Vita package key, seeded by `data_riv`. |
 
 `pkglens info` always works (header, content id, and metadata are unencrypted); `list`, `sfo`, and
-`extract` decrypt the item table, which now succeeds for both kinds out of the box.
+`extract` decrypt the item table, which now succeeds for supported PS3, PSP/PSX, and Vita packages
+out of the box. PS3 selection prefers an authenticated header-CMAC match and uses strict item-table
+validation for unsigned or stale-header packages.

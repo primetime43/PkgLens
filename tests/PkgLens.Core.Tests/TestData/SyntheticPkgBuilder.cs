@@ -26,7 +26,7 @@ public sealed class SyntheticPkgBuilder
     public byte[] RetailAesKey { get; set; } =
         Enumerable.Range(0, 16).Select(i => (byte)(0xA0 + i)).ToArray();
 
-    /// <summary>Build a PSP/PSX package (platform 0x0002) with per-entry key selection instead of PS3.</summary>
+    /// <summary>Build a PSP/PSVita package (platform 0x0002) instead of PS3.</summary>
     public bool Psp { get; set; }
 
     /// <summary>The PSP key_type written at header[0xE7] (1 = PSP). Only used when <see cref="Psp"/> is set.</summary>
@@ -115,8 +115,10 @@ public sealed class SyntheticPkgBuilder
         files.GetBuffer().AsSpan(0, filesLen).CopyTo(data.AsSpan(tableLen + namesLen));
 
         // Encrypt the data region in place (XOR keystream — symmetric).
-        if (Psp)
+        if (Psp && PspKeyType == 1)
             EncryptPspRegion(data, tableLen, nameOffsets, nameSizes, fileOffsets);
+        else if (Psp)
+            EncryptVitaRegion(data);
         else
         {
             var cipher = CreateCipher();
@@ -197,6 +199,21 @@ public sealed class SyntheticPkgBuilder
             if (contentLen > 0)
                 cipher.DecryptInPlace(data.AsSpan(fileOffsets[i], contentLen), fileOffsets[i]);
         }
+    }
+
+    private void EncryptVitaRegion(byte[] data)
+    {
+        byte[] key = PspKeyType switch
+        {
+            2 => PkgLens.Core.Shared.Keys.BundledKeys.VitaPkgAesKey2,
+            3 => PkgLens.Core.Shared.Keys.BundledKeys.VitaPkgAesKey3,
+            4 => PkgLens.Core.Shared.Keys.BundledKeys.VitaPkgAesKey4,
+            _ => throw new InvalidOperationException($"Unsupported synthetic Vita key type {PspKeyType}."),
+        };
+        var header = new PkgHeader { DataRiv = DataRiv, QaDigest = QaDigest };
+        var cipher = PkgLens.Core.Shared.Keys.DecryptionContext.ForVita(header, key).CreateDecryptor();
+        cipher.DecryptInPlace(data, 0);
+        (cipher as IDisposable)?.Dispose();
     }
 
     private static int Align(int value, int alignment) =>

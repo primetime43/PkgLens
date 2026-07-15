@@ -131,4 +131,32 @@ public class PspPackageTests
         Assert.Equal("not-really-a-png", Encoding.UTF8.GetString(
             PkgReader.ExtractEntryBytes(repacked, repackedInfo.Header, icon, keys)));
     }
+
+    [Theory]
+    [InlineData(2)]
+    [InlineData(3)]
+    [InlineData(4)]
+    public void Read_VitaPackage_AutoSelectsKeyRevision(byte keyType)
+    {
+        byte[] payload = Encoding.UTF8.GetBytes($"Vita key revision {keyType}");
+        byte[] pkg = new SyntheticPkgBuilder
+        {
+            Psp = true,
+            PspKeyType = keyType,
+            Finalization = PkgFinalization.Retail,
+            ContentId = "UP0001-PCSE12345_00-EXAMPLEVITA00001",
+        }
+            .AddFile("sce_sys/param.sfo", Sfo(), pspTypeHigh: 0x00)
+            .AddFile("eboot.bin", payload, pspTypeHigh: 0x00)
+            .Build();
+
+        using var stream = new MemoryStream(pkg);
+        var info = PkgReader.Read(stream, new FileKeyProvider());
+
+        Assert.True(info.IsDecrypted);
+        Assert.Equal(keyType, info.Header.PspKeyType);
+        Assert.Equal("PSVita", info.Header.PlatformDisplay);
+        var entry = info.Entries.Single(item => item.Name == "eboot.bin");
+        Assert.Equal(payload, PkgReader.ExtractEntryBytes(stream, info.Header, entry, new FileKeyProvider()));
+    }
 }

@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using PkgLens.Core.Shared.Crypto;
 using PkgLens.Core.Shared.Models;
 
 namespace PkgLens.Core.Shared.Keys;
@@ -5,8 +7,8 @@ namespace PkgLens.Core.Shared.Keys;
 /// <summary>
 /// Resolves the retail PS3 gpkg AES key. The standard key is public and <b>bundled</b>
 /// (<see cref="BundledKeys.Ps3GpkgAesKey"/>), so retail packages decrypt with no setup. A
-/// user-supplied key file, if present, <b>overrides</b> the bundled key — useful for the IDU/kiosk
-/// key or any non-standard package.
+/// user-supplied key file, if present, joins the automatic candidate key ring for non-standard
+/// packages. Standard and IDU/kiosk packages are detected automatically.
 ///
 /// Override-file resolution order for the keys directory:
 /// <list type="number">
@@ -29,9 +31,11 @@ public sealed class FileKeyProvider : IKeyProvider
     };
 
     private readonly string? _explicitDir;
-    private byte[]? _cachedKey;
+    private byte[]? _cachedOverrideKey;
     private string? _loadError;
     private bool _resolved;
+    private readonly Dictionary<PkgHeader, DecryptionContext> _selectedContexts =
+        new(ReferenceEqualityComparer.Instance);
 
     public FileKeyProvider(string? explicitKeysDirectory = null) => _explicitDir = explicitKeysDirectory;
 
@@ -63,19 +67,60 @@ public sealed class FileKeyProvider : IKeyProvider
             return false;
         }
 
-        byte[]? key = LoadKey(out string? loadError);
-        if (key is null)
+        if (_selectedContexts.TryGetValue(header, out context!))
+            return true;
+
+        if (!TryGetPs3Candidates(header, out var candidates, out string? loadError, out _))
         {
-            // A key is only ever null here when a user placed an override file we could not parse;
-            // a missing override falls back to the bundled key. Surface the parse error loudly.
             context = null!;
             reason = loadError;
             return false;
         }
 
-        context = DecryptionContext.ForRetail(header, key);
+        context = candidates[0];
         return true;
     }
+
+    /// <summary>
+    /// Returns every viable retail PS3 context. A valid header CMAC narrows the result to its exact
+    /// key; unsigned or stale-header packages fall back to structural item-table validation by the
+    /// container reader.
+    /// </summary>
+    internal bool TryGetPs3Candidates(PkgHeader header, out IReadOnlyList<DecryptionContext> contexts,
+        out string? reason, out bool authenticated)
+    {
+        authenticated = false;
+        reason = null;
+
+        byte[]? overrideKey = LoadOverrideKey(out string? loadError);
+        if (loadError is not null)
+        {
+            contexts = Array.Empty<DecryptionContext>();
+            reason = loadError;
+            return false;
+        }
+
+        var keys = new List<byte[]>(3);
+        AddDistinct(keys, overrideKey);
+        AddDistinct(keys, BundledKeys.Ps3GpkgAesKey);
+        AddDistinct(keys, BundledKeys.Ps3IduAesKey);
+
+        if (!IsAllZero(header.HeaderCmac))
+        {
+            var matches = keys.Where(key => HeaderCmacMatches(header, key)).ToList();
+            if (matches.Count > 0)
+            {
+                keys = matches;
+                authenticated = true;
+            }
+        }
+
+        contexts = keys.Select(key => DecryptionContext.ForRetail(header, key)).ToArray();
+        return true;
+    }
+
+    internal void RememberSelection(PkgHeader header, DecryptionContext context) =>
+        _selectedContexts[header] = context;
 
     /// <summary>
     /// Resolves a PSP/PSVita decryptor from the bundled keys. key_type 1 = PSP (key used directly);
@@ -107,16 +152,15 @@ public sealed class FileKeyProvider : IKeyProvider
     }
 
     /// <summary>
-    /// Returns the retail key to use: a user override file if one is present, otherwise the bundled
-    /// public key. Only returns null when an override file exists but cannot be parsed (a real error
-    /// the user should see); a simple absence of any file is not an error.
+    /// Loads the optional user key. Absence is not an error because bundled standard and IDU keys
+    /// remain available as candidates.
     /// </summary>
-    private byte[]? LoadKey(out string? error)
+    private byte[]? LoadOverrideKey(out string? error)
     {
         if (_resolved)
         {
-            error = _cachedKey is null ? _loadError : null;
-            return _cachedKey;
+            error = _loadError;
+            return _cachedOverrideKey;
         }
 
         _resolved = true;
@@ -130,8 +174,8 @@ public sealed class FileKeyProvider : IKeyProvider
                 if (!File.Exists(path)) continue;
                 try
                 {
-                    _cachedKey = ParseKeyFile(File.ReadAllBytes(path));
-                    return _cachedKey;
+                    _cachedOverrideKey = ParseKeyFile(File.ReadAllBytes(path));
+                    return _cachedOverrideKey;
                 }
                 catch (Exception ex)
                 {
@@ -142,9 +186,26 @@ public sealed class FileKeyProvider : IKeyProvider
             }
         }
 
-        // No override file: use the bundled public key so retail packages decrypt out of the box.
-        _cachedKey = BundledKeys.Ps3GpkgAesKey;
-        return _cachedKey;
+        return null;
+    }
+
+    private static void AddDistinct(List<byte[]> keys, byte[]? candidate)
+    {
+        if (candidate is not null && !keys.Any(key => key.AsSpan().SequenceEqual(candidate)))
+            keys.Add(candidate);
+    }
+
+    private static bool HeaderCmacMatches(PkgHeader header, byte[] key)
+    {
+        byte[] computed = AesCmac.Compute(key, header.AuthenticatedHeader);
+        return CryptographicOperations.FixedTimeEquals(computed, header.HeaderCmac);
+    }
+
+    private static bool IsAllZero(ReadOnlySpan<byte> value)
+    {
+        foreach (byte item in value)
+            if (item != 0) return false;
+        return true;
     }
 
     /// <summary>The key filenames this provider recognizes, most-preferred first.</summary>

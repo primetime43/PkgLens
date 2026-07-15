@@ -59,6 +59,9 @@ public sealed class PkgContainerReader : IPackageReader
         var metadata = ReadMetadata(stream, header);
 
         // 3. Resolve a decryptor (always succeeds for debug; retail needs a key).
+        if (keys is FileKeyProvider fileKeys && header.IsPs3 && header.IsRetail)
+            return ReadWithAutomaticPs3Key(stream, fileKeys, header, metadata);
+
         if (!keys.TryResolve(header, out var context, out string? reason))
         {
             return new PkgInfo
@@ -88,6 +91,51 @@ public sealed class PkgContainerReader : IPackageReader
         };
     }
 
+    private static PkgInfo ReadWithAutomaticPs3Key(Stream stream, FileKeyProvider keys, PkgHeader header,
+        PkgMetadata metadata)
+    {
+        if (!keys.TryGetPs3Candidates(header, out var candidates, out string? reason, out bool authenticated))
+            return Undecrypted(header, metadata, reason);
+
+        PkgFormatException? lastError = null;
+        foreach (DecryptionContext candidate in candidates)
+        {
+            try
+            {
+                using var decryptors = candidate.CreateDecryptorSet();
+                var entries = ReadEntries(stream, header, decryptors, validateCandidate: true);
+                var sfo = ReadSfo(stream, header, decryptors, entries);
+                keys.RememberSelection(header, candidate);
+                return new PkgInfo
+                {
+                    Header = header,
+                    Metadata = metadata,
+                    Entries = entries,
+                    Sfo = sfo,
+                    IsDecrypted = true,
+                };
+            }
+            catch (PkgFormatException ex)
+            {
+                lastError = ex;
+            }
+        }
+
+        if (authenticated && lastError is not null)
+            throw lastError;
+
+        return Undecrypted(header, metadata,
+            "None of the available PS3 package keys produced a valid item table.");
+    }
+
+    private static PkgInfo Undecrypted(PkgHeader header, PkgMetadata metadata, string? reason) => new()
+    {
+        Header = header,
+        Metadata = metadata,
+        IsDecrypted = false,
+        DecryptionNote = reason,
+    };
+
     private static PkgMetadata ReadMetadata(Stream stream, PkgHeader header)
     {
         if (header.MetadataCount == 0 || header.MetadataSize == 0)
@@ -100,7 +148,8 @@ public sealed class PkgContainerReader : IPackageReader
         return PkgMetadata.Parse(block, header.MetadataCount);
     }
 
-    private static List<PkgEntry> ReadEntries(Stream stream, PkgHeader header, PkgDecryptorSet decryptors)
+    private static List<PkgEntry> ReadEntries(Stream stream, PkgHeader header, PkgDecryptorSet decryptors,
+        bool validateCandidate = false)
     {
         long tableBytes = (long)header.ItemCount * PkgEntry.RecordSize;
         if (tableBytes == 0)
@@ -120,12 +169,31 @@ public sealed class PkgContainerReader : IPackageReader
             entries.Add(rec);
         }
 
+        if (validateCandidate)
+            ValidateCandidateEntries(header, entries, tableBytes);
+
         if (decryptors.PerEntry)
             ReadNamesPerEntry(stream, header, decryptors, entries);
         else
             ReadNamesBulk(stream, header, decryptors.Table, entries);
 
         return entries;
+    }
+
+    private static void ValidateCandidateEntries(PkgHeader header, List<PkgEntry> entries, long tableBytes)
+    {
+        foreach (PkgEntry entry in entries)
+        {
+            if (entry.Kind is < PkgEntryType.Npdrm or > PkgEntryType.Folder)
+                throw new PkgFormatException($"Item table contains unknown entry type 0x{entry.RawType:X8}.");
+            if (entry.NameSize == 0 || entry.NameOffset < tableBytes ||
+                entry.NameOffset > header.DataSize || entry.NameSize > header.DataSize - entry.NameOffset)
+                throw new PkgFormatException("Item table contains an invalid entry-name range.");
+            if (entry.FileOffset > header.DataSize || entry.FileSize > header.DataSize - entry.FileOffset)
+                throw new PkgFormatException("Item table contains an invalid file-data range.");
+            if (entry.IsDirectory && entry.FileSize != 0)
+                throw new PkgFormatException("Item table contains a directory with file data.");
+        }
     }
 
     /// <summary>

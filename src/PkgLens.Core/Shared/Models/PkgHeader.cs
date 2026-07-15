@@ -67,6 +67,15 @@ public sealed class PkgHeader
     public byte[] DataRiv { get; init; } = new byte[0x10];
 
     /// <summary>
+    /// 16-byte header CMAC at 0x80 when the extended header is available. Retail PS3 packages use
+    /// this to identify the matching package AES key without decrypting payload data.
+    /// </summary>
+    public byte[] HeaderCmac { get; init; } = new byte[0x10];
+
+    /// <summary>The exact 0x80-byte header region authenticated by <see cref="HeaderCmac"/>.</summary>
+    public byte[] AuthenticatedHeader { get; init; } = new byte[0x80];
+
+    /// <summary>
     /// PSP/PSVita key selector (<c>header[0xE7] &amp; 7</c>): 1 = PSP, 2/3/4 = PSVita key revisions.
     /// 0 when unknown or when the parse buffer didn't reach 0xE7 (only meaningful for platform 0x0002).
     /// </summary>
@@ -136,6 +145,8 @@ public sealed class PkgHeader
             ContentId = ContentId.Parse(contentIdRaw),
             QaDigest = data.Slice(0x60, 0x10).ToArray(),
             DataRiv = data.Slice(0x70, 0x10).ToArray(),
+            HeaderCmac = data.Length >= 0x90 ? data.Slice(0x80, 0x10).ToArray() : new byte[0x10],
+            AuthenticatedHeader = data.Slice(0, 0x80).ToArray(),
             PspKeyType = pspKeyType,
         };
     }
