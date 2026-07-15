@@ -1,0 +1,206 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Interactivity;
+using Avalonia.Markup.Xaml;
+using Avalonia.Platform.Storage;
+using Avalonia.Styling;
+using PkgLens.Core.Shared.Keys;
+using PkgLens.Core.Shared.Models;
+using PkgLens.Gui.Services;
+using PkgLens.Gui.ViewModels;
+
+namespace PkgLens.Gui.Views;
+
+public partial class MainWindow
+{
+    // ==================== Pack page ====================
+
+    private string? _packFolder;
+
+    private static readonly PkgContentType[] PackTypeChoices =
+    {
+        PkgContentType.GameExec, PkgContentType.GameData, PkgContentType.Theme,
+        PkgContentType.Widget, PkgContentType.License, PkgContentType.Ps1Emu,
+        PkgContentType.Psp, PkgContentType.Vsh, PkgContentType.Ps2Classic,
+    };
+
+    private void PopulatePackContentTypes()
+    {
+        var box = this.FindControl<ComboBox>("PackContentTypeBox")!;
+        box.ItemsSource = PackTypeChoices.Select(t => $"{t} (0x{(uint)t:X})").ToList();
+        box.SelectedIndex = 0; // GameExec
+    }
+
+    /// <summary>Menu/toolbar "Pack folder…" switches to the Pack page.</summary>
+    private void OnGoPackClick(object? sender, RoutedEventArgs e) => Vm.ActiveTool = ToolPage.Pack;
+
+    private string? _packRapPath;
+
+    private async void OnPackPickRap(object? sender, RoutedEventArgs e)
+    {
+        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "Choose the RAP license file for the EBOOT's content id",
+            AllowMultiple = false,
+            FileTypeFilter = new[]
+            {
+                new FilePickerFileType("RAP") { Patterns = new[] { "*.rap", "*.RAP" } },
+                FilePickerFileTypes.All,
+            },
+        });
+        if (files.FirstOrDefault()?.TryGetLocalPath() is not { } path)
+            return;
+        _packRapPath = path;
+        this.FindControl<TextBlock>("PackRapText")!.Text = Path.GetFileName(path);
+    }
+
+    private async void OnPackFolderInfo(object? sender, RoutedEventArgs e)
+    {
+        if (_packFolder is null)
+        {
+            Vm.Status = "Choose a source folder first.";
+            return;
+        }
+
+        var box = this.FindControl<Border>("FolderInfoBox")!;
+        var text = this.FindControl<TextBlock>("FolderInfoText")!;
+        await RunOperationAsync("Inspecting folder…", "Folder inspection failed", async (token, _) =>
+        {
+            var report = await Task.Run(() => PkgLens.Core.Shared.GameFolderInfo.Describe(_packFolder), token);
+            text.Text = PackagePresentationService.DescribeFolder(report);
+            box.IsVisible = true;
+            Vm.Status = $"Folder: {report.FileCount} file(s), {report.TotalBytes:n0} bytes.";
+        });
+    }
+
+    private void OnPackDrmChanged(object? sender, Avalonia.Controls.NumericUpDownValueChangedEventArgs e)
+    {
+        var label = this.FindControl<TextBlock>("PackDrmName");
+        if (label is not null)
+            label.Text = PkgLens.Core.Shared.Models.DrmType.Name((uint)(e.NewValue ?? 3));
+    }
+
+    private async void OnPackBrowseFolder(object? sender, RoutedEventArgs e)
+    {
+        var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        {
+            Title = "Choose the content folder to pack",
+            AllowMultiple = false,
+        });
+        if (folders.FirstOrDefault()?.TryGetLocalPath() is not { } folder)
+            return;
+
+        _packFolder = folder;
+        this.FindControl<TextBlock>("PackFolderText")!.Text = folder;
+
+        // Fast-Pack inference to pre-fill the fields (blank fallback if it can't infer).
+        await RunOperationAsync("Inspecting package folder…", "Folder inference failed", async (token, _) =>
+        {
+            var plan = await Task.Run(() => PkgLens.Core.Shared.FolderPackage.Plan(folder), token);
+            this.FindControl<TextBox>("PackContentIdBox")!.Text = plan.ContentId;
+            this.FindControl<TextBox>("PackInstallDirBox")!.Text = plan.InstallDirectory;
+            this.FindControl<NumericUpDown>("PackDrmBox")!.Value = plan.DrmType;
+            SelectPackContentType(plan.ContentType);
+            ShowPackNotes(plan.Notes.Count > 0 ? "Inferred: " + string.Join("; ", plan.Notes) : null);
+            Vm.Status = $"Ready to pack {plan.FileCount} file(s) from {Path.GetFileName(folder)}.";
+        });
+    }
+
+    private async void OnPackBuild(object? sender, RoutedEventArgs e)
+    {
+        if (_packFolder is null)
+        {
+            Vm.Status = "Choose a source folder first.";
+            return;
+        }
+
+        string contentId = (this.FindControl<TextBox>("PackContentIdBox")!.Text ?? string.Empty).Trim();
+        if (contentId.Length == 0)
+        {
+            Vm.Status = "A content id is required (e.g. UP0001-NPUB30910_00-EXAMPLE000000001).";
+            return;
+        }
+
+        string installDir = (this.FindControl<TextBox>("PackInstallDirBox")!.Text ?? string.Empty).Trim();
+        bool retail = this.FindControl<RadioButton>("PackRetailRadio")!.IsChecked == true;
+        bool resign = this.FindControl<CheckBox>("PackResignCheck")!.IsChecked == true;
+
+        byte[]? ebootKlic = null;
+        if (resign && _packRapPath is not null)
+        {
+            try
+            {
+                byte[] rapBytes = File.ReadAllBytes(_packRapPath);
+                if (rapBytes.Length != 16) { Vm.Status = "The chosen RAP is not 16 bytes."; return; }
+                ebootKlic = PkgLens.Core.Ps3.Npd.NpdKeys.RapToKlicensee(rapBytes);
+            }
+            catch (Exception ex) { Vm.ReportError("Could not read the RAP", ex); return; }
+        }
+
+        var options = new PkgLens.Core.Shared.PackOptions
+        {
+            ContentId = contentId,
+            InstallDirectory = installDir.Length == 0 ? null : installDir,
+            ContentType = SelectedPackContentType(),
+            DrmType = (uint)(this.FindControl<NumericUpDown>("PackDrmBox")!.Value ?? 3),
+            Finalization = retail ? PkgFinalization.Retail : PkgFinalization.Debug,
+            ResignEboot = resign,
+            EbootKlicensee = ebootKlic,
+        };
+
+        var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "Save the new .pkg as…",
+            SuggestedFileName = PackagePresentationService.SanitizeFileName(contentId) + ".pkg",
+            DefaultExtension = "pkg",
+            FileTypeChoices = new[] { new FilePickerFileType("PS3 package") { Patterns = new[] { "*.pkg" } } },
+        });
+        if (file?.TryGetLocalPath() is not { } dest)
+            return;
+
+        string folder = _packFolder;
+        await RunOperationAsync("Packing…", "Pack failed", async (token, progress) =>
+        {
+            var packageProgress = new Progress<PkgLens.Core.Shared.PkgOperationProgress>(value =>
+                progress.Report(PackagePresentationService.ToGuiProgress(value)));
+            var plan = await Task.Run(() =>
+            {
+                var p = PkgLens.Core.Shared.FolderPackage.Plan(folder, options, dest);
+                IKeyProvider keys = new FileKeyProvider(Vm.KeysDirectory);
+                AtomicOutput.Write(dest, dst => p.Builder.Build(dst, keys, token, packageProgress));
+                return p;
+            }, token);
+
+            Vm.Status = retail
+                ? $"Packed {plan.FileCount} file(s) → {Path.GetFileName(dest)} — retail-encrypted (installs on CFW)."
+                : $"Packed {plan.FileCount} file(s) → {Path.GetFileName(dest)} — non-finalized (debug; RPCS3 / dev).";
+            ShowPackNotes($"Wrote {new FileInfo(dest).Length:n0} bytes to {dest}");
+        });
+    }
+
+    private void SelectPackContentType(uint value)
+    {
+        int idx = Array.FindIndex(PackTypeChoices, t => (uint)t == value);
+        if (idx >= 0) this.FindControl<ComboBox>("PackContentTypeBox")!.SelectedIndex = idx;
+    }
+
+    private uint SelectedPackContentType()
+    {
+        int idx = this.FindControl<ComboBox>("PackContentTypeBox")!.SelectedIndex;
+        return idx >= 0 ? (uint)PackTypeChoices[idx] : (uint)PkgContentType.GameExec;
+    }
+
+    private void ShowPackNotes(string? text)
+    {
+        var notes = this.FindControl<TextBlock>("PackNotes")!;
+        notes.Text = text ?? string.Empty;
+        notes.IsVisible = !string.IsNullOrEmpty(text);
+    }
+}
