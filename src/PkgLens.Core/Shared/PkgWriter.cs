@@ -1,6 +1,6 @@
 using System.Buffers.Binary;
 using System.Text;
-using PkgLens.Core.Shared.Formats;
+using PkgLens.Core.Shared.Crypto;
 using PkgLens.Core.Shared.Keys;
 using PkgLens.Core.Shared.Models;
 
@@ -10,16 +10,18 @@ namespace PkgLens.Core.Shared;
 /// Rebuilds ("repacks") a package to a new stream, optionally replacing the data of individual
 /// entries. The header CMAC and ECDSA signature are <b>not</b> recomputed — PkgLens never forges
 /// signatures — so a repacked <em>retail</em> package is unsigned and will not pass integrity
-/// checks or install on a real console.
+/// checks or install on a stock console.
 ///
 /// Layout of the rebuilt (encrypted) data region: <c>[item table | entry names | file data]</c>,
 /// with fresh offsets/sizes. Everything before <c>data_offset</c> (header + metadata) is copied
-/// verbatim from the source, with only <c>total_size</c> and <c>data_size</c> patched.
+/// from the source in chunks, with only <c>total_size</c> and <c>data_size</c> patched. Unchanged
+/// entry data is decrypted from its old offset and re-encrypted at its new offset while streaming,
+/// so package size is not limited by available memory.
 /// </summary>
 public static class PkgWriter
 {
-    /// <summary>Guard against building an unbounded region in memory. Larger packages aren't supported yet.</summary>
-    public const long MaxRepackDataSize = 512L * 1024 * 1024;
+    private const int BufferSize = 1 << 20;
+    private const int PatchedHeaderLength = 0x30;
 
     public static void Repack(
         Stream source,
@@ -31,7 +33,14 @@ public static class PkgWriter
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(info);
         ArgumentNullException.ThrowIfNull(replacements);
+        ArgumentNullException.ThrowIfNull(keys);
         ArgumentNullException.ThrowIfNull(destination);
+        if (!source.CanSeek)
+            throw new PkgFormatException("A seekable source stream is required to repack a package.");
+        if (!destination.CanWrite)
+            throw new ArgumentException("The destination stream must be writable.", nameof(destination));
+        if (ReferenceEquals(source, destination))
+            throw new ArgumentException("Source and destination must be different streams.", nameof(destination));
 
         var header = info.Header;
         if (!info.IsDecrypted)
@@ -39,108 +48,213 @@ public static class PkgWriter
         if (!keys.TryResolve(header, out var context, out string? reason))
             throw new PkgKeyException(reason ?? "No key available to re-encrypt the package.");
 
-        using (var decryptors = context.CreateDecryptorSet())
+        var entries = info.Entries;
+        int itemCount = entries.Count;
+        int tableLength;
+        try { tableLength = checked(itemCount * PkgEntry.RecordSize); }
+        catch (OverflowException) { throw new PkgFormatException("The package has too many entries to repack."); }
+
+        var names = new byte[itemCount][];
+        var nameOffsets = new long[itemCount];
+        var fileOffsets = new long[itemCount];
+        var fileSizes = new long[itemCount];
+
+        long position = tableLength;
+        try
         {
-            var entries = info.Entries;
-            int itemCount = entries.Count;
-            int tableLen = itemCount * PkgEntry.RecordSize;
-
-            // Resolve each entry's plaintext content: a replacement if given, else the original
-            // decrypted bytes read from the source at its current offset.
-            var contents = new byte[itemCount][];
-            var names = new byte[itemCount][];
             for (int i = 0; i < itemCount; i++)
             {
-                var e = entries[i];
-                names[i] = Encoding.UTF8.GetBytes(e.Name);
-
-                if (replacements.TryGetValue(e, out var replacement) && !e.IsDirectory)
-                    contents[i] = replacement;
-                else if (e.IsDirectory || e.FileSize == 0)
-                    contents[i] = Array.Empty<byte>();
-                else
-                    contents[i] = PkgContainerReader.ReadEntry(source, header, decryptors.For(e), e);
-            }
-
-            long namesLen = names.Sum(n => (long)n.Length);
-            long filesLen = contents.Sum(c => (long)c.Length);
-            long dataSize = tableLen + namesLen + filesLen;
-            if (dataSize > MaxRepackDataSize)
-                throw new PkgFormatException(
-                    $"Repacked data region ({dataSize:n0} bytes) exceeds the {MaxRepackDataSize:n0}-byte limit.");
-
-            // Assemble the plaintext data region.
-            var region = new byte[dataSize];
-
-            int pos = tableLen;
-            var nameOffsets = new int[itemCount];
-            for (int i = 0; i < itemCount; i++)
-            {
-                nameOffsets[i] = pos;
-                Array.Copy(names[i], 0, region, pos, names[i].Length);
-                pos += names[i].Length;
-            }
-
-            var fileOffsets = new int[itemCount];
-            for (int i = 0; i < itemCount; i++)
-            {
-                if (contents[i].Length == 0) { fileOffsets[i] = 0; continue; }
-                fileOffsets[i] = pos;
-                Array.Copy(contents[i], 0, region, pos, contents[i].Length);
-                pos += contents[i].Length;
+                names[i] = Encoding.UTF8.GetBytes(entries[i].Name);
+                if ((ulong)position > uint.MaxValue)
+                    throw new PkgFormatException("The repacked entry-name table exceeds the PKG u32 offset limit.");
+                nameOffsets[i] = position;
+                position = checked(position + names[i].Length);
             }
 
             for (int i = 0; i < itemCount; i++)
             {
-                var e = entries[i];
-                var rec = region.AsSpan(i * PkgEntry.RecordSize, PkgEntry.RecordSize);
-                BinaryPrimitives.WriteUInt32BigEndian(rec[0x00..], (uint)nameOffsets[i]);
-                BinaryPrimitives.WriteUInt32BigEndian(rec[0x04..], (uint)names[i].Length);
-                BinaryPrimitives.WriteUInt64BigEndian(rec[0x08..], (ulong)fileOffsets[i]);
-                BinaryPrimitives.WriteUInt64BigEndian(rec[0x10..], (ulong)contents[i].Length);
-                BinaryPrimitives.WriteUInt32BigEndian(rec[0x18..], e.RawType); // preserve type/flags
-                // rec[0x1C..0x20] left zero (padding)
+                PkgEntry entry = entries[i];
+                long size = ReplacementOrOriginalSize(entry, replacements);
+                fileSizes[i] = size;
+                if (size == 0) continue;
+
+                fileOffsets[i] = position;
+                position = checked(position + size);
             }
+        }
+        catch (OverflowException)
+        {
+            throw new PkgFormatException("The repacked package is too large for this runtime.");
+        }
 
-            // Encrypt each portion with the same key selection the reader uses. PS3/PSVita packages
-            // use one key throughout, while PSP/PSX packages encrypt the table with the PSP key and
-            // select PSP vs gpkg per entry for both names and file data.
-            decryptors.Table.DecryptInPlace(region.AsSpan(0, tableLen), 0);
-            for (int i = 0; i < itemCount; i++)
-            {
-                decryptors.For(entries[i]).DecryptInPlace(
-                    region.AsSpan(nameOffsets[i], names[i].Length), nameOffsets[i]);
-                if (contents[i].Length > 0)
-                    decryptors.For(entries[i]).DecryptInPlace(
-                        region.AsSpan(fileOffsets[i], contents[i].Length), fileOffsets[i]);
-            }
+        long dataSize = position;
+        long dataOffset = ValidateDataOffset(header, source.Length);
+        long totalSize;
+        try { totalSize = checked(dataOffset + dataSize); }
+        catch (OverflowException) { throw new PkgFormatException("The repacked total size exceeds the stream limit."); }
 
-            // Copy the header + metadata prefix verbatim, patching only the size fields.
-            long dataOffset = (long)header.DataOffset;
-            if (dataOffset <= 0 || dataOffset > source.Length || dataOffset > int.MaxValue)
-                throw new PkgFormatException($"Invalid data_offset 0x{dataOffset:X} for repack.");
+        byte[] buffer = new byte[BufferSize];
+        CopyPatchedPrefix(source, destination, dataOffset, totalSize, dataSize, buffer);
 
-            var prefix = new byte[dataOffset];
-            source.Position = 0;
-            ReadExact(source, prefix);
+        using var decryptors = context.CreateDecryptorSet();
+        WriteItemTable(destination, entries, names, nameOffsets, fileOffsets, fileSizes,
+            tableLength, decryptors.Table);
+        WriteNames(destination, entries, names, nameOffsets, decryptors);
+        WriteFiles(source, destination, header, entries, replacements, fileOffsets, fileSizes,
+            decryptors, buffer);
+    }
 
-            long totalSize = dataOffset + dataSize;
-            BinaryPrimitives.WriteUInt64BigEndian(prefix.AsSpan(0x18), (ulong)totalSize);
-            BinaryPrimitives.WriteUInt64BigEndian(prefix.AsSpan(0x28), (ulong)dataSize);
+    private static long ReplacementOrOriginalSize(PkgEntry entry,
+        IReadOnlyDictionary<PkgEntry, byte[]> replacements)
+    {
+        if (entry.IsDirectory) return 0;
+        if (replacements.TryGetValue(entry, out byte[]? replacement))
+            return replacement.LongLength;
+        if (entry.FileSize > long.MaxValue)
+            throw new PkgFormatException($"Entry '{entry.Name}' is too large for this runtime.");
+        return (long)entry.FileSize;
+    }
 
-            destination.Write(prefix, 0, prefix.Length);
-            destination.Write(region, 0, region.Length);
+    private static long ValidateDataOffset(PkgHeader header, long sourceLength)
+    {
+        if (header.DataOffset < PatchedHeaderLength || header.DataOffset > (ulong)sourceLength ||
+            header.DataOffset > long.MaxValue)
+            throw new PkgFormatException($"Invalid data_offset 0x{header.DataOffset:X} for repack.");
+        return (long)header.DataOffset;
+    }
+
+    private static void CopyPatchedPrefix(Stream source, Stream destination, long dataOffset,
+        long totalSize, long dataSize, byte[] buffer)
+    {
+        var first = new byte[PatchedHeaderLength];
+        source.Position = 0;
+        ReadExact(source, first, first.Length, "header");
+        BinaryPrimitives.WriteUInt64BigEndian(first.AsSpan(0x18), (ulong)totalSize);
+        BinaryPrimitives.WriteUInt64BigEndian(first.AsSpan(0x28), (ulong)dataSize);
+        destination.Write(first);
+
+        CopyExact(source, destination, dataOffset - first.Length, buffer, "header/metadata prefix");
+    }
+
+    private static void WriteItemTable(Stream destination, IReadOnlyList<PkgEntry> entries,
+        IReadOnlyList<byte[]> names, IReadOnlyList<long> nameOffsets, IReadOnlyList<long> fileOffsets,
+        IReadOnlyList<long> fileSizes, int tableLength, IPkgDecryptor tableDecryptor)
+    {
+        var table = new byte[tableLength];
+        for (int i = 0; i < entries.Count; i++)
+        {
+            var record = table.AsSpan(i * PkgEntry.RecordSize, PkgEntry.RecordSize);
+            BinaryPrimitives.WriteUInt32BigEndian(record[0x00..], checked((uint)nameOffsets[i]));
+            BinaryPrimitives.WriteUInt32BigEndian(record[0x04..], checked((uint)names[i].Length));
+            BinaryPrimitives.WriteUInt64BigEndian(record[0x08..], (ulong)fileOffsets[i]);
+            BinaryPrimitives.WriteUInt64BigEndian(record[0x10..], (ulong)fileSizes[i]);
+            BinaryPrimitives.WriteUInt32BigEndian(record[0x18..], entries[i].RawType);
+        }
+
+        tableDecryptor.DecryptInPlace(table, 0);
+        destination.Write(table);
+    }
+
+    private static void WriteNames(Stream destination, IReadOnlyList<PkgEntry> entries,
+        IReadOnlyList<byte[]> names, IReadOnlyList<long> nameOffsets, PkgDecryptorSet decryptors)
+    {
+        for (int i = 0; i < entries.Count; i++)
+        {
+            byte[] name = names[i];
+            decryptors.For(entries[i]).DecryptInPlace(name, nameOffsets[i]);
+            destination.Write(name);
         }
     }
 
-    private static void ReadExact(Stream stream, byte[] buffer)
+    private static void WriteFiles(Stream source, Stream destination, PkgHeader header,
+        IReadOnlyList<PkgEntry> entries, IReadOnlyDictionary<PkgEntry, byte[]> replacements,
+        IReadOnlyList<long> fileOffsets, IReadOnlyList<long> fileSizes,
+        PkgDecryptorSet decryptors, byte[] buffer)
+    {
+        for (int i = 0; i < entries.Count; i++)
+        {
+            if (fileSizes[i] == 0) continue;
+
+            PkgEntry entry = entries[i];
+            IPkgDecryptor decryptor = decryptors.For(entry);
+            if (replacements.TryGetValue(entry, out byte[]? replacement) && !entry.IsDirectory)
+                WriteReplacement(destination, replacement, fileOffsets[i], decryptor, buffer);
+            else
+                CopyOriginalEntry(source, destination, header, entry, fileOffsets[i], decryptor, buffer);
+        }
+    }
+
+    private static void WriteReplacement(Stream destination, byte[] replacement, long newOffset,
+        IPkgDecryptor decryptor, byte[] buffer)
+    {
+        int sourceOffset = 0;
+        while (sourceOffset < replacement.Length)
+        {
+            int count = Math.Min(buffer.Length, replacement.Length - sourceOffset);
+            replacement.AsSpan(sourceOffset, count).CopyTo(buffer);
+            decryptor.DecryptInPlace(buffer.AsSpan(0, count), checked(newOffset + sourceOffset));
+            destination.Write(buffer, 0, count);
+            sourceOffset += count;
+        }
+    }
+
+    private static void CopyOriginalEntry(Stream source, Stream destination, PkgHeader header,
+        PkgEntry entry, long newOffset, IPkgDecryptor decryptor, byte[] buffer)
+    {
+        ValidateOriginalRange(source, header, entry, out long absoluteOffset, out long size);
+        source.Position = absoluteOffset;
+
+        long copied = 0;
+        while (copied < size)
+        {
+            int count = (int)Math.Min(buffer.Length, size - copied);
+            ReadExact(source, buffer, count, $"entry '{entry.Name}'");
+            decryptor.DecryptInPlace(buffer.AsSpan(0, count), checked((long)entry.FileOffset + copied));
+            decryptor.DecryptInPlace(buffer.AsSpan(0, count), checked(newOffset + copied));
+            destination.Write(buffer, 0, count);
+            copied += count;
+        }
+    }
+
+    private static void ValidateOriginalRange(Stream source, PkgHeader header, PkgEntry entry,
+        out long absoluteOffset, out long size)
+    {
+        if (entry.FileOffset > header.DataSize || entry.FileSize > header.DataSize - entry.FileOffset)
+            throw new PkgFormatException($"Entry '{entry.Name}' data range exceeds data_size.");
+        if (header.DataOffset > (ulong)source.Length ||
+            entry.FileOffset > (ulong)source.Length - header.DataOffset)
+            throw new PkgFormatException($"Truncated PKG: entry '{entry.Name}' starts past end of file.");
+
+        ulong absolute = header.DataOffset + entry.FileOffset;
+        if (entry.FileSize > (ulong)source.Length - absolute || absolute > long.MaxValue ||
+            entry.FileSize > long.MaxValue)
+            throw new PkgFormatException($"Truncated PKG: entry '{entry.Name}' extends past end of file.");
+
+        absoluteOffset = (long)absolute;
+        size = (long)entry.FileSize;
+    }
+
+    private static void CopyExact(Stream source, Stream destination, long length, byte[] buffer, string what)
+    {
+        long copied = 0;
+        while (copied < length)
+        {
+            int count = (int)Math.Min(buffer.Length, length - copied);
+            ReadExact(source, buffer, count, what);
+            destination.Write(buffer, 0, count);
+            copied += count;
+        }
+    }
+
+    private static void ReadExact(Stream stream, byte[] buffer, int count, string what)
     {
         int read = 0;
-        while (read < buffer.Length)
+        while (read < count)
         {
-            int n = stream.Read(buffer, read, buffer.Length - read);
-            if (n <= 0) throw new PkgFormatException("Unexpected end of source while copying header/metadata.");
-            read += n;
+            int current = stream.Read(buffer, read, count - read);
+            if (current <= 0)
+                throw new PkgFormatException($"Unexpected end of source while reading {what}.");
+            read += current;
         }
     }
 }

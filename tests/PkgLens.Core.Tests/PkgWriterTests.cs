@@ -19,10 +19,12 @@ public class PkgWriterTests
     [Fact]
     public void Repack_ReplacesFile_AndPreservesOthers()
     {
+        byte[] after = Enumerable.Range(0, 777).Select(i => (byte)(i * 11 + 5)).ToArray();
         byte[] pkg = new SyntheticPkgBuilder()
             .AddDirectory("USRDIR")
             .AddFile("PARAM.SFO", Sfo())
             .AddFile("USRDIR/DATA.BIN", new byte[] { 1, 2, 3, 4, 5 })
+            .AddFile("USRDIR/AFTER.BIN", after)
             .Build();
 
         var keys = new InMemoryKeyProvider();
@@ -50,6 +52,11 @@ public class PkgWriterTests
         var data2 = info2.Entries.Single(e => e.Name == "USRDIR/DATA.BIN");
         var readback = PkgReader.ExtractEntryBytes(src2, info2.Header, data2, keys);
         Assert.Equal(newContent, readback);
+
+        // An unchanged file after the replacement moved to a new CTR offset and must be
+        // decrypted from its old offset, then re-encrypted at the new one while streaming.
+        var after2 = info2.Entries.Single(e => e.Name == "USRDIR/AFTER.BIN");
+        Assert.Equal(after, PkgReader.ExtractEntryBytes(src2, info2.Header, after2, keys));
 
         // Header size fields consistent with the new file.
         Assert.Equal((ulong)repacked.Length, info2.Header.TotalSize);
@@ -99,5 +106,55 @@ public class PkgWriterTests
         Assert.Equal(info.Entries.Count, info2.Entries.Count);
         Assert.Equal("Repack Test", info2.Sfo?.Title);
         Assert.Equal("NPUB30910", info2.ContentId.TitleId);
+    }
+
+    [Fact]
+    public void Repack_LargeOriginalEntry_IsReadInBoundedChunks()
+    {
+        byte[] payload = Enumerable.Range(0, 5 * 1024 * 1024 + 123)
+            .Select(i => (byte)(i * 17 + 9))
+            .ToArray();
+        byte[] pkg = new SyntheticPkgBuilder()
+            .AddFile("PARAM.SFO", Sfo())
+            .AddFile("LARGE.BIN", payload)
+            .Build();
+
+        using var inner = new MemoryStream(pkg);
+        using var source = new MaxReadSizeStream(inner, 1 << 20);
+        var keys = new InMemoryKeyProvider();
+        var info = PkgReader.Read(source, keys);
+
+        using var destination = new MemoryStream();
+        PkgWriter.Repack(source, info, new Dictionary<PkgEntry, byte[]>(), keys, destination);
+
+        Assert.True(source.MaxObservedRead <= 1 << 20);
+        using var repacked = new MemoryStream(destination.ToArray());
+        var repackedInfo = PkgReader.Read(repacked, keys);
+        var large = repackedInfo.Entries.Single(e => e.Name == "LARGE.BIN");
+        Assert.Equal(payload, PkgReader.ExtractEntryBytes(repacked, repackedInfo.Header, large, keys));
+    }
+
+    private sealed class MaxReadSizeStream(Stream inner, int maximumRead) : Stream
+    {
+        public int MaxObservedRead { get; private set; }
+
+        public override bool CanRead => inner.CanRead;
+        public override bool CanSeek => inner.CanSeek;
+        public override bool CanWrite => false;
+        public override long Length => inner.Length;
+        public override long Position { get => inner.Position; set => inner.Position = value; }
+
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            MaxObservedRead = Math.Max(MaxObservedRead, count);
+            if (count > maximumRead)
+                throw new InvalidOperationException($"Read request {count} exceeded {maximumRead} bytes.");
+            return inner.Read(buffer, offset, count);
+        }
+
+        public override long Seek(long offset, SeekOrigin origin) => inner.Seek(offset, origin);
+        public override void SetLength(long value) => throw new NotSupportedException();
+        public override void Flush() { }
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
     }
 }
