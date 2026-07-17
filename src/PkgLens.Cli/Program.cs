@@ -75,6 +75,10 @@ if (command == "pspexport")
 if (command == "vitaexport")
     return VitaExportCommand.Run(args.AsSpan(1));
 
+// The `audit` command scans a package, protected-content file, or extracted folder.
+if (command == "audit")
+    return AuditCommand.Run(args.AsSpan(1));
+
 // The `patch` command applies magic patches to an EBOOT/ELF.
 if (command == "patch")
     return PatchCommand.Run(args.AsSpan(1));

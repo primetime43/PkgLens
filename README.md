@@ -45,8 +45,9 @@ In the GUI, open a package with **File → Open** or drag a `.pkg` onto the wind
 packages both open with no setup — the standard decryption key is built in. The left pane is a
 folder tree; the right pane lists the selected folder's files. **Tools → Package info…** shows the
 header, metadata, and `PARAM.SFO`. **File → Convert package → CFW…** performs the complete EBOOT
-conversion and streaming rebuild workflow in one operation. **File → Export PSP package…** turns a
-PSP package directly into `EBOOT.PBP`, a decrypted ISO, or a compressed CSO.
+  conversion and streaming rebuild workflow in one operation. **File → Export PSP package…** turns a
+  PSP package directly into `EBOOT.PBP`, a decrypted ISO, or a compressed CSO. **Tools → Key /
+  license audit…** scans a package, protected-content file, or folder and can save the report as JSON.
 
 ## What it does
 
@@ -58,6 +59,8 @@ PSP package directly into `EBOOT.PBP`, a decrypted ISO, or a compressed CSO.
 - View files inline: images (ICON0/PIC1), text, or a hex dump.
 - Read a SELF / EBOOT.BIN / SPRX header — program type, key revision, segments, control blocks,
   firmware version, NPDRM content id. No keys needed.
+- Audit a package, individual protected-content file, or folder for the required package/SELF key,
+  SELF revision, content IDs, license types, installed/missing RAPs, and unsupported encryption.
 
 ### Extract & decrypt
 
@@ -101,6 +104,7 @@ PSP package directly into `EBOOT.PBP`, a decrypted ISO, or a compressed CSO.
   altered, or truncated one is flagged.
 - Catalog a folder of packages, one row each (`scan`, with `--json` / `--csv`).
 - Report on an extracted content folder (`folderinfo`).
+- Produce a key/license readiness report (`audit`, or **Tools → Key / license audit…** in the GUI).
 
 Every format is covered by synthetic in-test fixtures, and several are additionally checked
 byte-for-byte against real retail dumps.
@@ -122,6 +126,7 @@ pkglens patch  <eboot> [--sdk-version 4.00] [--find HEX --replace HEX] [--at OFF
 pkglens pack   <folder> [--out FILE] [--debug] [--resign [--rap FILE]]   # build a .pkg
 pkglens folderinfo <folder> [--json]                    # report on an extracted content folder
 pkglens scan   <dir> [--recursive] [--json | --csv]     # catalog a folder of .pkg files
+pkglens audit  <pkg|file|folder> [--keys DIR] [--rap-dir DIR] [--json]   # key/license readiness
 pkglens unpbp  <EBOOT.PBP> [--out DIR] [--list]         # split a PSP PBP into its parts
 pkglens undoc  <DOCUMENT.DAT> [--docinfo FILE] [--out DIR]   # decrypt a PSP manual to PNG pages
 pkglens psar   decrypt <DATA.PSAR> [--out FILE]         # decrypt a PSP NPUMDIMG to .iso (keyless)

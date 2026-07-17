@@ -292,6 +292,25 @@ public sealed class PkgContainerReader : IPackageReader
         return data;
     }
 
+    /// <summary>
+    /// Decrypts at most <paramref name="maxBytes"/> from the start of an entry. Intended for
+    /// format detection and header-only inspection without buffering a potentially large file.
+    /// </summary>
+    public static byte[] ReadEntryPrefix(Stream stream, PkgHeader header, IPkgDecryptor decryptor,
+        PkgEntry entry, int maxBytes)
+    {
+        if (maxBytes <= 0)
+            throw new ArgumentOutOfRangeException(nameof(maxBytes), maxBytes,
+                "The prefix size must be positive.");
+        if (entry.IsDirectory || entry.FileSize == 0)
+            return Array.Empty<byte>();
+
+        int length = (int)Math.Min((ulong)maxBytes, entry.FileSize);
+        byte[] data = ReadDataRegion(stream, header, (long)entry.FileOffset, length);
+        decryptor.DecryptInPlace(data, (long)entry.FileOffset);
+        return data;
+    }
+
     /// <summary>Streams an entry's decrypted data to <paramref name="destination"/> without buffering it whole.</summary>
     public static void CopyEntryTo(Stream stream, PkgHeader header, IPkgDecryptor decryptor, PkgEntry entry,
         Stream destination, int bufferSize = 1 << 20, CancellationToken cancellationToken = default,

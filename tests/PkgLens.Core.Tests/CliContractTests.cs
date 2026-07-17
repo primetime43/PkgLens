@@ -20,6 +20,7 @@ public sealed class CliContractTests
         [new[] { "self", "--json" }],
         [new[] { "folderinfo", "--json" }],
         [new[] { "scan", "--json" }],
+        [new[] { "audit", "--json" }],
         [new[] { "pack", "--json" }],
         [new[] { "resign", "--json" }],
         [new[] { "unself", "--json" }],

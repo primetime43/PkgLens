@@ -1,0 +1,50 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="PkgLens.Gui.Views.KeyLicenseAuditDialog"
+        Width="1040" Height="650"
+        MinWidth="760" MinHeight="440"
+        WindowStartupLocation="CenterOwner"
+        Title="Key / license audit">
+
+  <DockPanel Margin="10">
+    <StackPanel x:Name="InputPanel" DockPanel.Dock="Top" Spacing="8" Margin="0,0,0,8">
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <Button Content="Choose file…" Click="OnChooseFile" />
+        <Button Content="Choose folder…" Click="OnChooseFolder" />
+        <TextBlock x:Name="SourceText" VerticalAlignment="Center" Opacity="0.8"
+                   MaxWidth="570" TextTrimming="CharacterEllipsis" Text="(no source chosen)" />
+        <Button x:Name="AuditBtn" Content="Audit" Click="OnAudit" IsEnabled="False" />
+      </StackPanel>
+      <TextBlock Text="Scans package keys, SELF revisions, content IDs, license types, the local RAP library, and unsupported encryption. Nothing is decrypted or modified."
+                 FontSize="12" Opacity="0.7" TextWrapping="Wrap" />
+    </StackPanel>
+
+    <Grid DockPanel.Dock="Bottom" RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto" Margin="0,8,0,0">
+      <TextBlock x:Name="StatusText" Grid.Row="0" Grid.Column="0" VerticalAlignment="Center"
+                 TextTrimming="CharacterEllipsis" Opacity="0.8" />
+      <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="12,0,0,0">
+        <Button x:Name="SaveJsonBtn" Content="Save JSON…" Click="OnSaveJson" IsEnabled="False" />
+        <Button x:Name="CancelBtn" Content="Cancel" Click="OnCancel" IsVisible="False" />
+        <Button Content="Close" Click="OnClose" />
+      </StackPanel>
+      <ProgressBar x:Name="AuditProgress" Grid.Row="1" Grid.ColumnSpan="2" Height="4" Margin="0,7,0,0"
+                   Minimum="0" Maximum="100" IsVisible="False" />
+    </Grid>
+
+    <DataGrid x:Name="Grid" AutoGenerateColumns="False" IsReadOnly="True" x:CompileBindings="False"
+              GridLinesVisibility="Horizontal" CanUserResizeColumns="True">
+      <DataGrid.Columns>
+        <DataGridTextColumn Header="Source" Binding="{Binding Source}" Width="2*" />
+        <DataGridTextColumn Header="Kind" Binding="{Binding Kind}" Width="90" />
+        <DataGridTextColumn Header="Required key" Binding="{Binding RequiredKey}" Width="2*" />
+        <DataGridTextColumn Header="Key" Binding="{Binding KeyStatus}" Width="90" />
+        <DataGridTextColumn Header="SELF rev" Binding="{Binding SelfRevision}" Width="82" />
+        <DataGridTextColumn Header="Content ID" Binding="{Binding ContentId}" Width="2*" />
+        <DataGridTextColumn Header="License" Binding="{Binding LicenseType}" Width="105" />
+        <DataGridTextColumn Header="RAP" Binding="{Binding RapStatus}" Width="90" />
+        <DataGridTextColumn Header="Encryption" Binding="{Binding EncryptionStatus}" Width="105" />
+        <DataGridTextColumn Header="Details" Binding="{Binding Details}" Width="2*" />
+      </DataGrid.Columns>
+    </DataGrid>
+  </DockPanel>
+</Window>

@@ -130,6 +130,8 @@ internal static class CliHelp
                        magic-patch an EBOOT/ELF (e.g. lower the firmware requirement: --sdk-version 4.00)
               pkglens folderinfo <folder> [--json]           report on an extracted content folder
               pkglens scan    <dir> [--recursive] [--json | --csv] [--keys DIR]   catalog a folder of .pkg files
+              pkglens audit   <pkg|file|folder> [--keys DIR] [--rap-dir DIR] [--json]
+                       report package keys, SELF revisions, licenses, RAP availability, and unsupported encryption
               pkglens unpbp   <EBOOT.PBP> [--out DIR] [--list]   split a PSP PBP into its parts (SFO/icons/DATA.PSP/DATA.PSAR)
               pkglens undoc   <DOCUMENT.DAT> [--docinfo FILE] [--out DIR]   decrypt a PSP/minis manual to PNG pages
               pkglens psar    info|decrypt <DATA.PSAR> [--out FILE]   decrypt a PSP NPUMDIMG (minis) to .iso (keyless)

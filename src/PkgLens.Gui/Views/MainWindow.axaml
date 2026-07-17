@@ -44,6 +44,7 @@
         <MenuItem Header="Package _info…" Click="OnInfoClick" IsEnabled="{Binding HasPackage}" />
         <MenuItem Header="_Folder info…" Click="OnFolderInfoClick" />
         <MenuItem Header="_Scan folder…" Click="OnScanFolderClick" />
+        <MenuItem Header="Key / _license audit…" Click="OnKeyLicenseAuditClick" />
         <Separator />
         <MenuItem Header="Import _override key…" Click="OnSetKeyClick" />
         <MenuItem Header="Keys _folder…" Click="OnKeysClick" />
@@ -228,6 +229,19 @@
                       </StackPanel>
                       <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                         <Border Classes="chip"><TextBlock Text="FOLDER" /></Border>
+                        <Border Classes="chip"><TextBlock Text="READ-ONLY" /></Border>
+                      </StackPanel>
+                    </Grid>
+                  </Button>
+                  <Button Classes="row" Click="OnKeyLicenseAuditClick">
+                    <Grid ColumnDefinitions="34,*,Auto">
+                      <materialIcons:MaterialIcon Grid.Column="0" Kind="ShieldKeyOutline" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="1,0,0,0" />
+                      <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
+                        <TextBlock Classes="rowtitle" Text="Key / license audit…" />
+                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="Find required keys, SELF revisions, licenses, missing RAPs and unsupported encryption." />
+                      </StackPanel>
+                      <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Border Classes="chip"><TextBlock Text="PKG / FOLDER" /></Border>
                         <Border Classes="chip"><TextBlock Text="READ-ONLY" /></Border>
                       </StackPanel>
                     </Grid>

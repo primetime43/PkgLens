@@ -36,6 +36,14 @@ public static class PkgReader
         return PkgContainerReader.ReadEntry(stream, header, decryptors.For(entry), entry);
     }
 
+    /// <summary>Decrypts a bounded prefix of an entry for header-only inspection.</summary>
+    public static byte[] ExtractEntryPrefix(Stream stream, PkgHeader header, PkgEntry entry,
+        IKeyProvider keys, int maxBytes)
+    {
+        using var decryptors = ResolveDecryptorSet(header, keys);
+        return PkgContainerReader.ReadEntryPrefix(stream, header, decryptors.For(entry), entry, maxBytes);
+    }
+
     /// <summary>Streams a single entry's decrypted data to <paramref name="destination"/>.</summary>
     public static void ExtractEntry(Stream stream, PkgHeader header, PkgEntry entry, Stream destination,
         IKeyProvider keys, CancellationToken cancellationToken = default, IProgress<long>? progress = null)

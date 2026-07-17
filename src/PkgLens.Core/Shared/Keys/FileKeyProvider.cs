@@ -123,6 +123,26 @@ public sealed class FileKeyProvider : IKeyProvider
         _selectedContexts[header] = context;
 
     /// <summary>
+    /// Returns a non-secret friendly name for the PS3 package key selected while reading
+    /// <paramref name="header"/>, or null when no key has been selected for that header.
+    /// </summary>
+    public string? GetSelectedKeyName(PkgHeader header)
+    {
+        if (!_selectedContexts.TryGetValue(header, out DecryptionContext? context) ||
+            !context.TryGetHeaderCmacKey(out byte[] selected))
+            return null;
+        if (selected.AsSpan().SequenceEqual(BundledKeys.Ps3GpkgAesKey))
+            return "Bundled standard PS3 retail package AES key";
+        if (selected.AsSpan().SequenceEqual(BundledKeys.Ps3IduAesKey))
+            return "Bundled IDU/kiosk PS3 package AES key";
+
+        byte[]? overrideKey = LoadOverrideKey(out _);
+        return overrideKey is not null && selected.AsSpan().SequenceEqual(overrideKey)
+            ? "User override PS3 package AES key"
+            : "Custom PS3 retail package AES key";
+    }
+
+    /// <summary>
     /// Resolves a PSP/PSVita decryptor from the bundled keys. key_type 1 = PSP (key used directly);
     /// 2/3/4 = PSVita (the CTR key is derived from the data_riv). These keys are public and always
     /// present, so PSP/PSVita packages decrypt out of the box like retail PS3 packages.
