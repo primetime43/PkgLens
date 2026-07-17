@@ -22,6 +22,7 @@ public partial class ScanDialog : Window
     private readonly string? _keysDir;
     private string? _folder;
     private List<PackageScanRow> _rows = new();
+    private PackageLibraryReport _report = new();
 
     private TextBlock _folderText = null!;
     private TextBlock _status = null!;
@@ -31,6 +32,8 @@ public partial class ScanDialog : Window
     private StackPanel _inputPanel = null!;
     private Button _cancelBtn = null!;
     private ProgressBar _progress = null!;
+    private Border _warningsPanel = null!;
+    private SelectableTextBlock _warningsText = null!;
     private CancellationTokenSource? _cancellation;
 
     public ScanDialog() : this(null) { }
@@ -49,6 +52,8 @@ public partial class ScanDialog : Window
         _inputPanel = this.FindControl<StackPanel>("InputPanel")!;
         _cancelBtn = this.FindControl<Button>("CancelBtn")!;
         _progress = this.FindControl<ProgressBar>("ScanProgress")!;
+        _warningsPanel = this.FindControl<Border>("WarningsPanel")!;
+        _warningsText = this.FindControl<SelectableTextBlock>("WarningsText")!;
     }
 
     private void InitializeComponent() => AvaloniaXamlLoader.Load(this);
@@ -107,13 +112,19 @@ public partial class ScanDialog : Window
                 return results;
             }, cancellation.Token);
 
-            _rows = rows;
-            _grid.ItemsSource = rows.Select(ScanResultRow.From).ToList();
+            _report = PackageLibraryMatcher.Analyze(rows);
+            _rows = _report.Packages.ToList();
+            _grid.ItemsSource = _rows.Select(row => ScanResultRow.From(row, _report)).ToList();
+            _warningsPanel.IsVisible = _report.Warnings.Count > 0;
+            _warningsText.Text = string.Join(Environment.NewLine,
+                _report.Warnings.Select(warning => $"• {warning.Message}"));
             long total = rows.Sum(r => r.Size);
             int ok = rows.Count(r => r.Decrypted), failed = rows.Count(r => r.Failed);
             _status.Text = rows.Count == 0
                 ? "No .pkg files found."
-                : $"{rows.Count} package(s), {total:n0} bytes — {ok} decrypted" + (failed > 0 ? $", {failed} unreadable" : "") + ".";
+                : $"{rows.Count} package(s) in {_report.Groups.Count} title group(s), {total:n0} bytes — " +
+                  $"{_report.Warnings.Count} warning(s), {ok} decrypted" +
+                  (failed > 0 ? $", {failed} unreadable" : "") + ".";
             _csvBtn.IsEnabled = _jsonBtn.IsEnabled = rows.Count > 0;
         }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
@@ -133,8 +144,11 @@ public partial class ScanDialog : Window
         }
     }
 
-    private async void OnSaveCsv(object? sender, RoutedEventArgs e) => await Save("csv", "scan.csv", PackageScanner.ToCsv(_rows));
-    private async void OnSaveJson(object? sender, RoutedEventArgs e) => await Save("json", "scan.json", PackageScanner.ToJson(_rows));
+    private async void OnSaveCsv(object? sender, RoutedEventArgs e) =>
+        await Save("csv", "package-library.csv", PackageLibraryMatcher.ToCsv(_report));
+
+    private async void OnSaveJson(object? sender, RoutedEventArgs e) =>
+        await Save("json", "package-library.json", PackageLibraryMatcher.ToJson(_report));
 
     private async Task Save(string ext, string suggested, string content)
     {

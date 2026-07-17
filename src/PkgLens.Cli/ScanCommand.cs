@@ -67,10 +67,11 @@ internal static class ScanCommand
 
         if (files.Count == 0)
         {
+            var empty = PackageLibraryMatcher.Analyze(Array.Empty<PackageScanRow>());
             if (format == Format.Json)
-                CliJson.Write(Array.Empty<PackageScanRow>());
+                Console.WriteLine(PackageLibraryMatcher.ToJson(empty));
             else if (format == Format.Csv)
-                Console.Write(PackageScanner.ToCsv(Array.Empty<PackageScanRow>()));
+                Console.Write(PackageLibraryMatcher.ToCsv(empty));
             else
                 Console.Error.WriteLine($"No .pkg files found in {dir}{(recursive ? " (recursive)" : "")}.");
             return ExitCode.Ok;
@@ -78,42 +79,40 @@ internal static class ScanCommand
 
         IKeyProvider keys = new FileKeyProvider(keysDir);
         var rows = files.Select(f => PackageScanner.Inspect(f, keys)).ToList();
+        PackageLibraryReport report = PackageLibraryMatcher.Analyze(rows);
 
         switch (format)
         {
-            case Format.Json: RenderJson(rows); break;
-            case Format.Csv: RenderCsv(rows); break;
-            default: RenderTable(rows); break;
+            case Format.Json: Console.WriteLine(PackageLibraryMatcher.ToJson(report)); break;
+            case Format.Csv: Console.Write(PackageLibraryMatcher.ToCsv(report)); break;
+            default: RenderTable(report); break;
         }
         return ExitCode.Ok;
     }
 
     // ---- renderers -------------------------------------------------------------------------------
 
-    private static void RenderTable(IReadOnlyList<PackageScanRow> rows)
+    private static void RenderTable(PackageLibraryReport report)
     {
         static string Cell(string? s) => string.IsNullOrEmpty(s) ? "-" : s;
 
-        Console.WriteLine($"{"CONTENT-ID",-36}  {"PLAT",-6} {"FINAL",-6} {"DEC",-3} {"SIZE",15}  {"VER",-8}  TITLE");
-        foreach (var r in rows)
+        Console.WriteLine($"{"TITLE-ID",-12} {"REGION",-7} {"ROLE",-7} {"CAT",-4} {"VER",-8} {"SIZE",13}  TITLE / FILE");
+        foreach (PackageScanRow row in report.Packages)
         {
-            string dec = r.Note is not null && r.Platform == "?" ? "err" : (r.Decrypted ? "ok" : "no");
-            string title = r.Note is not null && r.Platform == "?" ? $"[{r.Note}]" : Cell(r.Title);
+            string title = row.Failed ? $"[{row.Note}]" : $"{Cell(row.Title)} / {Path.GetFileName(row.File)}";
             Console.WriteLine(
-                $"{Cell(r.ContentId),-36}  {r.Platform,-6} {r.Finalization,-6} {dec,-3} {r.Size,15:n0}  {Cell(r.Version),-8}  {title}");
+                $"{Cell(row.TitleId),-12} {Cell(row.Region),-7} {row.Role,-7} {Cell(row.Category),-4} " +
+                $"{Cell(row.Version),-8} {row.Size,13:n0}  {title}");
         }
 
-        int ok = rows.Count(r => r.Decrypted);
-        int failed = rows.Count(r => r.Platform == "?");
-        long total = rows.Sum(r => r.Size);
+        int ok = report.Packages.Count(row => row.Decrypted);
+        int failed = report.Packages.Count(row => row.Failed);
+        long total = report.Packages.Sum(row => row.Size);
         Console.WriteLine();
-        Console.WriteLine($"{rows.Count} package(s), {total:n0} bytes — {ok} decrypted" +
-                          (failed > 0 ? $", {failed} unreadable" : "") + ".");
+        Console.WriteLine($"{report.Packages.Count} package(s) in {report.Groups.Count} title group(s), {total:n0} bytes — " +
+                          $"{report.Warnings.Count} warning(s), {ok} decrypted" +
+                           (failed > 0 ? $", {failed} unreadable" : "") + ".");
+        foreach (PackageLibraryWarning warning in report.Warnings)
+            Console.WriteLine($"warning: {warning.Message}");
     }
-
-    private static void RenderJson(IReadOnlyList<PackageScanRow> rows) =>
-        Console.WriteLine(PackageScanner.ToJson(rows));
-
-    private static void RenderCsv(IReadOnlyList<PackageScanRow> rows) =>
-        Console.Write(PackageScanner.ToCsv(rows));
 }

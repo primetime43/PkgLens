@@ -44,7 +44,7 @@
         <MenuItem Header="_Verify integrity…" Click="OnVerifyClick" IsEnabled="{Binding HasPackage}" />
         <MenuItem Header="Package _info…" Click="OnInfoClick" IsEnabled="{Binding HasPackage}" />
         <MenuItem Header="_Folder info…" Click="OnFolderInfoClick" />
-        <MenuItem Header="_Scan folder…" Click="OnScanFolderClick" />
+        <MenuItem Header="Scan package _library…" Click="OnScanFolderClick" />
         <MenuItem Header="Key / _license audit…" Click="OnKeyLicenseAuditClick" />
         <Separator />
         <MenuItem Header="Import _override key…" Click="OnSetKeyClick" />

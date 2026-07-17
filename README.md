@@ -61,6 +61,8 @@ header, metadata, and `PARAM.SFO`. **File → Convert package → CFW…** perfo
   firmware version, NPDRM content id. No keys needed.
 - Audit a package, individual protected-content file, or folder for the required package/SELF key,
   SELF revision, content IDs, license types, installed/missing RAPs, and unsupported encryption.
+- Match a package library by title ID, region, content ID, version, and SFO category; base games,
+  updates, and DLC are grouped together with missing-base and likely region-mismatch warnings.
 - Automatically classify each opened package and show only relevant next actions, such as PSP/Vita
   export, PS3 CFW conversion, update/game-data extraction, license audit, or integrity verification.
 - Run a blocking operation preflight before PSP/Vita export, CFW conversion, EDAT/SDAT decrypt, or
@@ -159,6 +161,10 @@ import, list/status, folder selection, replacement, and removal. EDAT viewing/de
 Patch, and Pack-with-resign all resolve stored RAPs automatically; choosing a RAP override caches it
 under the detected content ID for later operations. Additional nearby-license search folders can be
 selected on the **Keys** page; licensed operations also search beside their input before prompting.
+
+Use **Tools → Scan package library…** to catalog a folder of packages and view base/update/DLC
+relationships. The grouped report and its warnings can be saved as CSV or JSON; the CLI `scan`
+command emits the same relationship data.
 
 Every command accepts `--json`. Successful JSON mode writes exactly one JSON value to stdout;
 diagnostics remain on stderr and exit codes remain unchanged.

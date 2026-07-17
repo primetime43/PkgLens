@@ -2,9 +2,9 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:PkgLens.Gui.ViewModels"
         x:Class="PkgLens.Gui.Views.ScanDialog"
-        Width="920" Height="600"
+        Width="1180" Height="650" MinWidth="820" MinHeight="460"
         WindowStartupLocation="CenterOwner"
-        Title="Scan folder">
+        Title="Package library matcher">
 
   <DockPanel Margin="10">
     <StackPanel x:Name="InputPanel" DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
@@ -14,6 +14,16 @@
       <CheckBox x:Name="RecursiveCheck" Content="Recursive" VerticalAlignment="Center" />
       <Button x:Name="ScanBtn" Content="Scan" Click="OnScan" IsEnabled="False" />
     </StackPanel>
+
+    <Border x:Name="WarningsPanel" DockPanel.Dock="Top" Classes="panel" IsVisible="False"
+            Padding="10,8" Margin="0,0,0,8" BorderBrush="#CC8A4800">
+      <StackPanel Spacing="4">
+        <TextBlock Text="LIBRARY WARNINGS" FontWeight="SemiBold" Foreground="#C56A00" />
+        <ScrollViewer MaxHeight="110" VerticalScrollBarVisibility="Auto">
+          <SelectableTextBlock x:Name="WarningsText" TextWrapping="Wrap" FontSize="12" />
+        </ScrollViewer>
+      </StackPanel>
+    </Border>
 
     <Grid DockPanel.Dock="Bottom" RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto" Margin="0,8,0,0">
       <TextBlock x:Name="StatusText" Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Opacity="0.8"
@@ -33,12 +43,15 @@
       <DataGrid.Columns>
         <DataGridTextColumn Header="Title" Binding="{Binding Title}" Width="*" x:DataType="vm:ScanResultRow" />
         <DataGridTextColumn Header="Title ID" Binding="{Binding TitleId}" Width="100" x:DataType="vm:ScanResultRow" />
-        <DataGridTextColumn Header="Platform" Binding="{Binding Platform}" Width="80" x:DataType="vm:ScanResultRow" />
-        <DataGridTextColumn Header="Final" Binding="{Binding Finalization}" Width="80" x:DataType="vm:ScanResultRow" />
+        <DataGridTextColumn Header="Content ID" Binding="{Binding ContentId}" Width="270" x:DataType="vm:ScanResultRow" />
+        <DataGridTextColumn Header="Role" Binding="{Binding Role}" Width="75" x:DataType="vm:ScanResultRow" />
+        <DataGridTextColumn Header="Region" Binding="{Binding Region}" Width="75" x:DataType="vm:ScanResultRow" />
+        <DataGridTextColumn Header="Category" Binding="{Binding Category}" Width="70" x:DataType="vm:ScanResultRow" />
         <DataGridTextColumn Header="Ver" Binding="{Binding Version}" Width="70" x:DataType="vm:ScanResultRow" />
+        <DataGridTextColumn Header="Relationship" Binding="{Binding Match}" Width="120" x:DataType="vm:ScanResultRow" />
+        <DataGridTextColumn Header="Platform" Binding="{Binding Platform}" Width="80" x:DataType="vm:ScanResultRow" />
         <DataGridTextColumn Header="Size" Binding="{Binding SizeText}" Width="110" x:DataType="vm:ScanResultRow" />
-        <DataGridTextColumn Header="Dec" Binding="{Binding DecText}" Width="55" x:DataType="vm:ScanResultRow" />
-        <DataGridTextColumn Header="File / Note" Binding="{Binding FileOrNote}" Width="240" x:DataType="vm:ScanResultRow" />
+        <DataGridTextColumn Header="File / Note" Binding="{Binding FileOrNote}" Width="220" x:DataType="vm:ScanResultRow" />
       </DataGrid.Columns>
     </DataGrid>
   </DockPanel>

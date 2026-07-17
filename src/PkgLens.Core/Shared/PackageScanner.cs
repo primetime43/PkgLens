@@ -18,7 +18,11 @@ public sealed record PackageScanRow(
     string? Version,
     long Size,
     bool Decrypted,
-    string? Note)
+    string? Note,
+    string? Region = null,
+    string? Category = null,
+    string? ContentType = null,
+    PackageLibraryRole Role = PackageLibraryRole.Unknown)
 {
     /// <summary>True for a file that failed to parse (an error row).</summary>
     public bool Failed => Platform == "?";
@@ -44,17 +48,25 @@ public static class PackageScanner
         {
             PkgInfo info = PkgReader.Open(path, keys);
             var h = info.Header;
+            string? titleId = info.Sfo?.TitleId ?? info.ContentId.TitleId;
+            string? category = info.Sfo?.Category;
+            string? contentType = info.Metadata.ContentType?.ToString() ??
+                                  (info.Metadata.ContentTypeRaw is uint raw ? $"0x{raw:X}" : null);
             return new PackageScanRow(
                 File: path,
                 ContentId: info.ContentId.Raw is { Length: > 0 } cid ? cid : null,
                 Platform: h.PlatformDisplay,
                 Finalization: h.Finalization.ToString(),
-                TitleId: info.Sfo?.TitleId ?? info.ContentId.TitleId,
+                TitleId: titleId,
                 Title: info.Sfo?.Title ?? info.ContentId.Name,
                 Version: info.Sfo?.AppVersion ?? info.Sfo?.Version,
                 Size: size,
                 Decrypted: info.IsDecrypted,
-                Note: info.IsDecrypted ? null : info.DecryptionNote);
+                Note: info.IsDecrypted ? null : info.DecryptionNote,
+                Region: PackageLibraryMatcher.ResolveRegion(info.ContentId.Raw, titleId),
+                Category: category,
+                ContentType: contentType,
+                Role: PackageLibraryMatcher.Classify(info.Metadata.ContentType, category));
         }
         catch (Exception ex) when (ex is PkgFormatException or PkgKeyException or IOException or UnauthorizedAccessException)
         {
@@ -67,12 +79,13 @@ public static class PackageScanner
     {
         ArgumentNullException.ThrowIfNull(rows);
         var sb = new System.Text.StringBuilder();
-        sb.Append("file,content_id,platform,finalization,title_id,title,version,size_bytes,decrypted,note\n");
+        sb.Append("file,content_id,platform,finalization,title_id,title,version,region,category,content_type,role,size_bytes,decrypted,note\n");
         foreach (var r in rows)
             sb.Append(string.Join(',', new[]
             {
                 Csv(r.File), Csv(r.ContentId), Csv(r.Platform), Csv(r.Finalization),
-                Csv(r.TitleId), Csv(r.Title), Csv(r.Version), r.Size.ToString(),
+                Csv(r.TitleId), Csv(r.Title), Csv(r.Version), Csv(r.Region), Csv(r.Category),
+                Csv(r.ContentType), r.Role.ToString(), r.Size.ToString(),
                 r.Decrypted ? "true" : "false", Csv(r.Note),
             })).Append('\n');
         return sb.ToString();
@@ -92,6 +105,10 @@ public static class PackageScanner
                 titleId = r.TitleId,
                 title = r.Title,
                 version = r.Version,
+                region = r.Region,
+                category = r.Category,
+                contentType = r.ContentType,
+                role = r.Role.ToString(),
                 size = r.Size,
                 decrypted = r.Decrypted,
                 note = r.Note,
