@@ -63,6 +63,9 @@ header, metadata, and `PARAM.SFO`. **File → Convert package → CFW…** perfo
   SELF revision, content IDs, license types, installed/missing RAPs, and unsupported encryption.
 - Automatically classify each opened package and show only relevant next actions, such as PSP/Vita
   export, PS3 CFW conversion, update/game-data extraction, license audit, or integrity verification.
+- Run a blocking operation preflight before PSP/Vita export, CFW conversion, EDAT/SDAT decrypt, or
+  SELF decrypt: package/file type, keys, RAP/license readiness, encryption support, output safety,
+  expected size, and available disk space are checked before anything is written.
 
 ### Extract & decrypt
 

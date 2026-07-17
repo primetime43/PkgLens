@@ -93,6 +93,11 @@ public partial class MainWindow
 
         string inputPath = sourcePath;
         string? keysDirectory = Vm.KeysDirectory;
+        if (!await ConfirmPreflightAsync("Checking PSP export readiness…", () =>
+                PkgLens.Core.Shared.OperationPreflight.PspExport(inputPath, destinationPath, format.Value,
+                    new FileKeyProvider(keysDirectory))))
+            return;
+
         PspExportResult? result = null;
         await RunOperationAsync("Exporting PSP package…", "PSP export failed", async (token, guiProgress) =>
         {

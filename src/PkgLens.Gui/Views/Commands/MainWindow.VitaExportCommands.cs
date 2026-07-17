@@ -62,6 +62,11 @@ public partial class MainWindow
         if (folders.FirstOrDefault()?.TryGetLocalPath() is not { } destinationRoot) return;
 
         byte[]? workBin = settings.WorkBinPath is null ? null : await File.ReadAllBytesAsync(settings.WorkBinPath);
+        if (!await ConfirmPreflightAsync("Checking PSVita export readiness…", () =>
+                PkgLens.Core.Shared.OperationPreflight.VitaExport(inputPath, destinationRoot,
+                    new FileKeyProvider(keysDirectory), workBin is not null)))
+            return;
+
         VitaExportResult? result = null;
         await RunOperationAsync("Exporting PSVita package…", "Vita export failed", async (token, guiProgress) =>
         {

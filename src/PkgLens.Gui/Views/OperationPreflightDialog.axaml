@@ -1,0 +1,58 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="PkgLens.Gui.Views.OperationPreflightDialog"
+        Width="760" Height="590"
+        MinWidth="600" MinHeight="430"
+        WindowStartupLocation="CenterOwner"
+        Title="Operation preflight">
+
+  <DockPanel Margin="14">
+    <StackPanel DockPanel.Dock="Top" Spacing="3" Margin="0,0,0,12">
+      <TextBlock x:Name="OperationText" FontSize="20" FontWeight="SemiBold" />
+      <TextBlock x:Name="SummaryText" FontSize="12" Opacity="0.75" TextWrapping="Wrap" />
+    </StackPanel>
+
+    <Grid DockPanel.Dock="Bottom" ColumnDefinitions="*,Auto,Auto" Margin="0,12,0,0">
+      <TextBlock x:Name="FooterText" Grid.Column="0" VerticalAlignment="Center" FontSize="12"
+                 TextWrapping="Wrap" Margin="0,0,12,0" />
+      <Button Grid.Column="1" Content="Cancel" Click="OnCancel" Margin="0,0,8,0" Padding="14,6" />
+      <Button x:Name="ContinueButton" Grid.Column="2" Classes="primary" Content="Continue"
+              Click="OnContinue" Padding="14,6" />
+    </Grid>
+
+    <ScrollViewer>
+      <StackPanel Spacing="8">
+        <Border Classes="panel" Padding="11,8">
+          <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="95,*">
+            <TextBlock Grid.Row="0" Grid.Column="0" Text="Input" FontWeight="SemiBold" />
+            <SelectableTextBlock x:Name="InputText" Grid.Row="0" Grid.Column="1" TextWrapping="Wrap" />
+            <TextBlock Grid.Row="1" Grid.Column="0" Text="Output" FontWeight="SemiBold" Margin="0,5,0,0" />
+            <SelectableTextBlock x:Name="OutputText" Grid.Row="1" Grid.Column="1" TextWrapping="Wrap" Margin="0,5,0,0" />
+            <TextBlock Grid.Row="2" Grid.Column="0" Text="Expected" FontWeight="SemiBold" Margin="0,5,0,0" />
+            <TextBlock x:Name="ExpectedText" Grid.Row="2" Grid.Column="1" Margin="0,5,0,0" />
+          </Grid>
+        </Border>
+
+        <ItemsControl x:Name="Checks" x:CompileBindings="False">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <Border Classes="panel" Padding="10,8" Margin="0,0,0,6">
+                <Grid ColumnDefinitions="28,145,*">
+                  <TextBlock Grid.Column="0" Text="{Binding Icon}" FontSize="16"
+                             Foreground="{Binding Color}" VerticalAlignment="Top" />
+                  <TextBlock Grid.Column="1" Text="{Binding Name}" FontWeight="SemiBold"
+                             VerticalAlignment="Top" TextWrapping="Wrap" Margin="0,0,12,0" />
+                  <StackPanel Grid.Column="2" Spacing="1" Margin="4,0,0,0">
+                    <TextBlock Text="{Binding Status}" FontSize="11" FontWeight="SemiBold"
+                               Foreground="{Binding Color}" />
+                    <TextBlock Text="{Binding Details}" TextWrapping="Wrap" FontSize="12" Opacity="0.8" />
+                  </StackPanel>
+                </Grid>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+    </ScrollViewer>
+  </DockPanel>
+</Window>

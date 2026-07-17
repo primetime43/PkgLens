@@ -117,6 +117,10 @@ public class PackageReaderTests
         byte[] bytes = PkgReader.ExtractEntryBytes(stream, header, entry, new InMemoryKeyProvider());
         Assert.Equal(payload, bytes);
 
+        byte[] range = PkgReader.ExtractEntryRange(stream, header, entry, new InMemoryKeyProvider(),
+            entryOffset: 37, length: 211);
+        Assert.Equal(payload.AsSpan(37, 211).ToArray(), range);
+
         // Streamed extraction with a small buffer to exercise chunk boundaries.
         using var dest = new MemoryStream();
         var dec = DecryptionContext.ForDebug(header).CreateDecryptor();

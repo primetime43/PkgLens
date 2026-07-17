@@ -311,6 +311,23 @@ public sealed class PkgContainerReader : IPackageReader
         return data;
     }
 
+    /// <summary>Decrypts a bounded range within an entry without reading the preceding bytes.</summary>
+    public static byte[] ReadEntryRange(Stream stream, PkgHeader header, IPkgDecryptor decryptor,
+        PkgEntry entry, long entryOffset, int length)
+    {
+        if (entryOffset < 0)
+            throw new ArgumentOutOfRangeException(nameof(entryOffset));
+        if (length < 0)
+            throw new ArgumentOutOfRangeException(nameof(length));
+        if ((ulong)entryOffset > entry.FileSize || (ulong)length > entry.FileSize - (ulong)entryOffset)
+            throw new PkgFormatException($"Range [0x{entryOffset:X}, +0x{length:X}) exceeds entry '{entry.Name}'.");
+
+        long regionOffset = checked((long)entry.FileOffset + entryOffset);
+        byte[] data = ReadDataRegion(stream, header, regionOffset, length);
+        decryptor.DecryptInPlace(data, regionOffset);
+        return data;
+    }
+
     /// <summary>Streams an entry's decrypted data to <paramref name="destination"/> without buffering it whole.</summary>
     public static void CopyEntryTo(Stream stream, PkgHeader header, IPkgDecryptor decryptor, PkgEntry entry,
         Stream destination, int bufferSize = 1 << 20, CancellationToken cancellationToken = default,

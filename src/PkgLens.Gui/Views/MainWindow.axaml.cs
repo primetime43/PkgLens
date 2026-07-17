@@ -22,6 +22,7 @@ public partial class MainWindow : Window
 {
     private Border? _dropOverlay;
     private MainWindowViewModel? _subscribedViewModel;
+    private bool _showOperationPreflight;
 
     public MainWindow()
     {
@@ -33,6 +34,8 @@ public partial class MainWindow : Window
         AddHandler(DragDrop.DropEvent, OnDrop, handledEventsToo: true);
         _dropOverlay = this.FindControl<Border>("DropOverlay");
         UpdateThemeChecks(Application.Current?.RequestedThemeVariant ?? ThemeVariant.Default);
+        _showOperationPreflight = PreflightSettings.Load();
+        this.FindControl<MenuItem>("OperationPreflightItem")!.IsChecked = _showOperationPreflight;
         PopulatePackContentTypes();
     }
 
@@ -55,6 +58,12 @@ public partial class MainWindow : Window
         if (this.FindControl<MenuItem>("ThemeSystemItem") is { } s) s.IsChecked = variant == ThemeVariant.Default;
         if (this.FindControl<MenuItem>("ThemeLightItem") is { } l) l.IsChecked = variant == ThemeVariant.Light;
         if (this.FindControl<MenuItem>("ThemeDarkItem") is { } d) d.IsChecked = variant == ThemeVariant.Dark;
+    }
+
+    private void OnOperationPreflightChanged(object? sender, RoutedEventArgs e)
+    {
+        _showOperationPreflight = sender is MenuItem { IsChecked: true };
+        PreflightSettings.Save(_showOperationPreflight);
     }
 
     private MainWindowViewModel Vm => (MainWindowViewModel)DataContext!;

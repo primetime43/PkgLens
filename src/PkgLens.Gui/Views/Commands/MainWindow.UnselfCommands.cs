@@ -69,13 +69,19 @@ public partial class MainWindow
         if (save?.TryGetLocalPath() is not { } dest)
             return;
 
+        string? rapDirectory = Vm.RapDirectory;
+        if (!await ConfirmPreflightAsync("Checking SELF decrypt readiness…", () =>
+                PkgLens.Core.Shared.OperationPreflight.SelfDecrypt(input, dest, rap,
+                    rapDirectory, chain)))
+            return;
+
         await RunOperationAsync("Decrypting SELF…", "SELF decrypt failed", async (token, _) =>
         {
             var summary = await Task.Run(() =>
             {
                 token.ThrowIfCancellationRequested();
                 byte[] self = File.ReadAllBytes(input);
-                RapLicenseResolution resolution = RapLicenseService.ResolveSelf(self, rap, Vm.RapDirectory);
+                RapLicenseResolution resolution = RapLicenseService.ResolveSelf(self, rap, rapDirectory);
                 var result = PkgLens.Core.Ps3.Self.SelfDecryptor.Decrypt(self, resolution.Klicensee);
                 string lic = result.WasNpdrm ? (result.License?.ToString() ?? "NPDRM") : "non-NPDRM";
                 string source = resolution.Source is null ? string.Empty : $", {resolution.Source}";

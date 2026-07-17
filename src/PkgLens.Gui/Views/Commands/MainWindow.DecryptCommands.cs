@@ -79,74 +79,56 @@ public partial class MainWindow
             return;
         }
 
+        string sourcePath = _decryptFile;
+        var save = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "Save decrypted file as…",
+            SuggestedFileName = Path.GetFileNameWithoutExtension(sourcePath),
+        });
+        if (save?.TryGetLocalPath() is not { } destinationPath)
+            return;
+
+        string? rapDirectory = Vm.RapDirectory;
+        if (!await ConfirmPreflightAsync("Checking decrypt readiness…", () =>
+                PkgLens.Core.Shared.OperationPreflight.DataDecrypt(sourcePath, destinationPath,
+                    _decryptRap, rapDirectory)))
+            return;
+
         await RunOperationAsync("Decrypting data file…", "Decrypt failed", async (token, _) =>
         {
-            byte[] bytes = await File.ReadAllBytesAsync(_decryptFile, token);
-
-            // PSP EDAT / bare PGD: decrypt via the PSP path (fixed key, no RAP).
-            if (PkgLens.Core.Psp.PspEdatFile.IsPspEncrypted(bytes))
-            {
-                var pspSave = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
-                {
-                    Title = "Save decrypted PSP EDAT as…",
-                    SuggestedFileName = Path.GetFileNameWithoutExtension(_decryptFile),
-                });
-                if (pspSave?.TryGetLocalPath() is not { } pspDest)
-                    return;
-                string pspSrc = _decryptFile;
-                await Task.Run(() =>
-                {
-                    token.ThrowIfCancellationRequested();
-                    AtomicOutput.EnsureDifferentPath(pspSrc, pspDest);
-                    using var input = File.OpenRead(pspSrc);
-                    AtomicOutput.Write(pspDest,
-                        output => PkgLens.Core.Psp.PspEdatFile.Decrypt(input, output));
-                }, token);
-                Vm.Status = $"Decrypted PSP EDAT → {Path.GetFileName(pspDest)}";
-                ShowResultBanner("DecryptBanner", ok: true,
-                    $"Decrypted PSP EDAT — wrote {new FileInfo(pspDest).Length:n0} bytes.", pspDest);
-                SetDecryptResult(pspDest);
-                return;
-            }
-
-            var npd = PkgLens.Core.Ps3.Npd.EdatFile.ParseHeader(new MemoryStream(bytes));
-
-            byte[]? klic = null;
-            if (npd.NeedsKlicensee)
-            {
-                RapLicenseResolution resolution = RapLicenseService.ResolveContentId(
-                    npd.ContentId, _decryptRap, Vm.RapDirectory);
-                if (resolution.Klicensee is null)
-                {
-                    Vm.Status = $"{npd.ContentId} is a licensed EDAT — import its RAP in Keys → RAP Library, or browse to it here.";
-                    return;
-                }
-                klic = resolution.Klicensee;
-                Vm.RefreshRapStatus();
-            }
-
-            var save = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
-            {
-                Title = "Save decrypted file as…",
-                SuggestedFileName = Path.GetFileNameWithoutExtension(_decryptFile),
-            });
-            if (save?.TryGetLocalPath() is not { } dest)
-                return;
-
-            string src = _decryptFile;
-            byte[]? k = klic;
-            await Task.Run(() =>
+            string summary = await Task.Run(() =>
             {
                 token.ThrowIfCancellationRequested();
-                AtomicOutput.EnsureDifferentPath(src, dest);
-                using var input = File.OpenRead(src);
-                AtomicOutput.Write(dest,
-                    output => PkgLens.Core.Ps3.Npd.EdatFile.Decrypt(input, output, k));
+                using var input = File.OpenRead(sourcePath);
+                if (PkgLens.Core.Psp.PspEdatFile.IsPspEncrypted(input))
+                {
+                    AtomicOutput.EnsureDifferentPath(sourcePath, destinationPath);
+                    AtomicOutput.Write(destinationPath,
+                        output => PkgLens.Core.Psp.PspEdatFile.Decrypt(input, output));
+                    return $"Decrypted PSP EDAT — wrote {new FileInfo(destinationPath).Length:n0} bytes.";
+                }
+
+                var npd = PkgLens.Core.Ps3.Npd.EdatFile.ParseHeader(input);
+                byte[]? klicensee = null;
+                if (npd.NeedsKlicensee)
+                {
+                    RapLicenseResolution resolution = RapLicenseService.ResolveContentId(
+                        npd.ContentId, _decryptRap, rapDirectory);
+                    klicensee = resolution.Klicensee ?? throw new PkgLens.Core.PkgKeyException(
+                        $"No valid RAP is available for {npd.ContentId}.");
+                }
+
+                input.Position = 0;
+                AtomicOutput.EnsureDifferentPath(sourcePath, destinationPath);
+                AtomicOutput.Write(destinationPath,
+                    output => PkgLens.Core.Ps3.Npd.EdatFile.Decrypt(input, output, klicensee));
+                return $"Decrypted {npd.ContentId} — wrote {new FileInfo(destinationPath).Length:n0} bytes.";
             }, token);
-            Vm.Status = $"Decrypted {npd.ContentId} → {Path.GetFileName(dest)}";
-            ShowResultBanner("DecryptBanner", ok: true,
-                $"Decrypted {npd.ContentId} — wrote {new FileInfo(dest).Length:n0} bytes.", dest);
-            SetDecryptResult(dest);
+
+            Vm.RefreshRapStatus();
+            Vm.Status = summary;
+            ShowResultBanner("DecryptBanner", ok: true, summary, destinationPath);
+            SetDecryptResult(destinationPath);
         });
     }
 

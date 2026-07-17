@@ -57,6 +57,9 @@
           <MenuItem x:Name="ThemeLightItem" Header="_Light" ToggleType="Radio" Click="OnThemeLight" />
           <MenuItem x:Name="ThemeDarkItem" Header="_Dark" ToggleType="Radio" Click="OnThemeDark" />
         </MenuItem>
+        <Separator />
+        <MenuItem x:Name="OperationPreflightItem" Header="Show operation _preflight" ToggleType="CheckBox"
+                  Click="OnOperationPreflightChanged" />
       </MenuItem>
       <MenuItem Header="_Help">
         <MenuItem Header="_About PkgLens" Click="OnAboutClick" />

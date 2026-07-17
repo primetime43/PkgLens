@@ -44,6 +44,14 @@ public static class PkgReader
         return PkgContainerReader.ReadEntryPrefix(stream, header, decryptors.For(entry), entry, maxBytes);
     }
 
+    /// <summary>Decrypts a bounded range within an entry for random-access format inspection.</summary>
+    public static byte[] ExtractEntryRange(Stream stream, PkgHeader header, PkgEntry entry,
+        IKeyProvider keys, long entryOffset, int length)
+    {
+        using var decryptors = ResolveDecryptorSet(header, keys);
+        return PkgContainerReader.ReadEntryRange(stream, header, decryptors.For(entry), entry, entryOffset, length);
+    }
+
     /// <summary>Streams a single entry's decrypted data to <paramref name="destination"/>.</summary>
     public static void ExtractEntry(Stream stream, PkgHeader header, PkgEntry entry, Stream destination,
         IKeyProvider keys, CancellationToken cancellationToken = default, IProgress<long>? progress = null)
