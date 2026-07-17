@@ -134,6 +134,9 @@ public partial class MainWindow
 
         string? rapPath = _packRapPath;
         string? rapDirectory = Vm.RapDirectory;
+        string? keysDirectory = Vm.KeysDirectory;
+        if (resign && rapPath is null)
+            await OfferNearbyRapsForPathAsync(_packFolder);
 
         var options = new PkgLens.Core.Shared.PackOptions
         {
@@ -166,7 +169,7 @@ public partial class MainWindow
             var plan = await Task.Run(() =>
             {
                 var p = PkgLens.Core.Shared.FolderPackage.Plan(folder, options, dest);
-                IKeyProvider keys = new FileKeyProvider(Vm.KeysDirectory);
+                IKeyProvider keys = new FileKeyProvider(keysDirectory);
                 AtomicOutput.Write(dest, dst => p.Builder.Build(dst, keys, token, packageProgress));
                 return p;
             }, token);

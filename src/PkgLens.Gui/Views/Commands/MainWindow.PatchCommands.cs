@@ -62,6 +62,9 @@ public partial class MainWindow
         if (save?.TryGetLocalPath() is not { } dest)
             return;
 
+        string? rapDirectory = Vm.RapDirectory;
+        if (rap is null)
+            await OfferNearbyRapsForPathAsync(input);
         await RunOperationAsync("Magic-patching executable…", "Magic patch failed", async (token, _) =>
         {
             string summary = await Task.Run(() =>
@@ -73,7 +76,7 @@ public partial class MainWindow
                 byte[] elf; bool npdrm = false;
                 if (magic == 0x53434500) // SCE — decrypt first
                 {
-                    RapLicenseResolution resolution = RapLicenseService.ResolveSelf(raw, rap, Vm.RapDirectory);
+                    RapLicenseResolution resolution = RapLicenseService.ResolveSelf(raw, rap, rapDirectory);
                     var dec = PkgLens.Core.Ps3.Self.SelfDecryptor.Decrypt(raw, resolution.Klicensee);
                     elf = dec.Elf; npdrm = dec.WasNpdrm;
                 }
@@ -173,6 +176,9 @@ public partial class MainWindow
         if (save?.TryGetLocalPath() is not { } dest)
             return;
 
+        string? rapDirectory = Vm.RapDirectory;
+        if (rap is null)
+            await OfferNearbyRapsForPathAsync(input);
         await RunOperationAsync("Byte-patching executable…", "Byte patch failed", async (token, _) =>
         {
             string summary = await Task.Run(() =>
@@ -185,7 +191,7 @@ public partial class MainWindow
                 byte[] elf; bool wasSelf = false, npdrm = npdrmOverride;
                 if (magic == 0x53434500) // SCE — decrypt first
                 {
-                    RapLicenseResolution resolution = RapLicenseService.ResolveSelf(raw, rap, Vm.RapDirectory);
+                    RapLicenseResolution resolution = RapLicenseService.ResolveSelf(raw, rap, rapDirectory);
                     var dec = PkgLens.Core.Ps3.Self.SelfDecryptor.Decrypt(raw, resolution.Klicensee);
                     elf = dec.Elf; wasSelf = true; npdrm = dec.WasNpdrm || npdrmOverride;
                 }

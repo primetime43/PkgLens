@@ -72,6 +72,8 @@ header, metadata, and `PARAM.SFO`. **File → Convert package → CFW…** perfo
 - Extract one file, a selection, or everything to a folder (the tree is rebuilt on disk).
 - Decrypt EDAT/SDAT data files. SDAT needs no key; a licensed EDAT resolves its RAP automatically
   from the local library. Compressed EDATs are supported.
+- Discover missing content-ID-named RAPs beside an input or in user-selected search folders, validate
+  their size, and offer to import valid matches into the GUI RAP library automatically.
 - Decrypt an encrypted EBOOT.BIN / `.self` back to a plaintext ELF (`unself`). Fake-signed and debug
   SELFs need no key; a licensed one resolves its RAP automatically when installed.
 
@@ -155,7 +157,8 @@ pkglens raps remove CONTENT-ID
 The GUI exposes the same library from **Tools → RAP library** and the **Keys** page. It supports
 import, list/status, folder selection, replacement, and removal. EDAT viewing/decryption, Unself,
 Patch, and Pack-with-resign all resolve stored RAPs automatically; choosing a RAP override caches it
-under the detected content ID for later operations.
+under the detected content ID for later operations. Additional nearby-license search folders can be
+selected on the **Keys** page; licensed operations also search beside their input before prompting.
 
 Every command accepts `--json`. Successful JSON mode writes exactly one JSON value to stdout;
 diagnostics remain on stderr and exit codes remain unchanged.

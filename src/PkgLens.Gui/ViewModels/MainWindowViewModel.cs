@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
@@ -59,6 +60,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [ObservableProperty]
     private string _rapStatus = "";
 
+    private IReadOnlyList<string> _rapSearchDirectories = RapSearchFolderSettings.Load();
+
     private CancellationTokenSource? _operationCancellation;
 
     public ObservableCollection<RecentPackageItem> RecentPackages { get; } = new();
@@ -113,6 +116,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public bool HasPackage => Package is not null;
     public bool IsNotBusy => !IsBusy;
     public string RapDirectoryDisplay => RapStore.DirectoryPath(RapDirectory);
+    public IReadOnlyList<string> RapSearchDirectories => _rapSearchDirectories;
+    public bool HasRapSearchDirectories => _rapSearchDirectories.Count > 0;
+    public string RapSearchDirectoriesDisplay => _rapSearchDirectories.Count == 0
+        ? "Only the folder beside the input will be searched."
+        : string.Join("  •  ", _rapSearchDirectories);
 
     partial void OnIsBusyChanged(bool value) => OnPropertyChanged(nameof(IsNotBusy));
 
@@ -155,6 +163,20 @@ public sealed partial class MainWindowViewModel : ObservableObject
         {
             RapStatus = $"RAP library unavailable: {ex.Message}";
         }
+    }
+
+    public void SetRapSearchDirectories(IEnumerable<string> directories)
+    {
+        _rapSearchDirectories = directories.Select(Path.GetFullPath)
+            .Distinct(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal)
+            .ToArray();
+        RapSearchFolderSettings.Save(_rapSearchDirectories);
+        OnPropertyChanged(nameof(RapSearchDirectories));
+        OnPropertyChanged(nameof(HasRapSearchDirectories));
+        OnPropertyChanged(nameof(RapSearchDirectoriesDisplay));
+        Status = _rapSearchDirectories.Count == 0
+            ? "Nearby RAP discovery will search beside each input."
+            : $"Nearby RAP discovery will also search {_rapSearchDirectories.Count} selected folder(s).";
     }
 
     /// <summary>Closes the current package (disposing it) and returns to the empty state.</summary>

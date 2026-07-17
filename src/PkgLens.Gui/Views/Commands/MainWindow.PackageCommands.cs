@@ -91,6 +91,24 @@ public partial class MainWindow
         Vm.RefreshRapStatus();
     }
 
+    private async void OnRapSearchFoldersClick(object? sender, RoutedEventArgs e)
+    {
+        var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        {
+            Title = "Choose folders that may contain RAP licenses",
+            AllowMultiple = true,
+        });
+        string[] paths = folders.Select(folder => folder.TryGetLocalPath())
+            .Where(path => path is not null)
+            .Cast<string>()
+            .ToArray();
+        if (paths.Length > 0)
+            Vm.SetRapSearchDirectories(paths);
+    }
+
+    private void OnClearRapSearchFoldersClick(object? sender, RoutedEventArgs e) =>
+        Vm.SetRapSearchDirectories(Array.Empty<string>());
+
     private async void OnExtractClick(object? sender, RoutedEventArgs e)
     {
         if (Vm.Package is not { SelectedItem: { IsDirectory: false, Entry: not null } node } package)
@@ -179,21 +197,25 @@ public partial class MainWindow
             return;
         }
 
+        byte[]? data = null;
         await RunOperationAsync($"Reading {node.Name}…", $"Could not read {node.Name}", async (token, _) =>
         {
-            byte[] data = await Task.Run(package.ReadSelectedBytes, token);
-            string title = node.Name;
-
-            // If it's an EDAT/SDAT (PS3 NPDRM or PSP EDAT/PGD), decrypt it so the viewer shows the real contents.
-            if (PkgLens.Core.Ps3.Npd.EdatFile.IsEdat(data) || PkgLens.Core.Psp.PspEdatFile.IsPspEncrypted(data))
-                (data, title) = await DecryptEdatForView(data, node.Name);
-
-            await new FileViewerDialog(title, data).ShowDialog(this);
+            data = await Task.Run(package.ReadSelectedBytes, token);
         });
+        if (data is null)
+            return;
+
+        string title = node.Name;
+        // If it's an EDAT/SDAT (PS3 NPDRM or PSP EDAT/PGD), decrypt it so the viewer shows the real contents.
+        if (PkgLens.Core.Ps3.Npd.EdatFile.IsEdat(data) || PkgLens.Core.Psp.PspEdatFile.IsPspEncrypted(data))
+            (data, title) = await DecryptEdatForView(data, node.Name, package.FilePath);
+
+        await new FileViewerDialog(title, data).ShowDialog(this);
     }
 
     /// <summary>Decrypts an EDAT/SDAT for viewing (SDAT/free automatic; licensed resolves a RAP).</summary>
-    private async Task<(byte[] data, string title)> DecryptEdatForView(byte[] data, string name)
+    private async Task<(byte[] data, string title)> DecryptEdatForView(
+        byte[] data, string name, string packagePath)
     {
         // PSP EDAT ("\0PSPEDAT") / bare PGD ("\0PGD") decrypt via the PSP path (fixed key, no RAP).
         if (PkgLens.Core.Psp.PspEdatFile.IsPspEncrypted(data))
@@ -216,6 +238,7 @@ public partial class MainWindow
         byte[]? klic = null;
         if (npd.NeedsKlicensee)
         {
+            await OfferNearbyRapsAsync(packagePath, new[] { npd.ContentId });
             byte[]? rap = PkgLens.Core.Ps3.Npd.RapStore.Find(npd.ContentId, Vm.RapDirectory) ??
                           await PromptForRap(npd.ContentId);
             if (rap is null)

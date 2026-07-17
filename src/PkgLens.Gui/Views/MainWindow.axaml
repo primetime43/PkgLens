@@ -1064,11 +1064,20 @@
                 <TextBlock Text="{Binding RapDirectoryDisplay}"
                            FontSize="12" Opacity="0.6" TextTrimming="CharacterEllipsis" />
                 <Button Content="Manage RAP library…" Click="OnManageRapsClick" HorizontalAlignment="Left" />
+                <Separator />
+                <TextBlock Classes="sectionhead" Text="NEARBY RAP DISCOVERY" />
+                <TextBlock Text="{Binding RapSearchDirectoriesDisplay}" FontSize="12" Opacity="0.7"
+                           TextWrapping="Wrap" MaxLines="3" />
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <Button Content="Choose search folders…" Click="OnRapSearchFoldersClick" />
+                  <Button Content="Clear" Click="OnClearRapSearchFoldersClick"
+                          IsEnabled="{Binding HasRapSearchDirectories}" />
+                </StackPanel>
               </StackPanel>
             </Border>
 
             <TextBlock Classes="pagesubtitle" Opacity="0.55"
-                       Text="Explicit RAP selections remain available as overrides and are cached into the library by content ID." />
+                       Text="When a required RAP is missing, PkgLens searches beside the input and in selected folders, validates matching content-ID filenames, and offers to import valid 16-byte RAPs." />
           </StackPanel>
         </ScrollViewer>
 

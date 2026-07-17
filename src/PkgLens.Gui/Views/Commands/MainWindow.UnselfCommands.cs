@@ -70,6 +70,8 @@ public partial class MainWindow
             return;
 
         string? rapDirectory = Vm.RapDirectory;
+        if (rap is null)
+            await OfferNearbyRapsForPathAsync(input);
         if (!await ConfirmPreflightAsync("Checking SELF decrypt readiness…", () =>
                 PkgLens.Core.Shared.OperationPreflight.SelfDecrypt(input, dest, rap,
                     rapDirectory, chain)))

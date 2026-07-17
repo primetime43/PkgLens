@@ -1,0 +1,29 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="PkgLens.Gui.Views.NearbyRapImportDialog"
+        Width="780" Height="430" MinWidth="620" MinHeight="330"
+        WindowStartupLocation="CenterOwner" Title="Nearby RAP licenses found">
+  <DockPanel Margin="16">
+    <StackPanel DockPanel.Dock="Top" Spacing="4" Margin="0,0,0,12">
+      <TextBlock Text="Matching RAP licenses were found" FontSize="20" FontWeight="SemiBold" />
+      <TextBlock x:Name="SummaryText" TextWrapping="Wrap" Opacity="0.75" />
+      <TextBlock x:Name="LibraryText" TextWrapping="Wrap" FontSize="12" Opacity="0.6" />
+    </StackPanel>
+
+    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right"
+                Spacing="8" Margin="0,12,0,0">
+      <Button Content="Not now" Click="OnCancel" Padding="14,6" />
+      <Button x:Name="ImportButton" Classes="primary" Content="Import valid RAPs"
+              Click="OnImport" Padding="14,6" />
+    </StackPanel>
+
+    <DataGrid x:Name="CandidatesGrid" AutoGenerateColumns="False" IsReadOnly="True"
+              GridLinesVisibility="Horizontal" x:CompileBindings="False">
+      <DataGrid.Columns>
+        <DataGridTextColumn Header="Content ID" Binding="{Binding ContentId}" Width="270" />
+        <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="85" />
+        <DataGridTextColumn Header="Path / validation" Binding="{Binding Detail}" Width="*" />
+      </DataGrid.Columns>
+    </DataGrid>
+  </DockPanel>
+</Window>

@@ -60,6 +60,7 @@ public partial class MainWindow
             Path.GetFileNameWithoutExtension(destinationPath) + ".report.txt");
         string? rapDirectory = Vm.RapDirectory;
         string? keysDirectory = Vm.KeysDirectory;
+        await OfferNearbyRapsForPathAsync(inputPath);
         if (!await ConfirmPreflightAsync("Checking CFW conversion readiness…", () =>
                 OperationPreflight.CfwConversion(inputPath, destinationPath,
                     new FileKeyProvider(keysDirectory), rapDirectory)))

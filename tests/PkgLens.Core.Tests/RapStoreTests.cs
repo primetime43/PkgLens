@@ -86,6 +86,44 @@ public sealed class RapStoreTests
         Assert.Equal("rap-store", store.Source);
     }
 
+    [Fact]
+    public void Discovery_FindsMatchingRapsBesideInputAndInSelectedFolders()
+    {
+        using var nearby = new TempDirectory();
+        using var selected = new TempDirectory();
+        string input = Path.Combine(nearby.Path, "game.pkg");
+        File.WriteAllBytes(input, Array.Empty<byte>());
+        string nearbyRap = Path.Combine(nearby.Path, ContentId.ToLowerInvariant() + ".RAP");
+        const string otherContentId = "EP0002-NPEB00001_00-OTHERCONTENT0001";
+        string selectedRap = Path.Combine(selected.Path, otherContentId + ".rap");
+        File.WriteAllBytes(nearbyRap, new byte[16]);
+        File.WriteAllBytes(selectedRap, new byte[16]);
+
+        IReadOnlyList<RapDiscoveryCandidate> found = RapDiscovery.Find(
+            new[] { ContentId, otherContentId }, input, new[] { selected.Path });
+
+        Assert.Equal(2, found.Count);
+        Assert.All(found, candidate => Assert.True(candidate.IsValid));
+        Assert.Contains(found, candidate => candidate.ContentId == ContentId && candidate.Path == nearbyRap);
+        Assert.Contains(found, candidate => candidate.ContentId == otherContentId && candidate.Path == selectedRap);
+    }
+
+    [Fact]
+    public void Discovery_ReportsInvalidLengthAndIgnoresUnrelatedFiles()
+    {
+        using var directory = new TempDirectory();
+        string invalid = Path.Combine(directory.Path, ContentId + ".rap");
+        File.WriteAllBytes(invalid, new byte[15]);
+        File.WriteAllBytes(Path.Combine(directory.Path, "UP0000-UNRELATED_00-NOTREQUESTED00001.rap"), new byte[16]);
+
+        RapDiscoveryCandidate candidate = Assert.Single(
+            RapDiscovery.Find(new[] { ContentId }, directory.Path));
+
+        Assert.False(candidate.IsValid);
+        Assert.Equal(15, candidate.Size);
+        Assert.Contains("16 bytes", candidate.Error);
+    }
+
     private sealed class TempDirectory : IDisposable
     {
         public string Path { get; } = System.IO.Path.Combine(
