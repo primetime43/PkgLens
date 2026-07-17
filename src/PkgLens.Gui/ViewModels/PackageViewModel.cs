@@ -54,6 +54,11 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
     public bool HasSfo => SfoRows.Count > 0;
     public string? DecryptionNote => _info.DecryptionNote;
     public bool ShowDecryptionWarning => !_info.IsDecrypted;
+    public PackageRecommendationSet RecommendationSet { get; }
+    public IReadOnlyList<PackageActionRecommendation> Recommendations => RecommendationSet.Actions;
+    public string RecommendationHeading => $"Suggested for this {RecommendationSet.Classification.ToLowerInvariant()}";
+    public string RecommendationSummary => RecommendationSet.Summary;
+    public bool HasRecommendations => Recommendations.Count > 0;
 
     public int FileCount => _info.FileCount;
     public int DirectoryCount => _info.DirectoryCount;
@@ -300,6 +305,7 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
         PlatformText = info.Header.PlatformDisplay;
         FinalizationText = info.Header.Finalization.ToString();
         IsRetail = info.Header.IsRetail;
+        RecommendationSet = PackageRecommendationEngine.Analyze(info);
 
         // Wrap the parsed tree under a single root node labelled like the classic PkgView's top
         // node (e.g. "NPUB30468") — the package's install directory / title-id, which is the

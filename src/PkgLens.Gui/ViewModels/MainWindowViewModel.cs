@@ -12,7 +12,7 @@ using PkgLens.Gui.Services;
 namespace PkgLens.Gui.ViewModels;
 
 /// <summary>The tool pages shown in the left rail, in rail order.</summary>
-public enum ToolPage { Home, Package, Pack, Resign, Decrypt, Keys }
+public enum ToolPage { Home, Suggested, Package, Pack, Resign, Decrypt, Keys }
 
 public sealed record GuiOperationProgress(string? Message = null, double? Percent = null);
 
@@ -82,6 +82,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     }
 
     public bool IsHomeTool => ActiveTool == ToolPage.Home;
+    public bool IsSuggestedTool => ActiveTool == ToolPage.Suggested;
     public bool IsPackageTool => ActiveTool == ToolPage.Package;
     public bool IsPackTool => ActiveTool == ToolPage.Pack;
     public bool IsResignTool => ActiveTool == ToolPage.Resign;
@@ -92,6 +93,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(SelectedToolIndex));
         OnPropertyChanged(nameof(IsHomeTool));
+        OnPropertyChanged(nameof(IsSuggestedTool));
         OnPropertyChanged(nameof(IsPackageTool));
         OnPropertyChanged(nameof(IsPackTool));
         OnPropertyChanged(nameof(IsResignTool));
@@ -296,7 +298,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             var vm = await Task.Run(() => PackageViewModel.Load(path, keys, token), token);
             Package = vm;
             RecordRecentPackage(path);
-            ActiveTool = ToolPage.Package; // a freshly opened package lands on the inspector
+            ActiveTool = ToolPage.Suggested; // show the package-aware next steps first
             Status = vm.IsDecrypted
                 ? vm.StatusCounts
                 : "Header only — this package's contents could not be decrypted.";

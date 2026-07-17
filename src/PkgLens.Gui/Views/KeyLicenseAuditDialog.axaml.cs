@@ -21,6 +21,7 @@ public partial class KeyLicenseAuditDialog : Window
     private string? _source;
     private KeyLicenseAuditReport? _report;
     private CancellationTokenSource? _cancellation;
+    private readonly bool _autoStart;
 
     private StackPanel _inputPanel = null!;
     private TextBlock _sourceText = null!;
@@ -31,12 +32,15 @@ public partial class KeyLicenseAuditDialog : Window
     private ProgressBar _progress = null!;
     private DataGrid _grid = null!;
 
-    public KeyLicenseAuditDialog() : this(null) { }
+    public KeyLicenseAuditDialog() : this(null, null) { }
 
-    public KeyLicenseAuditDialog(string? keysDirectory)
+    public KeyLicenseAuditDialog(string? keysDirectory) : this(keysDirectory, null) { }
+
+    public KeyLicenseAuditDialog(string? keysDirectory, string? source, bool autoStart = false)
     {
         InitializeComponent();
         _keysDirectory = keysDirectory;
+        _autoStart = autoStart;
         _inputPanel = this.FindControl<StackPanel>("InputPanel")!;
         _sourceText = this.FindControl<TextBlock>("SourceText")!;
         _statusText = this.FindControl<TextBlock>("StatusText")!;
@@ -45,6 +49,8 @@ public partial class KeyLicenseAuditDialog : Window
         _cancelButton = this.FindControl<Button>("CancelBtn")!;
         _progress = this.FindControl<ProgressBar>("AuditProgress")!;
         _grid = this.FindControl<DataGrid>("Grid")!;
+        if (!string.IsNullOrWhiteSpace(source))
+            SelectSource(source);
     }
 
     private void InitializeComponent() => AvaloniaXamlLoader.Load(this);
@@ -87,7 +93,16 @@ public partial class KeyLicenseAuditDialog : Window
         _statusText.Text = Directory.Exists(path) ? "Ready to audit this folder recursively." : "Ready to audit this file.";
     }
 
-    private async void OnAudit(object? sender, RoutedEventArgs e)
+    protected override async void OnOpened(EventArgs e)
+    {
+        base.OnOpened(e);
+        if (_autoStart && _source is not null)
+            await RunAuditAsync();
+    }
+
+    private async void OnAudit(object? sender, RoutedEventArgs e) => await RunAuditAsync();
+
+    private async Task RunAuditAsync()
     {
         if (_source is null)
             return;

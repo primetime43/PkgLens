@@ -61,6 +61,8 @@ header, metadata, and `PARAM.SFO`. **File → Convert package → CFW…** perfo
   firmware version, NPDRM content id. No keys needed.
 - Audit a package, individual protected-content file, or folder for the required package/SELF key,
   SELF revision, content IDs, license types, installed/missing RAPs, and unsupported encryption.
+- Automatically classify each opened package and show only relevant next actions, such as PSP/Vita
+  export, PS3 CFW conversion, update/game-data extraction, license audit, or integrity verification.
 
 ### Extract & decrypt
 
