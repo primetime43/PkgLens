@@ -49,6 +49,8 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
     public IReadOnlyList<SfoRow> SfoRows { get; }
 
     public bool IsDecrypted => _info.IsDecrypted;
+    public PspExportEligibility PspExportEligibility => PspPackageExporter.CheckEligibility(_info);
+    public bool CanExportPsp => PspExportEligibility.CanExport;
     public bool HasSfo => SfoRows.Count > 0;
     public string? DecryptionNote => _info.DecryptionNote;
     public bool ShowDecryptionWarning => !_info.IsDecrypted;

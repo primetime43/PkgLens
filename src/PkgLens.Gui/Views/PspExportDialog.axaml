@@ -1,0 +1,35 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="PkgLens.Gui.Views.PspExportDialog"
+        Width="520" SizeToContent="Height" CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        Title="Export PSP package">
+  <StackPanel Margin="18" Spacing="14">
+    <StackPanel Spacing="4">
+      <TextBlock Text="Export PSP package" FontSize="20" FontWeight="SemiBold" />
+      <TextBlock Text="PkgLens locates EBOOT.PBP and performs the required extraction and disc decryption automatically."
+                 TextWrapping="Wrap" Opacity="0.75" />
+    </StackPanel>
+
+    <Border Padding="10" CornerRadius="5"
+            Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
+      <TextBlock x:Name="SourceText" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" />
+    </Border>
+
+    <StackPanel Spacing="10">
+      <RadioButton x:Name="PbpRadio" GroupName="Format" Content="EBOOT.PBP — original PSP application container" />
+      <RadioButton x:Name="IsoRadio" GroupName="Format" IsChecked="True"
+                   Content="ISO — decrypted, uncompressed PSP disc image" />
+      <RadioButton x:Name="CsoRadio" GroupName="Format"
+                   Content="CSO — decrypted PSP disc image with PSP-compatible compression" />
+    </StackPanel>
+
+    <TextBlock Text="ISO and CSO require a DATA.PSAR disc image inside EBOOT.PBP. Some PSP applications contain no disc image and can only be exported as PBP."
+               TextWrapping="Wrap" FontSize="11" Opacity="0.7" />
+
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+      <Button Content="Cancel" Click="OnCancel" />
+      <Button Content="Export…" Click="OnExport" Classes="accent" />
+    </StackPanel>
+  </StackPanel>
+</Window>

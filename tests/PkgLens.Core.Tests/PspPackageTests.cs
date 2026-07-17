@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using PkgLens.Core;
+using PkgLens.Core.Psp;
 using PkgLens.Core.Shared;
 using PkgLens.Core.Shared.Keys;
 using PkgLens.Core.Shared.Models;
@@ -102,6 +103,70 @@ public class PspPackageTests
         var icon = info.Entries.Single(e => e.Name == "ICON0.PNG");
         byte[] iconBytes = PkgReader.ExtractEntryBytes(s, info.Header, icon, new FileKeyProvider());
         Assert.Equal("not-really-a-png", Encoding.UTF8.GetString(iconBytes));
+    }
+
+    [Fact]
+    public void ExportPbp_DirectlyExtractsEbootFromPspPackage()
+    {
+        byte[] pkg = PspPackage().Build();
+        using var source = new MemoryStream(pkg);
+        using var destination = new MemoryStream();
+
+        PspExportResult result = PspPackageExporter.Export(source, destination,
+            new FileKeyProvider(), PspExportFormat.Pbp);
+
+        Assert.Equal(PspExportFormat.Pbp, result.Format);
+        Assert.Equal("USRDIR/CONTENT/EBOOT.PBP", result.PackageEntry);
+        Assert.Equal("EBOOT payload bytes", Encoding.UTF8.GetString(destination.ToArray()));
+        Assert.Equal(destination.Length, result.OutputSize);
+    }
+
+    [Fact]
+    public void ExportEligibility_AcceptsPspPackageWithEboot()
+    {
+        using var source = new MemoryStream(PspPackage().Build());
+
+        PspExportEligibility eligibility = PspPackageExporter.CheckEligibility(source, new FileKeyProvider());
+
+        Assert.True(eligibility.CanExport);
+        Assert.Equal("USRDIR/CONTENT/EBOOT.PBP", eligibility.PackageEntry);
+    }
+
+    [Fact]
+    public void ExportEligibility_RejectsPs3PackageEvenWhenItContainsEbootPbp()
+    {
+        byte[] pkg = new SyntheticPkgBuilder
+        {
+            Finalization = PkgFinalization.Debug,
+            ContentId = "UP0001-BLUS12345_00-EXAMPLEPS3000001",
+        }
+            .AddFile("USRDIR/CONTENT/EBOOT.PBP", Encoding.UTF8.GetBytes("not PSP content"))
+            .Build();
+        using var source = new MemoryStream(pkg);
+
+        PspExportEligibility eligibility = PspPackageExporter.CheckEligibility(source, new FileKeyProvider());
+
+        Assert.False(eligibility.CanExport);
+        Assert.Contains("PS3", eligibility.Reason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ExportEligibility_RejectsPspPackageWithoutEbootPbp()
+    {
+        byte[] pkg = new SyntheticPkgBuilder
+        {
+            Psp = true,
+            Finalization = PkgFinalization.Retail,
+            ContentId = "UP0001-ULUS12345_00-EXAMPLEPSP000001",
+        }
+            .AddFile("PARAM.SFO", Sfo(), pspTypeHigh: 0x00)
+            .Build();
+        using var source = new MemoryStream(pkg);
+
+        PspExportEligibility eligibility = PspPackageExporter.CheckEligibility(source, new FileKeyProvider());
+
+        Assert.False(eligibility.CanExport);
+        Assert.Contains("EBOOT.PBP", eligibility.Reason);
     }
 
     [Fact]

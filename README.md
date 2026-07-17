@@ -45,7 +45,8 @@ In the GUI, open a package with **File → Open** or drag a `.pkg` onto the wind
 packages both open with no setup — the standard decryption key is built in. The left pane is a
 folder tree; the right pane lists the selected folder's files. **Tools → Package info…** shows the
 header, metadata, and `PARAM.SFO`. **File → Convert package → CFW…** performs the complete EBOOT
-conversion and streaming rebuild workflow in one operation.
+conversion and streaming rebuild workflow in one operation. **File → Export PSP package…** turns a
+PSP package directly into `EBOOT.PBP`, a decrypted ISO, or a compressed CSO.
 
 ## What it does
 
@@ -72,6 +73,8 @@ conversion and streaming rebuild workflow in one operation.
 - Decrypt a PSP/minis manual (`DOCUMENT.DAT`) into its PNG pages (`undoc`).
 - Split a PSP `EBOOT.PBP` into its parts (`unpbp`): `PARAM.SFO`, icons, `DATA.PSP`, `DATA.PSAR`.
 - Decrypt a minis `DATA.PSAR` (NPUMDIMG) to a mountable `.iso` (`psar decrypt`) — keyless, no RAP.
+- Export a PSP package directly to `EBOOT.PBP`, decrypted `.iso`, or PSP-compatible compressed `.cso`
+  (`pspexport`), without manually extracting the package and PBP first.
 
 ### Pack & repack
 
@@ -119,6 +122,7 @@ pkglens scan   <dir> [--recursive] [--json | --csv]     # catalog a folder of .p
 pkglens unpbp  <EBOOT.PBP> [--out DIR] [--list]         # split a PSP PBP into its parts
 pkglens undoc  <DOCUMENT.DAT> [--docinfo FILE] [--out DIR]   # decrypt a PSP manual to PNG pages
 pkglens psar   decrypt <DATA.PSAR> [--out FILE]         # decrypt a PSP NPUMDIMG to .iso (keyless)
+pkglens pspexport <pkg> [--format pbp|iso|cso] [--out FILE] [--json]   # one-step PSP export
 pkglens keys   import|status|where                      # manage an optional override key
 pkglens raps   import|list|status|remove                # manage the local RAP library
 ```

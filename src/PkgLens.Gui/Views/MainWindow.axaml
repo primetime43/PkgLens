@@ -19,6 +19,7 @@
         <Separator />
         <MenuItem Header="_Pack folder → .pkg…" Click="OnGoPackClick" />
         <MenuItem Header="_Convert package → CFW…" Click="OnConvertCfwClick" />
+        <MenuItem Header="Export _PSP package…" Click="OnExportPspClick" />
         <MenuItem Header="Extract _all…" Click="OnExtractAllClick"
                   IsEnabled="{Binding Package.IsDecrypted, FallbackValue=False}" />
         <MenuItem Header="Save _As… (repack)" Click="OnSaveAsClick"
@@ -253,6 +254,19 @@
                       <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                         <Border Classes="chip"><TextBlock Text="PKG" /></Border>
                         <Border Classes="chip cfw"><TextBlock Text="CEX · CFW" /></Border>
+                      </StackPanel>
+                    </Grid>
+                  </Button>
+                  <Button Classes="row" Click="OnHomeExportPsp">
+                    <Grid ColumnDefinitions="34,*,Auto">
+                      <materialIcons:MaterialIcon Grid.Column="0" Kind="Disc" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="1,0,0,0" />
+                      <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
+                        <TextBlock Classes="rowtitle" Text="Export PSP package → PBP / ISO / CSO…" />
+                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="Locate EBOOT.PBP and export or decrypt its disc image in one step." />
+                      </StackPanel>
+                      <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Border Classes="chip"><TextBlock Text="PSP PKG" /></Border>
+                        <Border Classes="chip"><TextBlock Text="READ-ONLY" /></Border>
                       </StackPanel>
                     </Grid>
                   </Button>
