@@ -135,6 +135,8 @@ internal static class CliHelp
               pkglens psar    info|decrypt <DATA.PSAR> [--out FILE]   decrypt a PSP NPUMDIMG (minis) to .iso (keyless)
               pkglens pspexport <pkg> [--format pbp|iso|cso] [--out FILE] [--json]
                        export a PSP package directly; format defaults to output extension, then ISO
+              pkglens vitaexport <pkg> [--out DIR] [--work-bin FILE] [--json]
+                       classify and export a Vita app/update/DLC/theme to app/patch/addcont layout
               pkglens pack    <folder> [--out FILE] [options]   build a .pkg from a content folder
               pkglens keys    import|status|where           manage an optional override retail key
               pkglens raps    import|list|status|remove     manage stored RAP licenses

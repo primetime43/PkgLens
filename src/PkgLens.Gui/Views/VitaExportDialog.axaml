@@ -1,0 +1,41 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="PkgLens.Gui.Views.VitaExportDialog"
+        Width="560" SizeToContent="Height" CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        Title="Export PSVita package">
+  <StackPanel Margin="18" Spacing="14">
+    <StackPanel Spacing="4">
+      <TextBlock Text="Export PSVita package" FontSize="20" FontWeight="SemiBold" />
+      <TextBlock Text="PkgLens detected the package type and will create the matching Vita directory structure."
+                 TextWrapping="Wrap" Opacity="0.75" />
+    </StackPanel>
+
+    <Border Padding="10" CornerRadius="5"
+            Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
+      <StackPanel Spacing="3">
+        <TextBlock x:Name="SourceText" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" />
+        <TextBlock x:Name="PackageText" FontWeight="SemiBold" />
+        <TextBlock x:Name="MetadataText" TextWrapping="Wrap" FontSize="12" Opacity="0.75" />
+        <TextBlock x:Name="RootText" FontFamily="Consolas, Menlo, monospace" FontSize="12" />
+      </StackPanel>
+    </Border>
+
+    <StackPanel Spacing="6">
+      <TextBlock Text="License material (optional)" FontWeight="SemiBold" />
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+        <TextBox x:Name="LicensePathBox" Grid.Column="0" IsReadOnly="True" Watermark="No work.bin selected" />
+        <Button Grid.Column="1" Content="Browse…" Click="OnBrowseLicense" />
+      </Grid>
+      <TextBlock x:Name="LicenseNote" TextWrapping="Wrap" FontSize="11" Opacity="0.7" />
+    </StackPanel>
+
+    <TextBlock Text="The Vita package keys only remove the outer PKG encryption. Inner licensed PFS/SELF content still needs license material from content you own."
+               TextWrapping="Wrap" FontSize="11" Opacity="0.7" />
+
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+      <Button Content="Cancel" Click="OnCancel" />
+      <Button Content="Choose output folder…" Click="OnExport" Classes="accent" />
+    </StackPanel>
+  </StackPanel>
+</Window>

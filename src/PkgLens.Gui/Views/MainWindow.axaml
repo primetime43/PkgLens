@@ -20,6 +20,7 @@
         <MenuItem Header="_Pack folder → .pkg…" Click="OnGoPackClick" />
         <MenuItem Header="_Convert package → CFW…" Click="OnConvertCfwClick" />
         <MenuItem Header="Export _PSP package…" Click="OnExportPspClick" />
+        <MenuItem Header="Export PS_Vita package…" Click="OnExportVitaClick" />
         <MenuItem Header="Extract _all…" Click="OnExtractAllClick"
                   IsEnabled="{Binding Package.IsDecrypted, FallbackValue=False}" />
         <MenuItem Header="Save _As… (repack)" Click="OnSaveAsClick"
@@ -266,6 +267,19 @@
                       </StackPanel>
                       <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                         <Border Classes="chip"><TextBlock Text="PSP PKG" /></Border>
+                        <Border Classes="chip"><TextBlock Text="READ-ONLY" /></Border>
+                      </StackPanel>
+                    </Grid>
+                  </Button>
+                  <Button Classes="row" Click="OnHomeExportVita">
+                    <Grid ColumnDefinitions="34,*,Auto">
+                      <materialIcons:MaterialIcon Grid.Column="0" Kind="FolderMoveOutline" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="1,0,0,0" />
+                      <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
+                        <TextBlock Classes="rowtitle" Text="Export PSVita package…" />
+                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="Identify app, update, DLC or theme and create the correct Vita directory tree." />
+                      </StackPanel>
+                      <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Border Classes="chip"><TextBlock Text="VITA PKG" /></Border>
                         <Border Classes="chip"><TextBlock Text="READ-ONLY" /></Border>
                       </StackPanel>
                     </Grid>

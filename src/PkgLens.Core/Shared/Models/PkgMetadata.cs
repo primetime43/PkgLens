@@ -18,12 +18,12 @@ public enum PkgMetadataId : uint
     QaDigest = 0x07,
     SoftwareRevision = 0x08,
     InstallDirectory = 0x0A,
-    PsVitaItemInfo = 0x0E,
-    PsVitaSfoInfo = 0x0F,
-    PsVitaUnknownDataInfo = 0x10,
-    PsVitaEntiretyInfo = 0x11,
-    PsVitaVersionInfo = 0x12,
-    PsVitaSelfInfo = 0x13,
+    PsVitaItemInfo = 0x0D,
+    PsVitaSfoInfo = 0x0E,
+    PsVitaUnknownDataInfo = 0x0F,
+    PsVitaEntiretyInfo = 0x10,
+    PsVitaVersionInfo = 0x11,
+    PsVitaSelfInfo = 0x12,
 }
 
 /// <summary>Common values of the <see cref="PkgMetadataId.ContentType"/> entry.</summary>
@@ -46,6 +46,11 @@ public enum PkgContentType : uint
     NeoGeo = 0x13,
     Vmc = 0x14,
     Ps2Classic = 0x1B,
+    VitaApp = 0x15,
+    VitaDlc = 0x16,
+    VitaPsm = 0x18,
+    VitaPsmUpdate = 0x1D,
+    VitaTheme = 0x1F,
 }
 
 /// <summary>
@@ -120,6 +125,10 @@ public sealed class PkgMetadata
             ? (PkgContentType)v
             : null;
 
+    public (uint Offset, uint Size)? PsVitaItemRange => ReadVitaRange(PkgMetadataId.PsVitaItemInfo);
+
+    public (uint Offset, uint Size)? PsVitaSfoRange => ReadVitaRange(PkgMetadataId.PsVitaSfoInfo);
+
     /// <summary>
     /// The "software revision" (id 0x08) decoded into firmware / version / app-version, if present.
     /// The 8-byte payload is <c>unk[1] · firmware[3] · version[2] · app_version[2]</c>, each shown as
@@ -151,6 +160,14 @@ public sealed class PkgMetadata
             var e = Find(PkgMetadataId.InstallDirectory);
             return e is null ? null : System.Text.Encoding.ASCII.GetString(e.Data).TrimEnd('\0');
         }
+    }
+
+    private (uint Offset, uint Size)? ReadVitaRange(PkgMetadataId id)
+    {
+        byte[]? data = Find(id)?.Data;
+        if (data is null || data.Length < 8) return null;
+        return (BinaryPrimitives.ReadUInt32BigEndian(data),
+            BinaryPrimitives.ReadUInt32BigEndian(data.AsSpan(4)));
     }
 
     /// <summary>

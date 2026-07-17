@@ -71,6 +71,10 @@ if (command == "psar")
 if (command == "pspexport")
     return PspExportCommand.Run(args.AsSpan(1));
 
+// The `vitaexport` command classifies and extracts PSVita packages to console-style roots.
+if (command == "vitaexport")
+    return VitaExportCommand.Run(args.AsSpan(1));
+
 // The `patch` command applies magic patches to an EBOOT/ELF.
 if (command == "patch")
     return PatchCommand.Run(args.AsSpan(1));
