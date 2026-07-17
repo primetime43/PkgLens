@@ -13,7 +13,7 @@ public partial class ErrorDialog : Window
     {
         Title = error.Title;
         this.FindControl<TextBlock>("MessageText")!.Text = error.Message;
-        this.FindControl<TextBlock>("DetailsText")!.Text = error.Details;
+        this.FindControl<TextBox>("DetailsText")!.Text = error.Details;
     }
 
     private void InitializeComponent() => AvaloniaXamlLoader.Load(this);
