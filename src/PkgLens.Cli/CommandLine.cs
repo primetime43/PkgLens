@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using PkgLens.Core.Shared;
 
 namespace PkgLens.Cli;
 
@@ -108,10 +109,10 @@ internal static class CliHelp
 {
     public static void PrintUsage()
     {
+        Console.WriteLine(FeatureText.CliSummary);
+        Console.WriteLine();
         Console.WriteLine(
             """
-            pkglens — inspect PS3 .pkg packages
-
             Usage:
               pkglens --version
               pkglens info    <pkg> [--keys DIR] [--json]   header + content-id + SFO summary

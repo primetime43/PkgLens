@@ -190,7 +190,7 @@
             <StackPanel Spacing="3">
               <TextBlock Classes="pagetitle" Text="PkgLens" />
               <TextBlock Classes="pagesubtitle"
-                         Text="Keyless PS3 / PSP / PSVita package and EBOOT tools. Each tool is tagged below with the file it works on and where its output runs." />
+                         Text="{x:Static core:FeatureText.HomeIntro}" />
             </StackPanel>
 
             <StackPanel Spacing="8" IsVisible="{Binding HasRecentPackages}">
@@ -253,7 +253,7 @@
                       <materialIcons:MaterialIcon Grid.Column="0" Kind="FileOutline" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="1,0,0,0" />
                       <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
                         <TextBlock Classes="rowtitle" Text="Open a .pkg…" />
-                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="Browse, list and extract a package." />
+                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{x:Static core:FeatureText.OpenPackage}" />
                       </StackPanel>
                       <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                         <Border Classes="chip"><TextBlock Text="PKG" /></Border>
@@ -266,7 +266,7 @@
                       <materialIcons:MaterialIcon Grid.Column="0" Kind="FolderSearchOutline" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="1,0,0,0" />
                       <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
                         <TextBlock Classes="rowtitle" Text="Scan a folder…" />
-                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="Catalog every .pkg in a directory." />
+                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{x:Static core:FeatureText.ScanFolder}" />
                       </StackPanel>
                       <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                         <Border Classes="chip"><TextBlock Text="PKG" /></Border>
@@ -279,7 +279,7 @@
                       <materialIcons:MaterialIcon Grid.Column="0" Kind="PlaylistPlay" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="1,0,0,0" />
                       <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
                         <TextBlock Classes="rowtitle" Text="Batch processing center…" />
-                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="Audit, classify, verify, extract, export, or CFW-convert a package folder with resumable jobs." />
+                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{x:Static core:FeatureText.BatchCenter}" />
                       </StackPanel>
                       <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                         <Border Classes="chip"><TextBlock Text="FOLDER" /></Border>
@@ -292,7 +292,7 @@
                       <materialIcons:MaterialIcon Grid.Column="0" Kind="FolderMoveOutline" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="1,0,0,0" />
                       <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
                         <TextBlock Classes="rowtitle" Text="Duplicate / package organizer…" />
-                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="Find hash/content duplicates and older updates, then preview a PS3 / PSP / Vita library layout." />
+                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{x:Static core:FeatureText.PackageOrganizer}" />
                       </StackPanel>
                       <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                         <Border Classes="chip"><TextBlock Text="FOLDER" /></Border>
@@ -305,7 +305,7 @@
                       <materialIcons:MaterialIcon Grid.Column="0" Kind="InformationOutline" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="1,0,0,0" />
                       <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
                         <TextBlock Classes="rowtitle" Text="Game folder info…" />
-                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="Read a content folder's PARAM.SFO / EBOOTs." />
+                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{x:Static core:FeatureText.GameFolderInfo}" />
                       </StackPanel>
                       <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                         <Border Classes="chip"><TextBlock Text="FOLDER" /></Border>
@@ -318,7 +318,7 @@
                       <materialIcons:MaterialIcon Grid.Column="0" Kind="ShieldKeyOutline" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="1,0,0,0" />
                       <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
                         <TextBlock Classes="rowtitle" Text="Key / license audit…" />
-                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="Find required keys, SELF revisions, licenses, missing RAPs and unsupported encryption." />
+                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{x:Static core:FeatureText.KeyLicenseAudit}" />
                       </StackPanel>
                       <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                         <Border Classes="chip"><TextBlock Text="PKG / FOLDER" /></Border>
@@ -331,7 +331,7 @@
                       <materialIcons:MaterialIcon Grid.Column="0" Kind="PackageVariantClosed" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="1,0,0,0" />
                       <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
                         <TextBlock Classes="rowtitle" Text="Pack folder → .pkg" />
-                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="Build a package from a content folder." />
+                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{x:Static core:FeatureText.PackFolder}" />
                       </StackPanel>
                       <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                         <Border Classes="chip cfw"><TextBlock Text="CEX · CFW" /></Border>
@@ -344,7 +344,7 @@
                       <materialIcons:MaterialIcon Grid.Column="0" Kind="AutoFix" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="1,0,0,0" />
                       <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
                         <TextBlock Classes="rowtitle" Text="Target compatibility and conversion…" />
-                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="Check RPCS3, CEX CFW, DEX, or HEN before rebuilding." />
+                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{x:Static core:FeatureText.TargetCompatibility}" />
                       </StackPanel>
                       <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                         <Border Classes="chip"><TextBlock Text="PKG" /></Border>
@@ -357,7 +357,7 @@
                       <materialIcons:MaterialIcon Grid.Column="0" Kind="Disc" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="1,0,0,0" />
                       <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
                         <TextBlock Classes="rowtitle" Text="Export PSP package → PBP / ISO / CSO…" />
-                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="Locate EBOOT.PBP and export or decrypt its disc image in one step." />
+                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{x:Static core:FeatureText.ExportPsp}" />
                       </StackPanel>
                       <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                         <Border Classes="chip"><TextBlock Text="PSP PKG" /></Border>
@@ -370,7 +370,7 @@
                       <materialIcons:MaterialIcon Grid.Column="0" Kind="DiscPlayer" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="1,0,0,0" />
                       <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
                         <TextBlock Classes="rowtitle" Text="Export PS1 Classic → BIN / CUE…" />
-                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="Resolve licenses, preserve metadata, and reconstruct single- or multi-disc images." />
+                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{x:Static core:FeatureText.ExportPs1}" />
                       </StackPanel>
                       <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                         <Border Classes="chip"><TextBlock Text="PS1 PKG" /></Border>
@@ -383,7 +383,7 @@
                       <materialIcons:MaterialIcon Grid.Column="0" Kind="FolderMoveOutline" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="1,0,0,0" />
                       <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
                         <TextBlock Classes="rowtitle" Text="Export PSVita package…" />
-                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="Identify app, update, DLC or theme and create the correct Vita directory tree." />
+                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{x:Static core:FeatureText.ExportVita}" />
                       </StackPanel>
                       <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                         <Border Classes="chip"><TextBlock Text="VITA PKG" /></Border>
@@ -410,7 +410,7 @@
                       <materialIcons:MaterialIcon Grid.Column="0" Kind="Magnify" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="1,0,0,0" />
                       <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
                         <TextBlock Classes="rowtitle" Text="Inspect SELF / EBOOT" />
-                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="Header — type, key rev, segments." />
+                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{x:Static core:FeatureText.InspectSelf}" />
                       </StackPanel>
                       <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                         <Border Classes="chip"><TextBlock Text="EBOOT" /></Border>
@@ -423,7 +423,7 @@
                       <materialIcons:MaterialIcon Grid.Column="0" Kind="LockOpenOutline" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="1,0,0,0" />
                       <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
                         <TextBlock Classes="rowtitle" Text="Decrypt SELF → ELF" />
-                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="EBOOT.BIN / .self to a plaintext ELF." />
+                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{x:Static core:FeatureText.DecryptSelf}" />
                       </StackPanel>
                       <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                         <Border Classes="chip"><TextBlock Text="EBOOT" /></Border>
@@ -436,7 +436,7 @@
                       <materialIcons:MaterialIcon Grid.Column="0" Kind="DrawPen" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="1,0,0,0" />
                       <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
                         <TextBlock Classes="rowtitle" Text="Fake-sign ELF → fSELF" />
-                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="A CFW-ready fSELF from a plain ELF." />
+                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{x:Static core:FeatureText.FakeSignSelf}" />
                       </StackPanel>
                       <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                         <Border Classes="chip"><TextBlock Text="EBOOT" /></Border>
@@ -449,7 +449,7 @@
                       <materialIcons:MaterialIcon Grid.Column="0" Kind="ArrowDownBoldBox" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="1,0,0,0" />
                       <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
                         <TextBlock Classes="rowtitle" Text="Magic-patch firmware" />
-                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="Lower the firmware an EBOOT requires." />
+                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{x:Static core:FeatureText.PatchFirmware}" />
                       </StackPanel>
                       <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                         <Border Classes="chip"><TextBlock Text="EBOOT" /></Border>
@@ -462,7 +462,7 @@
                       <materialIcons:MaterialIcon Grid.Column="0" Kind="CodeBraces" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="1,0,0,0" />
                       <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
                         <TextBlock Classes="rowtitle" Text="Byte-patch EBOOT" />
-                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="Hex find/replace or at-offset edit." />
+                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{x:Static core:FeatureText.BytePatch}" />
                       </StackPanel>
                       <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                         <Border Classes="chip"><TextBlock Text="EBOOT" /></Border>
@@ -478,7 +478,7 @@
                 <TextBlock Text="debug console · official firmware" FontSize="11" Opacity="0.6" VerticalAlignment="Center" />
               </StackPanel>
               <TextBlock Classes="carddesc" Margin="2,0,0,0"
-                         Text="No DEX OFW resign yet — resigning SELFs for debug (DEX) firmware isn't built. For DEX today, build a debug .pkg from Pack." />
+                         Text="{x:Static core:FeatureText.DexLimitation}" />
             </StackPanel>
 
             <!-- Data files & setup -->
@@ -491,7 +491,7 @@
                       <materialIcons:MaterialIcon Grid.Column="0" Kind="KeyVariant" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="1,0,0,0" />
                       <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
                         <TextBlock Classes="rowtitle" Text="Decrypt EDAT / SDAT" />
-                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="Decrypt an NPDRM data file to plaintext." />
+                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{x:Static core:FeatureText.DecryptEdat}" />
                       </StackPanel>
                       <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                         <Border Classes="chip"><TextBlock Text="EDAT" /></Border>
@@ -505,7 +505,7 @@
                       <materialIcons:MaterialIcon Grid.Column="0" Kind="CogOutline" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="1,0,0,0" />
                       <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
                         <TextBlock Classes="rowtitle" Text="Manage keys…" />
-                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="Import an override key or set the folder." />
+                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{x:Static core:FeatureText.ManageKeys}" />
                       </StackPanel>
                       <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                         <Border Classes="chip"><TextBlock Text="SETUP" /></Border>
@@ -725,7 +725,7 @@
             <StackPanel Spacing="3">
               <TextBlock Classes="pagetitle" Text="Pack folder → .pkg" />
               <TextBlock Classes="pagesubtitle"
-                         Text="Build a package from a content folder. Fields are pre-filled from the folder's PARAM.SFO where possible." />
+                         Text="{x:Static core:FeatureText.PackPageIntro}" />
               <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
                 <Border Classes="chip"><TextBlock Text="PKG" /></Border>
                 <Border Classes="chip cfw"><TextBlock Text="CEX · CFW" /></Border>
@@ -842,7 +842,7 @@
                       <materialIcons:MaterialIcon Grid.Column="0" Kind="Magnify" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="1,0,0,0" />
                       <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
                         <TextBlock Classes="rowtitle" Text="Inspect SELF / EBOOT" />
-                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="Header — type, key rev, segments." />
+                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{x:Static core:FeatureText.InspectSelf}" />
                       </StackPanel>
                       <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                         <Border Classes="chip"><TextBlock Text="EBOOT" /></Border>
@@ -856,7 +856,7 @@
                       <materialIcons:MaterialIcon Grid.Column="0" Kind="LockOpenOutline" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="1,0,0,0" />
                       <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
                         <TextBlock Classes="rowtitle" Text="Decrypt SELF → ELF" />
-                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="EBOOT.BIN / .self to a plaintext ELF." />
+                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{x:Static core:FeatureText.DecryptSelf}" />
                       </StackPanel>
                       <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                         <Border Classes="chip"><TextBlock Text="EBOOT" /></Border>
@@ -870,7 +870,7 @@
                       <materialIcons:MaterialIcon Grid.Column="0" Kind="DrawPen" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="1,0,0,0" />
                       <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
                         <TextBlock Classes="rowtitle" Text="Fake-sign ELF → fSELF" />
-                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="A CFW-ready fSELF from a plain ELF." />
+                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{x:Static core:FeatureText.FakeSignSelf}" />
                       </StackPanel>
                       <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                         <Border Classes="chip"><TextBlock Text="EBOOT" /></Border>
@@ -884,7 +884,7 @@
                       <materialIcons:MaterialIcon Grid.Column="0" Kind="ArrowDownBoldBox" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="1,0,0,0" />
                       <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
                         <TextBlock Classes="rowtitle" Text="Magic-patch firmware" />
-                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="Lower the firmware an EBOOT requires." />
+                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{x:Static core:FeatureText.PatchFirmware}" />
                       </StackPanel>
                       <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                         <Border Classes="chip"><TextBlock Text="EBOOT" /></Border>
@@ -898,7 +898,7 @@
                       <materialIcons:MaterialIcon Grid.Column="0" Kind="CodeBraces" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="1,0,0,0" />
                       <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
                         <TextBlock Classes="rowtitle" Text="Byte-patch EBOOT" />
-                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="Hex find/replace or at-offset edit." />
+                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{x:Static core:FeatureText.BytePatch}" />
                       </StackPanel>
                       <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                         <Border Classes="chip"><TextBlock Text="EBOOT" /></Border>
@@ -914,7 +914,7 @@
                 <TextBlock Text="debug console · official firmware" FontSize="11" Opacity="0.6" VerticalAlignment="Center" />
               </StackPanel>
               <TextBlock Classes="carddesc" Margin="2,0,0,0"
-                         Text="No DEX OFW resign yet — resigning SELFs for debug (DEX) firmware isn't built. For DEX today, build a debug .pkg from the Pack page." />
+                         Text="{x:Static core:FeatureText.DexLimitation}" />
             </StackPanel>
 
             <!-- Detail: one focused operation at a time -->
@@ -1074,7 +1074,7 @@
             <StackPanel Spacing="3">
               <TextBlock Classes="pagetitle" Text="Decrypt EDAT / SDAT" />
               <TextBlock Classes="pagesubtitle"
-                         Text="Decrypt an NPDRM data file. Licensed EDATs resolve RAPs automatically from the library." />
+                         Text="{x:Static core:FeatureText.DecryptPageIntro}" />
               <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
                 <Border Classes="chip"><TextBlock Text="EDAT" /></Border>
                 <Border Classes="chip"><TextBlock Text="PS3 / PSP" /></Border>

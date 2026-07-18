@@ -57,7 +57,7 @@ public static class PackageRecommendationEngine
             new[]
             {
                 new PackageActionRecommendation(PackageRecommendedAction.KeyLicenseAudit,
-                    "Check keys and licenses", "Identify the required package key and unsupported encryption.",
+                    "Check keys and licenses", FeatureText.KeyLicenseAudit,
                     "RECOMMENDED", true),
                 new PackageActionRecommendation(PackageRecommendedAction.Verify,
                     "Verify package", "Check the cleartext header and structural integrity that remain available.",
@@ -72,7 +72,7 @@ public static class PackageRecommendationEngine
         if (eligibility.CanExport)
         {
             actions.Add(new(PackageRecommendedAction.ExportPsp, "Export PSP game",
-                "Create EBOOT.PBP, a decrypted ISO, or a PSP-compatible CSO directly.", "RECOMMENDED", true));
+                FeatureText.ExportPsp, "RECOMMENDED", true));
         }
         actions.Add(new(PackageRecommendedAction.ExtractAll, "Extract package files",
             "Extract the original PSP package directory without converting it.", "FOLDER",
@@ -135,7 +135,7 @@ public static class PackageRecommendationEngine
                  Path.GetFileName(entry.Name).Equals("ISO.BIN.EDAT", StringComparison.OrdinalIgnoreCase)));
             if (hasImage)
                 actions.Add(new(PackageRecommendedAction.ExportPs1Classic, "Export PS1 Classic",
-                    "Resolve the RAP when needed, export metadata and artwork, then reconstruct emulator-ready BIN/CUE disc images.",
+                    FeatureText.ExportPs1,
                     "RECOMMENDED", true));
             actions.Add(new(PackageRecommendedAction.ExtractAll, "Extract package files",
                 "Extract the original PS1 Classic package directory without reconstructing its disc image.", "FOLDER",
@@ -153,7 +153,7 @@ public static class PackageRecommendationEngine
                 Path.GetFileName(entry.Name).Equals("ISO.BIN.ENC", StringComparison.OrdinalIgnoreCase));
             if (hasImage)
                 actions.Add(new(PackageRecommendedAction.ExportPs2Classic, "Export PS2 Classic",
-                    "Resolve the RAP automatically, verify and decrypt ISO.BIN.ENC, then optionally rebuild a CFW/HEN package copy.",
+                    FeatureText.ExportPs2,
                     "RECOMMENDED", true));
             actions.Add(new(PackageRecommendedAction.ExtractAll, "Extract package files",
                 "Extract the original PS2 Classic package directory without decrypting the disc image.", "FOLDER",
@@ -168,7 +168,7 @@ public static class PackageRecommendationEngine
         if (canConvertForCfw)
         {
             actions.Add(new(PackageRecommendedAction.ConvertCfw, "Convert package for CFW",
-                "Process embedded EBOOT/SELF/SPRX files, resolve RAPs, fake-sign them, and rebuild the package.",
+                FeatureText.ConvertCfw,
                 "RECOMMENDED", true));
         }
         actions.Add(new(PackageRecommendedAction.ExtractAll,
@@ -177,7 +177,7 @@ public static class PackageRecommendationEngine
             IsPrimary: !canConvertForCfw));
         if (hasExecutables)
             actions.Add(new(PackageRecommendedAction.AnalyzeFirmware, "Analyze required firmware",
-                "Scan every EBOOT, SELF, and SPRX; report the highest requirement and verified patch support.",
+                FeatureText.AnalyzeFirmware,
                 "READ-ONLY"));
         AddLicenseAudit(info, actions);
         actions.Add(Verify());
@@ -210,7 +210,7 @@ public static class PackageRecommendationEngine
     }
 
     private static PackageActionRecommendation Verify() => new(PackageRecommendedAction.Verify,
-        "Verify package integrity", "Check header authentication, signatures, and structural bounds.", "READ-ONLY");
+        "Verify package integrity", FeatureText.VerifyPackage, "READ-ONLY");
 
     private static bool IsPs3Executable(string path)
     {

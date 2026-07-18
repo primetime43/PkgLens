@@ -241,10 +241,9 @@ console will reject it. Use `--debug` for a self-contained non-finalized package
 
 ## Feature coverage vs TrueAncestor
 
-How PkgLens maps to the two TrueAncestor tools (PKG Repacker + SELF Resigner): **20 covered ·
-1 partial · 3 out of scope by design.** The out-of-scope items all need Sony's private
-signing keys, which PkgLens never uses. A themed version of this table is in
-[`docs/coverage.html`](docs/coverage.html).
+<!-- BEGIN GENERATED:README-COVERAGE -->
+How PkgLens maps to the two TrueAncestor tools (PKG Repacker + SELF Resigner). **20 covered · 1 partial · 3 out of scope by design.** The out-of-scope items all need Sony's private signing keys, which PkgLens never uses.
+A themed version of this table is in [`docs/coverage.html`](docs/coverage.html).
 
 Legend: ✅ covered · 🟡 partial · ⛔ out of scope (needs signing keys) · ⬜ not yet built
 
@@ -252,7 +251,7 @@ Legend: ✅ covered · 🟡 partial · ⛔ out of scope (needs signing keys) · 
 
 | # | Feature | Status | In PkgLens |
 |---|---------|:------:|-----------|
-| 1 | Fast Pack Pkg | ✅ | `pkglens pack` (infers IDs from PARAM.SFO) |
+| 1 | Fast Pack Pkg | ✅ | `pkglens pack <folder>` — infers IDs from PARAM.SFO |
 | 2 | Custom Pack Pkg | ✅ | `pack` with `--content-id`, `--install-dir`, … |
 | 3 | Unpack Pkg | ✅ | `pkglens extract` · right-click · extract-all |
 | 4 | Repack Pkg | ✅ | Replace a file → Save As (unsigned rebuild) |
@@ -267,23 +266,23 @@ Legend: ✅ covered · 🟡 partial · ⛔ out of scope (needs signing keys) · 
 
 | # | Feature | Status | In PkgLens |
 |---|---------|:------:|-----------|
-| 1 | Decrypt EBOOT.BIN Only | ✅ | `pkglens unself` (byte-exact vs real EBOOT) |
+| 1 | Decrypt EBOOT.BIN Only | ✅ | `pkglens unself` — retail SELF → ELF, byte-exact |
 | 2 | Resign to NON-DRM EBOOT | ✅ | `unself` → `resign` (GUI chains it) |
 | 3 | Resign to NPDRM EBOOT | ✅ | `resign --npdrm` |
-| 4 | Decrypt SELF / SPRX Only | ✅ | `unself` (same SCE format) |
+| 4 | Decrypt SELF / SPRX Only | ✅ | `unself` — same SCE format |
 | 5 | Fast Resign NON-DRM SELF/SPRX | ✅ | Decrypt → fake-sign chain |
 | 6 | Fast Resign NPDRM SELF/SPRX | ✅ | Same, `--npdrm` |
-| 7 | Custom Sign → NON-DRM | ✅ | `resign --auth-id --vendor-id --app-version --type` |
+| 7 | Custom Sign → NON-DRM | ✅ | `--auth-id --vendor-id --app-version --type` |
 | 8 | Custom Sign → NPDRM | ✅ | Custom fields + `--content-id` |
 | 9 | Magic Patch EBOOT/SELF/SPRX | ✅ | `pkglens patch --sdk-version` + find/replace/offset |
 | 10 | Decrypt DEX EBOOT (fSELF) | ✅ | `unself` handles fake-signed / debug SELFs |
 | 11 | Resign to NON-DRM EBOOT — DEX/OFW | ⛔ | OFW signature check needs debug signing keys |
 | 12 | Resign to NPDRM EBOOT — DEX/OFW | ⛔ | Same — signing keys, out of scope |
-| O | Output Method *(switch)* | 🟡 | fSELF profile with settable fw-version + control flags; cap flags need signing |
+| O | Output Method *(switch)* | 🟡 | fSELF output supports settable firmware and control flags plus RPCS3, CEX CFW, DEX compatibility analysis, and HEN target profiles; signed capability flags remain unavailable |
 | D | Compress Data *(switch)* | ✅ | Beneficial fSELF segments are zlib-compressed automatically; incompressible or unsafe layouts stay plain |
 
-Beyond TrueAncestor, PkgLens adds a full inspector GUI, integrity `verify`, EDAT/SDAT decryption,
-SELF-header inspect, a batch `scan` catalog, `--json` output, and cross-platform support.
+Beyond TrueAncestor, PkgLens adds a full inspector GUI, integrity verification, EDAT/SDAT decryption, platform exports, library automation, target-aware conversion, structured JSON output, and cross-platform support.
+<!-- END GENERATED:README-COVERAGE -->
 
 ## Keys
 
@@ -333,6 +332,14 @@ docs/coverage.html        # feature coverage vs TrueAncestor (open in a browser)
 ```
 
 ## Build & test
+
+Feature coverage and shared GUI/CLI descriptions come from `docs/feature-manifest.json`. After
+editing it, regenerate the checked-in README, HTML, and C# outputs:
+
+```powershell
+./eng/Generate-FeatureCatalog.ps1
+./eng/Generate-FeatureCatalog.ps1 -Check
+```
 
 ```
 dotnet build   # whole solution

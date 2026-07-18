@@ -133,10 +133,12 @@
   </header>
 
   <div class="tiles">
-    <div class="tile done"><div class="n">20</div><div class="l">Covered</div></div>
-    <div class="tile partial"><div class="n">1</div><div class="l">Partial</div></div>
+    <!-- BEGIN GENERATED:HTML-TILES -->
+    <div class="tile done"><div class="n">20</div><div class="l">covered</div></div>
+    <div class="tile partial"><div class="n">1</div><div class="l">partial</div></div>
     <div class="tile scope"><div class="n">3</div><div class="l">Out of scope <em>by design</em></div></div>
-    <div class="tile miss"><div class="n">0</div><div class="l">Not yet built</div></div>
+    <div class="tile miss"><div class="n">0</div><div class="l">not yet built</div></div>
+    <!-- END GENERATED:HTML-TILES -->
   </div>
 
   <div class="legend">
@@ -157,16 +159,18 @@
     <div class="tablecard"><div class="scroll"><table>
       <thead><tr><th class="num">#</th><th>TrueAncestor feature</th><th>PkgLens</th><th>How</th></tr></thead>
       <tbody>
-        <tr><td class="num">1</td><td class="feat">Fast Pack Pkg</td><td><span class="pill done"><i class="dot done"></i>Covered</span></td><td class="how"><code>pkglens pack &lt;folder&gt;</code> — infers IDs from PARAM.SFO</td></tr>
-        <tr><td class="num">2</td><td class="feat">Custom Pack Pkg</td><td><span class="pill done"><i class="dot done"></i>Covered</span></td><td class="how"><code>pack</code> with <code>--content-id</code>, <code>--install-dir</code>, …</td></tr>
-        <tr><td class="num">3</td><td class="feat">Unpack Pkg</td><td><span class="pill done"><i class="dot done"></i>Covered</span></td><td class="how"><code>pkglens extract</code> · right-click · extract-all</td></tr>
+        <!-- BEGIN GENERATED:HTML-ROWS-PKG-REPACKER -->
+        <tr><td class="num">1</td><td class="feat">Fast Pack Pkg</td><td><span class="pill done"><i class="dot done"></i>Covered</span></td><td class="how">`pkglens pack &lt;folder&gt;` — infers IDs from PARAM.SFO</td></tr>
+        <tr><td class="num">2</td><td class="feat">Custom Pack Pkg</td><td><span class="pill done"><i class="dot done"></i>Covered</span></td><td class="how">`pack` with `--content-id`, `--install-dir`, …</td></tr>
+        <tr><td class="num">3</td><td class="feat">Unpack Pkg</td><td><span class="pill done"><i class="dot done"></i>Covered</span></td><td class="how">`pkglens extract` &#183; right-click &#183; extract-all</td></tr>
         <tr><td class="num">4</td><td class="feat">Repack Pkg</td><td><span class="pill done"><i class="dot done"></i>Covered</span></td><td class="how">Replace a file → Save As (unsigned rebuild)</td></tr>
-        <tr><td class="num">5</td><td class="feat">Finalize Pkg</td><td><span class="pill scope"><i class="dot scope"></i>By design</span></td><td class="how">Forges the retail ECDSA signature — permanently excluded</td></tr>
-        <tr><td class="num">6</td><td class="feat">Show Game Folder Info</td><td><span class="pill done"><i class="dot done"></i>Covered</span></td><td class="how"><code>pkglens folderinfo</code> · Pack page button</td></tr>
-        <tr><td class="num">7</td><td class="feat">Edit PARAM.SFO</td><td><span class="pill done"><i class="dot done"></i>Covered</span></td><td class="how">SFO editor → Save As repacks the change</td></tr>
-        <tr><td class="num">8</td><td class="feat">Show Pkg Info</td><td><span class="pill done"><i class="dot done"></i>Covered</span></td><td class="how"><code>pkglens info</code> · Package info dialog</td></tr>
+        <tr><td class="num">5</td><td class="feat">Finalize Pkg</td><td><span class="pill scope"><i class="dot scope"></i>By design</span></td><td class="how">Forges the retail ECDSA signature</td></tr>
+        <tr><td class="num">6</td><td class="feat">Show Game Folder Info</td><td><span class="pill done"><i class="dot done"></i>Covered</span></td><td class="how">`pkglens folderinfo` &#183; Pack page button</td></tr>
+        <tr><td class="num">7</td><td class="feat">Edit PARAM.SFO</td><td><span class="pill done"><i class="dot done"></i>Covered</span></td><td class="how">SFO editor → Save As</td></tr>
+        <tr><td class="num">8</td><td class="feat">Show Pkg Info</td><td><span class="pill done"><i class="dot done"></i>Covered</span></td><td class="how">`pkglens info` &#183; Package info dialog</td></tr>
         <tr><td class="num">P</td><td class="feat">Patch PARAM.SFO <span style="color:var(--ink-3);font-size:.82em">(switch)</span></td><td><span class="pill done"><i class="dot done"></i>Covered</span></td><td class="how">Same SFO editor path</td></tr>
-        <tr><td class="num">R</td><td class="feat">Resign EBOOT.BIN <span style="color:var(--ink-3);font-size:.82em">(switch)</span></td><td><span class="pill done"><i class="dot done"></i>Covered</span></td><td class="how"><code>pack --resign</code> — fake-signs the EBOOT while packing</td></tr>
+        <tr><td class="num">R</td><td class="feat">Resign EBOOT.BIN <span style="color:var(--ink-3);font-size:.82em">(switch)</span></td><td><span class="pill done"><i class="dot done"></i>Covered</span></td><td class="how">`pack --resign` — fake-signs while packing</td></tr>
+        <!-- END GENERATED:HTML-ROWS-PKG-REPACKER -->
       </tbody>
     </table></div></div>
   </section>
@@ -184,20 +188,22 @@
     <div class="tablecard"><div class="scroll"><table>
       <thead><tr><th class="num">#</th><th>TrueAncestor feature</th><th>PkgLens</th><th>How</th></tr></thead>
       <tbody>
-        <tr><td class="num">1</td><td class="feat">Decrypt EBOOT.BIN Only</td><td><span class="pill done"><i class="dot done"></i>Covered</span></td><td class="how"><code>pkglens unself</code> — retail SELF → ELF, byte-exact</td></tr>
-        <tr><td class="num">2</td><td class="feat">Resign to NON-DRM EBOOT</td><td><span class="pill done"><i class="dot done"></i>Covered</span></td><td class="how"><code>unself</code> → <code>resign</code> (GUI chains it)</td></tr>
-        <tr><td class="num">3</td><td class="feat">Resign to NPDRM EBOOT</td><td><span class="pill done"><i class="dot done"></i>Covered</span></td><td class="how"><code>resign --npdrm</code></td></tr>
-        <tr><td class="num">4</td><td class="feat">Decrypt SELF / SPRX Only</td><td><span class="pill done"><i class="dot done"></i>Covered</span></td><td class="how"><code>unself</code> — same SCE format</td></tr>
+        <!-- BEGIN GENERATED:HTML-ROWS-SELF-RESIGNER -->
+        <tr><td class="num">1</td><td class="feat">Decrypt EBOOT.BIN Only</td><td><span class="pill done"><i class="dot done"></i>Covered</span></td><td class="how">`pkglens unself` — retail SELF → ELF, byte-exact</td></tr>
+        <tr><td class="num">2</td><td class="feat">Resign to NON-DRM EBOOT</td><td><span class="pill done"><i class="dot done"></i>Covered</span></td><td class="how">`unself` → `resign` (GUI chains it)</td></tr>
+        <tr><td class="num">3</td><td class="feat">Resign to NPDRM EBOOT</td><td><span class="pill done"><i class="dot done"></i>Covered</span></td><td class="how">`resign --npdrm`</td></tr>
+        <tr><td class="num">4</td><td class="feat">Decrypt SELF / SPRX Only</td><td><span class="pill done"><i class="dot done"></i>Covered</span></td><td class="how">`unself` — same SCE format</td></tr>
         <tr><td class="num">5</td><td class="feat">Fast Resign NON-DRM SELF/SPRX</td><td><span class="pill done"><i class="dot done"></i>Covered</span></td><td class="how">Decrypt → fake-sign chain</td></tr>
-        <tr><td class="num">6</td><td class="feat">Fast Resign NPDRM SELF/SPRX</td><td><span class="pill done"><i class="dot done"></i>Covered</span></td><td class="how">Same, <code>--npdrm</code></td></tr>
-        <tr><td class="num">7</td><td class="feat">Custom Sign → NON-DRM</td><td><span class="pill done"><i class="dot done"></i>Covered</span></td><td class="how"><code>--auth-id --vendor-id --app-version --type</code></td></tr>
-        <tr><td class="num">8</td><td class="feat">Custom Sign → NPDRM</td><td><span class="pill done"><i class="dot done"></i>Covered</span></td><td class="how">Custom fields + <code>--content-id</code></td></tr>
-        <tr><td class="num">9</td><td class="feat">Magic Patch EBOOT/SELF/SPRX</td><td><span class="pill done"><i class="dot done"></i>Covered</span></td><td class="how"><code>pkglens patch --sdk-version</code> lowers the firmware requirement · plus find/replace &amp; offset patches</td></tr>
-        <tr><td class="num">10</td><td class="feat">Decrypt EBOOT.BIN (FSELF) — DEX</td><td><span class="pill done"><i class="dot done"></i>Covered</span></td><td class="how"><code>unself</code> handles fake-signed / debug SELFs</td></tr>
+        <tr><td class="num">6</td><td class="feat">Fast Resign NPDRM SELF/SPRX</td><td><span class="pill done"><i class="dot done"></i>Covered</span></td><td class="how">Same, `--npdrm`</td></tr>
+        <tr><td class="num">7</td><td class="feat">Custom Sign → NON-DRM</td><td><span class="pill done"><i class="dot done"></i>Covered</span></td><td class="how">`--auth-id --vendor-id --app-version --type`</td></tr>
+        <tr><td class="num">8</td><td class="feat">Custom Sign → NPDRM</td><td><span class="pill done"><i class="dot done"></i>Covered</span></td><td class="how">Custom fields + `--content-id`</td></tr>
+        <tr><td class="num">9</td><td class="feat">Magic Patch EBOOT/SELF/SPRX</td><td><span class="pill done"><i class="dot done"></i>Covered</span></td><td class="how">`pkglens patch --sdk-version` + find/replace/offset</td></tr>
+        <tr><td class="num">10</td><td class="feat">Decrypt DEX EBOOT (fSELF)</td><td><span class="pill done"><i class="dot done"></i>Covered</span></td><td class="how">`unself` handles fake-signed / debug SELFs</td></tr>
         <tr><td class="num">11</td><td class="feat">Resign to NON-DRM EBOOT — DEX/OFW</td><td><span class="pill scope"><i class="dot scope"></i>By design</span></td><td class="how">OFW signature check needs debug signing keys</td></tr>
         <tr><td class="num">12</td><td class="feat">Resign to NPDRM EBOOT — DEX/OFW</td><td><span class="pill scope"><i class="dot scope"></i>By design</span></td><td class="how">Same — signing keys, out of scope</td></tr>
         <tr><td class="num">O</td><td class="feat">Output Method <span style="color:var(--ink-3);font-size:.82em">(switch)</span></td><td><span class="pill partial"><i class="dot partial"></i>Partial</span></td><td class="how">fSELF output supports settable firmware and control flags plus RPCS3, CEX CFW, DEX compatibility analysis, and HEN target profiles; signed capability flags remain unavailable</td></tr>
-        <tr><td class="num">D</td><td class="feat">Compress Data <span style="color:var(--ink-3);font-size:.82em">(switch)</span></td><td><span class="pill done"><i class="dot done"></i>Covered</span></td><td class="how">Beneficial program segments use zlib automatically; incompressible or non-round-trippable layouts stay plain</td></tr>
+        <tr><td class="num">D</td><td class="feat">Compress Data <span style="color:var(--ink-3);font-size:.82em">(switch)</span></td><td><span class="pill done"><i class="dot done"></i>Covered</span></td><td class="how">Beneficial fSELF segments are zlib-compressed automatically; incompressible or unsafe layouts stay plain</td></tr>
+        <!-- END GENERATED:HTML-ROWS-SELF-RESIGNER -->
       </tbody>
     </table></div></div>
   </section>
@@ -211,26 +217,25 @@
     <p class="sec-note">PkgLens is one library-first tool, not two console utilities — so it also carries
       capabilities TrueAncestor never had.</p>
     <div class="extras">
-      <div class="xcard"><h3><span class="chk">✓</span> Package inspector GUI</h3><p>Folder tree, file list, and a built-in viewer — image (ICON0/PIC1), text, or hex dump.</p></div>
-      <div class="xcard"><h3><span class="chk">✓</span> Integrity <code style="font-family:var(--font-mono);font-size:.8em">verify</code></h3><p>Structural bounds, header SHA-1, and header AES-CMAC — confirmed against real packages.</p></div>
-      <div class="xcard"><h3><span class="chk">✓</span> EDAT / SDAT decrypt</h3><p>SDAT keyless, EDAT via RAP or free key — including a range-coded compressed golden vector, integrity checks, and expected plaintext.</p></div>
-      <div class="xcard"><h3><span class="chk">✓</span> SELF header inspect</h3><p><code style="font-family:var(--font-mono);font-size:.8em">pkglens self</code> reads program type, key revision, ELF header &amp; NPDRM id — no keys.</p></div>
-      <div class="xcard"><h3><span class="chk">✓</span> Cross-platform</h3><p>Avalonia GUI + .NET CLI on Windows/macOS/Linux — not a Windows-only console app.</p></div>
-      <div class="xcard"><h3><span class="chk">✓</span> Scriptable output</h3><p><code style="font-family:var(--font-mono);font-size:.8em">--json</code> on the inspection commands for tooling and pipelines.</p></div>
-      <div class="xcard"><h3><span class="chk">✓</span> PlayStation exports</h3><p>Guided PS1 and PS2 Classics workflows, PSP PBP/ISO/CSO export, and Vita app/update/DLC/theme directory export.</p></div>
-      <div class="xcard"><h3><span class="chk">✓</span> Library automation</h3><p>Resumable batch jobs, package classification, base/update/DLC matching, duplicate detection, and library organization.</p></div>
-      <div class="xcard"><h3><span class="chk">✓</span> Safe conversion guidance</h3><p>Operation preflight, automatic key/RAP discovery, firmware analysis, post-operation verification, and target compatibility reports.</p></div>
+      <!-- BEGIN GENERATED:HTML-BEYOND -->
+      <div class="xcard"><h3><span class="chk">✓</span> Package inspector GUI</h3><p>Folder tree, file list, search/filter, recent history, and a built-in image, text, or hex viewer.</p></div>
+      <div class="xcard"><h3><span class="chk">✓</span> Integrity `verify`</h3><p>Structural bounds, header SHA-1, header AES-CMAC, signatures, and post-operation verification.</p></div>
+      <div class="xcard"><h3><span class="chk">✓</span> EDAT / SDAT decrypt</h3><p>SDAT keyless and EDAT via RAP or free key, including compressed golden-vector and block-integrity coverage.</p></div>
+      <div class="xcard"><h3><span class="chk">✓</span> SELF header inspect</h3><p>Reads program type, key revision, ELF header, segment compression, and NPDRM identity without decrypting.</p></div>
+      <div class="xcard"><h3><span class="chk">✓</span> Cross-platform</h3><p>Avalonia GUI and .NET CLI on Windows, macOS, and Linux.</p></div>
+      <div class="xcard"><h3><span class="chk">✓</span> Scriptable output</h3><p>Structured `--json` output across CLI inspection and mutation commands.</p></div>
+      <div class="xcard"><h3><span class="chk">✓</span> PlayStation exports</h3><p>Guided PS1 and PS2 Classics workflows, PSP PBP/ISO/CSO export, and Vita app/update/DLC/theme export.</p></div>
+      <div class="xcard"><h3><span class="chk">✓</span> Library automation</h3><p>Resumable batch jobs, package classification, matching, duplicate detection, and organization.</p></div>
+      <div class="xcard"><h3><span class="chk">✓</span> Safe conversion guidance</h3><p>Operation preflight, automatic key/RAP discovery, firmware analysis, and target compatibility reports.</p></div>
+      <!-- END GENERATED:HTML-BEYOND -->
     </div>
   </section>
 
   <div class="foot">
-    <p><b>Compressed-data verification is covered.</b> The EDAT LZ path is checked against a range-coded
-      compressed golden vector and expected plaintext, while compressed fSELF segments are rebuilt only
-      when they are beneficial and can be decrypted back to the original ELF bytes.</p>
-    <p><b>Former backlog items now ship.</b> Firmware-target profiles, automatic fSELF compression,
-      resumable batch/catalog workflows, and PS1, PS2, PSP, and Vita package workflows are available from
-      the GUI, with relevant operations also exposed through the CLI.</p>
-    <p style="margin-top:.8rem;color:var(--ink-3)">Core/CLI and Avalonia headless GUI suites run in CI with
-      dependency auditing, separate line/branch coverage gates, and published TRX/Cobertura reports.</p>
+    <!-- BEGIN GENERATED:HTML-FOOTER -->
+    <p><b>Compressed-data verification is covered.</b> The EDAT LZ path is checked against a range-coded compressed golden vector and expected plaintext, while compressed fSELF segments are rebuilt only when beneficial and byte-exactly recoverable.</p>
+    <p><b>Former backlog items now ship.</b> Firmware-target profiles, automatic fSELF compression, resumable batch/catalog workflows, and PS1, PS2, PSP, and Vita package workflows are available from the GUI, with relevant operations also exposed through the CLI.</p>
+    <p><b>Generated coverage stays synchronized.</b> README tables, this HTML report, GUI feature descriptions, and the CLI tagline come from this manifest; CI rejects stale generated output.</p>
+    <!-- END GENERATED:HTML-FOOTER -->
   </div>
 </div>
