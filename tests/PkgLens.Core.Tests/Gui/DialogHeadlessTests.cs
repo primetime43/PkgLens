@@ -55,6 +55,17 @@ public sealed class DialogHeadlessTests
         Assert.True(batchGrid.CanUserResizeColumns);
         Assert.True(batchGrid.CanUserSortColumns);
         Assert.Equal(8, batchGrid.Columns.Count);
+        Control targetPanel = batch.FindControl<Control>("TargetProfilePanel")!;
+        ComboBox operationBox = batch.FindControl<ComboBox>("OperationBox")!;
+        ComboBox targetBox = batch.FindControl<ComboBox>("TargetProfileBox")!;
+        Assert.False(targetPanel.IsVisible);
+        operationBox.SelectedItem = OperationCatalog.ForBatch(BatchOperation.ConvertCfw);
+        Assert.True(targetPanel.IsVisible);
+        Assert.Equal(3, targetBox.ItemCount);
+        Assert.Equal(TargetCompatibilityProfile.CexCfw,
+            Assert.IsType<TargetCompatibilityProfileInfo>(targetBox.SelectedItem).Profile);
+        Assert.False(string.IsNullOrWhiteSpace(
+            batch.FindControl<TextBlock>("TargetProfileDescription")!.Text));
         firmware.Close();
         batch.Close();
     }

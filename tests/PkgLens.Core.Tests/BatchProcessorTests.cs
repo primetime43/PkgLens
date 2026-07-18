@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using PkgLens.Core;
 using PkgLens.Core.Ps3.Self;
 using PkgLens.Core.Shared;
@@ -112,16 +113,42 @@ public class BatchProcessorTests
                 .AddFile("USRDIR/EBOOT.PBP", new byte[64], pspTypeHigh: 0x90).Build());
 
         BatchManifest manifest = BatchProcessor.Create(source, output, BatchOperation.ConvertCfw,
-            recursive: false, new FileKeyProvider());
-        BatchProcessor.Run(manifest, new FileKeyProvider());
+            recursive: false, new FileKeyProvider(), TargetCompatibilityProfile.Rpcs3);
+        Assert.Equal(TargetCompatibilityProfile.Rpcs3, manifest.TargetProfile);
+        Assert.Contains("\"targetProfile\": \"rpcs3\"", File.ReadAllText(manifest.ManifestPath));
 
-        BatchJob ps3 = manifest.Jobs.Single(job => job.RelativePath == "ps3.pkg");
-        BatchJob psp = manifest.Jobs.Single(job => job.RelativePath == "psp.pkg");
+        BatchManifest resumed = BatchProcessor.Load(manifest.ManifestPath);
+        Assert.Equal(TargetCompatibilityProfile.Rpcs3, resumed.TargetProfile);
+        BatchProcessor.Run(resumed, new FileKeyProvider());
+
+        BatchJob ps3 = resumed.Jobs.Single(job => job.RelativePath == "ps3.pkg");
+        BatchJob psp = resumed.Jobs.Single(job => job.RelativePath == "psp.pkg");
         Assert.Equal(BatchJobStatus.Completed, ps3.Status);
         Assert.True(File.Exists(ps3.OutputPath));
         Assert.True(File.Exists(Path.ChangeExtension(ps3.OutputPath, ".report.txt")));
+        Assert.Contains("Target profile : RPCS3 emulator",
+            File.ReadAllText(Path.ChangeExtension(ps3.OutputPath, ".report.txt")));
         Assert.Equal(BatchJobStatus.Skipped, psp.Status);
         Assert.Contains("not a PS3", psp.Message!);
+    }
+
+    [Fact]
+    public void Load_LegacyManifestWithoutTargetProfile_DefaultsToCexCfw()
+    {
+        using var root = new TempDirectory();
+        string source = root.CreateDirectory("source");
+        string output = root.CreateDirectory("output");
+        File.WriteAllBytes(Path.Combine(source, "game.pkg"),
+            new SyntheticPkgBuilder().AddFile("DATA.BIN", "x").Build());
+        BatchManifest manifest = BatchProcessor.Create(source, output, BatchOperation.ConvertCfw,
+            recursive: false, new InMemoryKeyProvider());
+        JsonObject json = JsonNode.Parse(File.ReadAllText(manifest.ManifestPath))!.AsObject();
+        Assert.True(json.Remove("targetProfile"));
+        File.WriteAllText(manifest.ManifestPath, json.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
+
+        BatchManifest legacy = BatchProcessor.Load(manifest.ManifestPath);
+
+        Assert.Equal(TargetCompatibilityProfile.CexCfw, legacy.TargetProfile);
     }
 
     [Fact]

@@ -50,6 +50,7 @@ public sealed class BatchManifest
     public required string SourceDirectory { get; init; }
     public required string OutputDirectory { get; init; }
     public required BatchOperation Operation { get; init; }
+    public TargetCompatibilityProfile TargetProfile { get; init; } = TargetCompatibilityProfile.CexCfw;
     public bool Recursive { get; init; }
     public DateTimeOffset CreatedUtc { get; init; } = DateTimeOffset.UtcNow;
     public DateTimeOffset UpdatedUtc { get; set; } = DateTimeOffset.UtcNow;
@@ -97,11 +98,25 @@ public static class BatchProcessor
         bool recursive,
         IKeyProvider keys,
         CancellationToken cancellationToken = default,
+        IProgress<BatchDiscoveryProgress>? progress = null) =>
+        Create(sourceDirectory, outputDirectory, operation, recursive, keys,
+            TargetCompatibilityProfile.CexCfw, cancellationToken, progress);
+
+    public static BatchManifest Create(
+        string sourceDirectory,
+        string outputDirectory,
+        BatchOperation operation,
+        bool recursive,
+        IKeyProvider keys,
+        TargetCompatibilityProfile targetProfile,
+        CancellationToken cancellationToken = default,
         IProgress<BatchDiscoveryProgress>? progress = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sourceDirectory);
         ArgumentException.ThrowIfNullOrWhiteSpace(outputDirectory);
         ArgumentNullException.ThrowIfNull(keys);
+        if (!Enum.IsDefined(targetProfile))
+            throw new ArgumentOutOfRangeException(nameof(targetProfile));
 
         string sourceRoot = Path.GetFullPath(sourceDirectory);
         string outputRoot = Path.GetFullPath(outputDirectory);
@@ -124,6 +139,7 @@ public static class BatchProcessor
             SourceDirectory = sourceRoot,
             OutputDirectory = outputRoot,
             Operation = operation,
+            TargetProfile = targetProfile,
             Recursive = recursive,
         };
 
@@ -275,7 +291,8 @@ public static class BatchProcessor
             BatchOperation.ExportPbp => ExportPsp(job, keys, PspExportFormat.Pbp, cancellationToken, itemProgress),
             BatchOperation.ExportIso => ExportPsp(job, keys, PspExportFormat.Iso, cancellationToken, itemProgress),
             BatchOperation.ExportCso => ExportPsp(job, keys, PspExportFormat.Cso, cancellationToken, itemProgress),
-            BatchOperation.ConvertCfw => ConvertCfw(job, keys, options, cancellationToken, itemProgress),
+            BatchOperation.ConvertCfw => ConvertCfw(job, keys, options, manifest.TargetProfile,
+                cancellationToken, itemProgress),
             _ => throw new ArgumentOutOfRangeException(nameof(manifest.Operation)),
         };
     }
@@ -364,7 +381,8 @@ public static class BatchProcessor
     }
 
     private static string ConvertCfw(BatchJob job, IKeyProvider keys, BatchProcessorOptions options,
-        CancellationToken cancellationToken, IProgress<double> progress)
+        TargetCompatibilityProfile targetProfile, CancellationToken cancellationToken,
+        IProgress<double> progress)
     {
         using (var source = File.OpenRead(job.SourcePath))
         {
@@ -384,6 +402,7 @@ public static class BatchProcessor
             {
                 SourceName = job.SourcePath,
                 OutputName = job.OutputPath,
+                TargetProfile = targetProfile,
                 KlicenseeResolver = contentId =>
                 {
                     byte[]? rap = RapStore.Find(contentId, options.RapDirectory);
@@ -396,7 +415,8 @@ public static class BatchProcessor
         PostOperationVerifier.VerifyPackage(job.OutputPath, keys,
             report!.Executables.Select(executable => executable.Path));
         WriteTextAtomic(Path.ChangeExtension(job.OutputPath, ".report.txt"), report.ToText());
-        return $"Converted and verified {report.Executables.Count} executable(s)";
+        return $"Converted and verified {report.Executables.Count} executable(s) for " +
+               TargetCompatibilityAnalyzer.Describe(report.TargetProfile).Name;
     }
 
     private static string BuildOutputPath(string outputRoot, string relativePath, BatchOperation operation)
@@ -479,6 +499,8 @@ public static class BatchProcessor
 
     private static void ValidateManifest(BatchManifest manifest)
     {
+        if (!Enum.IsDefined(manifest.TargetProfile))
+            throw new PkgFormatException($"Batch manifest target profile '{manifest.TargetProfile}' is invalid.");
         string sourceRoot = Path.GetFullPath(manifest.SourceDirectory);
         string outputRoot = Path.GetFullPath(manifest.OutputDirectory);
         foreach (BatchJob job in manifest.Jobs)

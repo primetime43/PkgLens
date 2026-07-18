@@ -9,7 +9,7 @@
 
   <DockPanel Margin="12">
     <StackPanel x:Name="SetupPanel" DockPanel.Dock="Top" Spacing="9" Margin="0,0,0,10">
-      <Grid ColumnDefinitions="Auto,*,Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="7">
+      <Grid ColumnDefinitions="Auto,*,Auto,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="8" RowSpacing="7">
         <Button Grid.Row="0" Grid.Column="0" Content="Source folder…" Click="OnChooseSource" />
         <TextBlock x:Name="SourceText" Grid.Row="0" Grid.Column="1" VerticalAlignment="Center"
                    Text="Drop or choose a folder containing packages" TextTrimming="CharacterEllipsis" Opacity="0.8" />
@@ -26,6 +26,15 @@
           <Button x:Name="PrepareButton" Content="Prepare jobs" Click="OnPrepare" IsEnabled="False" />
           <Button Content="Load / resume manifest…" Click="OnLoadManifest" />
         </StackPanel>
+
+        <Grid x:Name="TargetProfilePanel" Grid.Row="2" Grid.ColumnSpan="4"
+              ColumnDefinitions="Auto,240,*" ColumnSpacing="8" IsVisible="False">
+          <TextBlock Grid.Column="0" Text="Target profile" VerticalAlignment="Center" />
+          <ComboBox x:Name="TargetProfileBox" Grid.Column="1" SelectionChanged="OnTargetProfileChanged"
+                    ToolTip.Tip="Choose where every converted package must run. The choice is saved in the resumable manifest." />
+          <TextBlock x:Name="TargetProfileDescription" Grid.Column="2" VerticalAlignment="Center"
+                     TextWrapping="Wrap" FontSize="11" Opacity="0.7" />
+        </Grid>
       </Grid>
 
       <Border Classes="panel" Padding="10,8">

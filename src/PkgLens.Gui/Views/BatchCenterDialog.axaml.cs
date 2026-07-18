@@ -33,6 +33,8 @@ public partial class BatchCenterDialog : Window
     private TextBlock _description = null!;
     private TextBlock _status = null!;
     private ComboBox _operationBox = null!;
+    private ComboBox _targetProfileBox = null!;
+    private TextBlock _targetProfileDescription = null!;
     private CheckBox _recursive = null!;
     private DataGrid _grid = null!;
     private Button _prepare = null!;
@@ -43,6 +45,7 @@ public partial class BatchCenterDialog : Window
     private ProgressBar _progress = null!;
     private Control _setup = null!;
     private Control _dropOverlay = null!;
+    private Control _targetProfilePanel = null!;
 
     public BatchCenterDialog() : this(null, null, null) { }
 
@@ -53,6 +56,11 @@ public partial class BatchCenterDialog : Window
         InitializeComponent();
         FindControls();
         _operationBox.ItemsSource = _operations;
+        _targetProfileBox.ItemsSource = TargetCompatibilityAnalyzer.Profiles
+            .Where(profile => profile.Profile != TargetCompatibilityProfile.Dex)
+            .ToList();
+        _targetProfileBox.SelectedItem =
+            TargetCompatibilityAnalyzer.Describe(TargetCompatibilityProfile.CexCfw);
         _operationBox.SelectedItem = OperationCatalog.ForBatch(BatchOperation.Verify);
         AddHandler(DragDrop.DragOverEvent, OnDragOver, handledEventsToo: true);
         AddHandler(DragDrop.DragLeaveEvent, OnDragLeave, handledEventsToo: true);
@@ -70,6 +78,8 @@ public partial class BatchCenterDialog : Window
         _description = this.FindControl<TextBlock>("OperationDescription")!;
         _status = this.FindControl<TextBlock>("StatusText")!;
         _operationBox = this.FindControl<ComboBox>("OperationBox")!;
+        _targetProfileBox = this.FindControl<ComboBox>("TargetProfileBox")!;
+        _targetProfileDescription = this.FindControl<TextBlock>("TargetProfileDescription")!;
         _recursive = this.FindControl<CheckBox>("RecursiveCheck")!;
         _grid = this.FindControl<DataGrid>("JobsGrid")!;
         _prepare = this.FindControl<Button>("PrepareButton")!;
@@ -80,6 +90,7 @@ public partial class BatchCenterDialog : Window
         _progress = this.FindControl<ProgressBar>("BatchProgress")!;
         _setup = this.FindControl<Control>("SetupPanel")!;
         _dropOverlay = this.FindControl<Control>("DropOverlay")!;
+        _targetProfilePanel = this.FindControl<Control>("TargetProfilePanel")!;
     }
 
     private async void OnChooseSource(object? sender, RoutedEventArgs e)
@@ -124,9 +135,30 @@ public partial class BatchCenterDialog : Window
     {
         if (_operationBox.SelectedItem is not OperationDefinition choice) return;
         _description.Text = choice.BatchDescription;
+        UpdateTargetProfileControls();
         if (_loadingManifest) return;
         ClearPreparedJobs("Operation changed. Prepare jobs again.");
         UpdateButtons();
+    }
+
+    private void OnTargetProfileChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        UpdateTargetProfileControls();
+        if (_loadingManifest ||
+            _operationBox.SelectedItem is not OperationDefinition { BatchOperation: BatchOperation.ConvertCfw })
+            return;
+        ClearPreparedJobs("Target profile changed. Prepare jobs again.");
+        UpdateButtons();
+    }
+
+    private void UpdateTargetProfileControls()
+    {
+        bool convertsCfw = _operationBox.SelectedItem is OperationDefinition
+            { BatchOperation: BatchOperation.ConvertCfw };
+        _targetProfilePanel.IsVisible = convertsCfw;
+        _targetProfileDescription.Text = _targetProfileBox.SelectedItem is TargetCompatibilityProfileInfo profile
+            ? profile.ShortDescription
+            : string.Empty;
     }
 
     private async void OnPrepare(object? sender, RoutedEventArgs e)
@@ -150,8 +182,12 @@ public partial class BatchCenterDialog : Window
             string output = _outputDirectory;
             bool recursive = _recursive.IsChecked == true;
             string? keysDirectory = _keysDirectory;
+            TargetCompatibilityProfile targetProfile =
+                (_targetProfileBox.SelectedItem as TargetCompatibilityProfileInfo)?.Profile ??
+                TargetCompatibilityProfile.CexCfw;
             _manifest = await Task.Run(() => BatchProcessor.Create(source, output, batchOperation,
-                recursive, new FileKeyProvider(keysDirectory), cancellation.Token, discoveryProgress),
+                recursive, new FileKeyProvider(keysDirectory), targetProfile, cancellation.Token,
+                discoveryProgress),
                 cancellation.Token);
             RefreshRows();
             _status.Text = _manifest.Jobs.Count == 0
@@ -198,6 +234,7 @@ public partial class BatchCenterDialog : Window
             try
             {
                 _operationBox.SelectedItem = OperationCatalog.ForBatch(_manifest.Operation);
+                _targetProfileBox.SelectedItem = TargetCompatibilityAnalyzer.Describe(_manifest.TargetProfile);
             }
             finally
             {
