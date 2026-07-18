@@ -1,0 +1,255 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PkgLens.Gui.ViewModels"
+             xmlns:core="using:PkgLens.Core.Shared"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="PkgLens.Gui.Views.Pages.ResignPage"
+             x:DataType="vm:MainWindowViewModel">
+  <ScrollViewer>
+    <StackPanel Margin="24,20" Spacing="16" MaxWidth="820" HorizontalAlignment="Left">
+      <TextBlock Classes="pagetitle" Text="SELF / EBOOT Resigner" />
+  
+      <!-- Menu: a compact list of the tools on this page -->
+      <StackPanel x:Name="ResignMenu" Spacing="10">
+        <TextBlock Classes="pagesubtitle"
+                   Text="Keyless SELF / EBOOT tools, grouped by target — CEX CFW today; DEX OFW resign isn't built yet." />
+  
+        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,2,0,0">
+          <Border Classes="chip cfw"><TextBlock Text="CEX · CFW" /></Border>
+          <TextBlock Text="retail console · custom firmware" FontSize="11" Opacity="0.6" VerticalAlignment="Center" />
+        </StackPanel>
+        <Border Classes="panel" Padding="4">
+          <StackPanel>
+            <Button Classes="row" Tag="inspect" Click="OnResignCardClick"
+                    ToolTip.Tip="Read a SELF/EBOOT header without decrypting.">
+              <Grid ColumnDefinitions="34,*,Auto">
+                <materialIcons:MaterialIcon Grid.Column="0" Kind="Magnify" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="1,0,0,0" />
+                <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
+                  <TextBlock Classes="rowtitle" Text="Inspect SELF / EBOOT" />
+                  <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{x:Static core:FeatureText.InspectSelf}" />
+                </StackPanel>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                  <Border Classes="chip"><TextBlock Text="EBOOT" /></Border>
+                  <Border Classes="chip"><TextBlock Text="READ-ONLY" /></Border>
+                </StackPanel>
+              </Grid>
+            </Button>
+            <Button Classes="row" Tag="decrypt" Click="OnResignCardClick"
+                    ToolTip.Tip="Recover a plaintext ELF from an encrypted EBOOT.BIN / .self.">
+              <Grid ColumnDefinitions="34,*,Auto">
+                <materialIcons:MaterialIcon Grid.Column="0" Kind="LockOpenOutline" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="1,0,0,0" />
+                <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
+                  <TextBlock Classes="rowtitle" Text="Decrypt SELF → ELF" />
+                  <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{x:Static core:FeatureText.DecryptSelf}" />
+                </StackPanel>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                  <Border Classes="chip"><TextBlock Text="EBOOT" /></Border>
+                  <Border Classes="chip"><TextBlock Text="READ-ONLY" /></Border>
+                </StackPanel>
+              </Grid>
+            </Button>
+            <Button Classes="row" Tag="fakesign" Click="OnResignCardClick"
+                    ToolTip.Tip="Wrap a plaintext ELF as a fake-signed SELF that boots on CFW.">
+              <Grid ColumnDefinitions="34,*,Auto">
+                <materialIcons:MaterialIcon Grid.Column="0" Kind="DrawPen" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="1,0,0,0" />
+                <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
+                  <TextBlock Classes="rowtitle" Text="Fake-sign ELF → fSELF" />
+                  <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{x:Static core:FeatureText.FakeSignSelf}" />
+                </StackPanel>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                  <Border Classes="chip"><TextBlock Text="EBOOT" /></Border>
+                  <Border Classes="chip cfw"><TextBlock Text="CFW" /></Border>
+                </StackPanel>
+              </Grid>
+            </Button>
+            <Button Classes="row" Tag="magic" Click="OnResignCardClick"
+                    ToolTip.Tip="Lower the firmware an EBOOT demands so it boots on a lower CFW.">
+              <Grid ColumnDefinitions="34,*,Auto">
+                <materialIcons:MaterialIcon Grid.Column="0" Kind="ArrowDownBoldBox" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="1,0,0,0" />
+                <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
+                  <TextBlock Classes="rowtitle" Text="Magic-patch firmware" />
+                  <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{x:Static core:FeatureText.PatchFirmware}" />
+                </StackPanel>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                  <Border Classes="chip"><TextBlock Text="EBOOT" /></Border>
+                  <Border Classes="chip cfw"><TextBlock Text="CFW" /></Border>
+                </StackPanel>
+              </Grid>
+            </Button>
+            <Button Classes="row" Tag="byte" Click="OnResignCardClick"
+                    ToolTip.Tip="Apply raw hex edits to an EBOOT/ELF.">
+              <Grid ColumnDefinitions="34,*,Auto">
+                <materialIcons:MaterialIcon Grid.Column="0" Kind="CodeBraces" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="1,0,0,0" />
+                <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
+                  <TextBlock Classes="rowtitle" Text="Byte-patch EBOOT" />
+                  <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{x:Static core:FeatureText.BytePatch}" />
+                </StackPanel>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                  <Border Classes="chip"><TextBlock Text="EBOOT" /></Border>
+                  <Border Classes="chip cfw"><TextBlock Text="CFW" /></Border>
+                </StackPanel>
+              </Grid>
+            </Button>
+          </StackPanel>
+        </Border>
+  
+        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,4,0,0">
+          <Border Classes="chip debug"><TextBlock Text="DEX · OFW" /></Border>
+          <TextBlock Text="debug console · official firmware" FontSize="11" Opacity="0.6" VerticalAlignment="Center" />
+        </StackPanel>
+        <TextBlock Classes="carddesc" Margin="2,0,0,0"
+                   Text="{x:Static core:FeatureText.DexLimitation}" />
+      </StackPanel>
+  
+      <!-- Detail: one focused operation at a time -->
+      <StackPanel x:Name="ResignDetail" IsVisible="False" Spacing="10">
+        <Button Classes="back" Content="‹  All resign tools" Click="OnResignBack" />
+  
+        <!-- Inspect -->
+        <StackPanel x:Name="ResignOpInspect" IsVisible="False" Spacing="10">
+          <TextBlock Text="Inspect SELF / EBOOT" FontWeight="SemiBold" FontSize="14" />
+          <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.75"
+                     Text="Read a SELF/EBOOT header — program type, key revision, control blocks and segments. No key needed." />
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <Button Content="Browse SELF / EBOOT…" Click="OnSelfBrowse" />
+            <TextBlock x:Name="SelfFileText" VerticalAlignment="Center" FontSize="12" Opacity="0.8"
+                       TextTrimming="CharacterEllipsis" Text="(none)" />
+          </StackPanel>
+          <Border x:Name="SelfInfoBox" IsVisible="False"
+                  BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="1"
+                  CornerRadius="3" Padding="12">
+            <TextBlock x:Name="SelfInfoText" FontFamily="Consolas,monospace" FontSize="12" TextWrapping="Wrap" />
+          </Border>
+        </StackPanel>
+  
+        <!-- Fake-sign ELF → fSELF -->
+        <StackPanel x:Name="ResignOpFakeSign" IsVisible="False" Spacing="10">
+          <TextBlock Text="Fake-sign ELF → fSELF" FontWeight="SemiBold" FontSize="14" />
+          <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.75"
+                     Text="Pick a decrypted ELF; PkgLens writes a fake-signed NON-DRM SELF (no keys). It runs on CFW — signature checks patched — not on stock retail." />
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <Button Content="Fake-sign an ELF…" Click="OnMakeFself" />
+            <CheckBox x:Name="FselfNpdrmCheck" Content="NPDRM (app type 8)" VerticalAlignment="Center"
+                      ToolTip.Tip="Tag the fSELF as NPDRM (app type 8) for use inside an NPDRM package, instead of a plain app (type 4)." />
+          </StackPanel>
+          <Expander x:Name="FselfCustomExpander" Header="Custom sign fields (optional)">
+            <StackPanel Spacing="8" Margin="0,4">
+              <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.7"
+                         Text="Advanced — leave every field blank to use the standard fSELF defaults, which is what most repacks want. Each field matches a specific SDK / firmware / console profile; fill only the ones you need. Hover a box for what it does." />
+              <Grid ColumnDefinitions="100,10,*" RowDefinitions="Auto,6,Auto,6,Auto,6,Auto,6,Auto,6,Auto,6,Auto,6,Auto">
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="Auth ID" VerticalAlignment="Center" />
+                <TextBox   Grid.Row="0" Grid.Column="2" x:Name="FselfAuthIdBox"
+                           Watermark="0x1010000001000003" FontFamily="Consolas,monospace"
+                           ToolTip.Tip="app_info authentication id (16 hex digits). Blank = the standard fSELF default 0x1010000001000003." />
+                <TextBlock Grid.Row="2" Grid.Column="0" Text="Vendor ID" VerticalAlignment="Center" />
+                <TextBox   Grid.Row="2" Grid.Column="2" x:Name="FselfVendorIdBox"
+                           Watermark="0x01000002" FontFamily="Consolas,monospace"
+                           ToolTip.Tip="app_info vendor id (up to 8 hex digits). Blank = the default 0x01000002." />
+                <TextBlock Grid.Row="4" Grid.Column="0" Text="App version" VerticalAlignment="Center" />
+                <TextBox   Grid.Row="4" Grid.Column="2" x:Name="FselfAppVerBox"
+                           Watermark="0x0001000000000000" FontFamily="Consolas,monospace"
+                           ToolTip.Tip="app_info version field (16 hex digits). Blank = the default 0x0001000000000000." />
+                <TextBlock Grid.Row="6" Grid.Column="0" Text="FW version" VerticalAlignment="Center" />
+                <TextBox   Grid.Row="6" Grid.Column="2" x:Name="FselfFwVerBox"
+                           Watermark="e.g. 4.46 (blank = unset)" FontFamily="Consolas,monospace"
+                           ToolTip.Tip="Minimum firmware the executable claims to need, as M.NN (e.g. 4.46), written into the SELF's digest block. Blank = leave it unset." />
+                <TextBlock Grid.Row="8" Grid.Column="0" Text="Control flags" VerticalAlignment="Center" />
+                <TextBox   Grid.Row="8" Grid.Column="2" x:Name="FselfCtrlFlagsBox"
+                           Watermark="e.g. 0000…0000 — 64 hex chars (blank = omit)" FontFamily="Consolas,monospace"
+                           ToolTip.Tip="The 32-byte SELF control-flags block, as exactly 64 hex characters. Advanced; blank = omit the block entirely (the default)." />
+                <TextBlock Grid.Row="10" Grid.Column="0" Text="Content ID" VerticalAlignment="Center" />
+                <TextBox   Grid.Row="10" Grid.Column="2" x:Name="FselfContentIdBox"
+                           Watermark="UP0001-NPUB30910_00-EXAMPLE000000001" FontFamily="Consolas,monospace"
+                           ToolTip.Tip="NPDRM content id (37 chars). Used only with the NPDRM option; blank = the fake default id." />
+                <TextBlock Grid.Row="12" Grid.Column="0" Text="NP license" VerticalAlignment="Center" />
+                <TextBox   Grid.Row="12" Grid.Column="2" x:Name="FselfNpLicenseBox"
+                           Watermark="FREE | LOCAL | NETWORK (blank = default LOCAL)" FontFamily="Consolas,monospace"
+                           ToolTip.Tip="NPDRM license type written into the control block. NPDRM only; blank = the default (LOCAL)." />
+                <TextBlock Grid.Row="14" Grid.Column="0" Text="NP app type" VerticalAlignment="Center" />
+                <TextBox   Grid.Row="14" Grid.Column="2" x:Name="FselfNpAppTypeBox"
+                           Watermark="SPRX | EXEC | USPRX | UEXEC (blank = default EXEC)" FontFamily="Consolas,monospace"
+                           ToolTip.Tip="NPDRM app type (U* = update). NPDRM only; blank = the default (EXEC)." />
+              </Grid>
+            </StackPanel>
+          </Expander>
+          <TextBlock x:Name="FselfNotes" TextWrapping="Wrap" FontSize="12" Opacity="0.7" IsVisible="False" />
+        </StackPanel>
+  
+        <!-- Decrypt SELF → ELF -->
+        <StackPanel x:Name="ResignOpDecrypt" IsVisible="False" Spacing="10">
+          <TextBlock Text="Decrypt SELF → ELF" FontWeight="SemiBold" FontSize="14" />
+          <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.75"
+                     Text="Decrypt an encrypted EBOOT.BIN / .self back to a plaintext ELF. Licensed SELFs resolve RAPs automatically from the library." />
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <Button Content="Decrypt EBOOT.BIN → ELF…" Click="OnUnself" />
+            <CheckBox x:Name="UnselfThenResignCheck" Content="then fake-sign to fSELF" VerticalAlignment="Center" />
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <Button Content="Override RAP…" Click="OnPickRap" />
+            <TextBlock x:Name="UnselfRapText" VerticalAlignment="Center" FontSize="12" Opacity="0.8"
+                       TextTrimming="CharacterEllipsis" Text="(auto from RAP library)" />
+          </StackPanel>
+          <Border x:Name="UnselfBanner" Classes="resultbanner" IsVisible="False">
+            <Grid ColumnDefinitions="Auto,10,*,Auto">
+              <TextBlock Grid.Column="0" x:Name="UnselfBannerIcon" Classes="bannericon" Text="✓" />
+              <StackPanel Grid.Column="2" Spacing="3">
+                <TextBlock x:Name="UnselfBannerTitle" Classes="bannertitle" />
+                <SelectableTextBlock x:Name="UnselfBannerPath" Classes="bannerpath" IsVisible="False" />
+              </StackPanel>
+              <Button Grid.Column="3" x:Name="UnselfBannerShow" Content="Show in folder"
+                      Click="OnShowResultInFolder" IsVisible="False" VerticalAlignment="Center" Margin="10,0,0,0" />
+            </Grid>
+          </Border>
+        </StackPanel>
+  
+        <!-- Magic-patch firmware -->
+        <StackPanel x:Name="ResignOpMagic" IsVisible="False" Spacing="10">
+          <TextBlock Text="Magic-patch firmware" FontWeight="SemiBold" FontSize="14" />
+          <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.75"
+                     Text="Lower the firmware version an EBOOT demands so a higher-firmware game boots on a lower CFW. Pick an EBOOT.BIN/.self (decrypted automatically) or a plaintext ELF; the result is fake-signed." />
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <TextBlock Text="Target firmware" VerticalAlignment="Center" FontSize="12" />
+            <TextBox x:Name="MagicFwBox" Width="90" Watermark="4.00" FontFamily="Consolas,monospace"
+                     ToolTip.Tip="The firmware version to write into the EBOOT's SDK field, e.g. 4.00 — lower it so a higher-firmware game boots on a lower CFW." />
+            <Button Content="Magic-patch EBOOT…" Click="OnMagicPatch" />
+          </StackPanel>
+          <TextBlock x:Name="MagicNotes" TextWrapping="Wrap" FontSize="12" Opacity="0.7" IsVisible="False" />
+        </StackPanel>
+  
+        <!-- Byte-patch EBOOT -->
+        <StackPanel x:Name="ResignOpByte" IsVisible="False" Spacing="10">
+          <TextBlock Text="Byte-patch EBOOT" FontWeight="SemiBold" FontSize="14" />
+          <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.75"
+                     Text="Apply raw byte edits to an EBOOT/ELF — a hex find→replace (equal length) and/or an at-offset overwrite. A SELF/EBOOT input is decrypted first; tick 'fake-sign' to write the result back as a CFW-ready fSELF." />
+          <Grid ColumnDefinitions="86,10,*" RowDefinitions="Auto,6,Auto,6,Auto">
+            <TextBlock Grid.Row="0" Grid.Column="0" Text="Find (hex)" VerticalAlignment="Center" FontSize="12" />
+            <TextBox   Grid.Row="0" Grid.Column="2" x:Name="PatchFindBox" Watermark="e.g. 90909090"
+                       FontFamily="Consolas,monospace"
+                       ToolTip.Tip="Bytes to search for, as hex. Replaced everywhere it occurs. Leave blank to skip find/replace." />
+            <TextBlock Grid.Row="2" Grid.Column="0" Text="Replace (hex)" VerticalAlignment="Center" FontSize="12" />
+            <TextBox   Grid.Row="2" Grid.Column="2" x:Name="PatchReplaceBox" Watermark="same length as find"
+                       FontFamily="Consolas,monospace"
+                       ToolTip.Tip="Replacement bytes, as hex. Must be exactly the same length as Find." />
+            <TextBlock Grid.Row="4" Grid.Column="0" Text="At offset" VerticalAlignment="Center" FontSize="12" />
+            <StackPanel Grid.Row="4" Grid.Column="2" Orientation="Horizontal" Spacing="6">
+              <TextBox x:Name="PatchAtOffsetBox" Width="110" Watermark="0x1234" FontFamily="Consolas,monospace"
+                       ToolTip.Tip="Offset into the ELF to overwrite (0x-hex or decimal). Leave blank to skip." />
+              <TextBlock Text="=" VerticalAlignment="Center" />
+              <TextBox x:Name="PatchAtBytesBox" Width="200" Watermark="hex bytes" FontFamily="Consolas,monospace"
+                       ToolTip.Tip="Bytes to write at the offset, as hex." />
+            </StackPanel>
+          </Grid>
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <Button Content="Byte-patch EBOOT…" Click="OnBytePatch" />
+            <CheckBox x:Name="BytePatchResignCheck" Content="fake-sign output (fSELF)" VerticalAlignment="Center"
+                      ToolTip.Tip="Write the patched result as a fake-signed SELF. Always on when the input was a SELF/EBOOT.BIN." />
+            <CheckBox x:Name="BytePatchNpdrmCheck" Content="NPDRM" VerticalAlignment="Center"
+                      ToolTip.Tip="Tag the fSELF as NPDRM (app type 8)." />
+          </StackPanel>
+          <TextBlock x:Name="BytePatchNotes" TextWrapping="Wrap" FontSize="12" Opacity="0.7" IsVisible="False" />
+        </StackPanel>
+      </StackPanel>
+    </StackPanel>
+  </ScrollViewer>
+  
+</UserControl>

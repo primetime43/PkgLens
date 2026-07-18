@@ -1,0 +1,144 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PkgLens.Gui.ViewModels"
+             xmlns:core="using:PkgLens.Core.Shared"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="PkgLens.Gui.Views.Pages.PackagePage"
+             x:DataType="vm:MainWindowViewModel">
+  <Grid>
+    <TextBlock IsVisible="{Binding !HasPackage}"
+               Text="Open a .pkg file (File → Open), or drag one onto the window."
+               TextAlignment="Center" TextWrapping="Wrap" MaxWidth="420"
+               HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.45" />
+  
+    <Border IsVisible="{Binding HasPackage}">
+      <Panel DataContext="{Binding Package}">
+        <DockPanel x:DataType="vm:PackageViewModel">
+  
+          <!-- Package info header strip -->
+          <Border DockPanel.Dock="Top" Padding="10,7"
+                  Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                  BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="0,0,0,1">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+              <Image Grid.Column="0" Source="{Binding Icon}" Width="40" Height="40" Margin="0,0,10,0"
+                     VerticalAlignment="Center" IsVisible="{Binding HasIcon}" />
+              <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
+                <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="14" TextTrimming="CharacterEllipsis" />
+                 <TextBlock Text="{Binding ContentIdRaw}" FontFamily="Consolas,monospace" FontSize="11"
+                            Opacity="0.7" TextTrimming="CharacterEllipsis" />
+                 <TextBlock Text="{Binding ClassificationLine}" FontSize="11" FontWeight="SemiBold"
+                            TextTrimming="CharacterEllipsis"
+                            ToolTip.Tip="Package platform, library role, region, and SFO category" />
+                 <TextBlock Text="{Binding SummaryLine}" FontSize="11" Opacity="0.7" />
+              </StackPanel>
+              <TextBlock Grid.Column="2" Text="{Binding StatusCounts}" VerticalAlignment="Center"
+                         FontSize="12" Opacity="0.8" Margin="10,0,0,0" TextAlignment="Right" />
+            </Grid>
+          </Border>
+  
+          <!-- Decryption warning banner (only when contents couldn't be decrypted) -->
+          <Border DockPanel.Dock="Top" IsVisible="{Binding ShowDecryptionWarning}" Padding="10,6"
+                  Background="#33D08A00" BorderBrush="#D08A00" BorderThickness="0,0,0,1">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <TextBlock Text="⚠" VerticalAlignment="Center" Foreground="#D08A00" FontSize="14" />
+              <TextBlock Text="{Binding DecryptionNote}" TextWrapping="Wrap" FontSize="12"
+                         VerticalAlignment="Center" />
+            </StackPanel>
+          </Border>
+  
+          <Border DockPanel.Dock="Top" Padding="8,6"
+                  Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                  BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="0,0,0,1">
+            <Grid ColumnDefinitions="*,Auto,Auto">
+              <TextBox Grid.Column="0" Text="{Binding FileFilter, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                       Watermark="Filter files by name or path…" />
+              <TextBlock Grid.Column="1" Text="{Binding FilterSummary}" IsVisible="{Binding HasFileFilter}"
+                         Margin="10,0" VerticalAlignment="Center" FontSize="11" Opacity="0.65" />
+              <Button Grid.Column="2" Content="Clear" Click="OnClearFileFilter"
+                      IsVisible="{Binding HasFileFilter}" Padding="8,3" VerticalAlignment="Center" />
+            </Grid>
+          </Border>
+  
+          <!-- Selected-file detail line -->
+          <Border DockPanel.Dock="Bottom" IsVisible="{Binding HasSelectedFile}" Padding="10,4"
+                  Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                  BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="0,1,0,0">
+            <TextBlock Text="{Binding SelectedFileDetail}" FontSize="12" FontFamily="Consolas,monospace"
+                       Opacity="0.85" TextTrimming="CharacterEllipsis" />
+          </Border>
+  
+          <Grid ColumnDefinitions="220,4,*">
+  
+          <!-- Folder tree -->
+          <TreeView Grid.Column="0" ItemsSource="{Binding FolderRoots}"
+                    SelectedItem="{Binding SelectedFolder, Mode=TwoWay}"
+                    BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="0,0,1,0">
+            <TreeView.Styles>
+              <Style Selector="TreeViewItem">
+                <Setter Property="IsExpanded" Value="{ReflectionBinding IsExpanded, Mode=TwoWay}" />
+              </Style>
+            </TreeView.Styles>
+            <TreeView.ItemTemplate>
+              <TreeDataTemplate ItemsSource="{Binding DirectoryChildren}" x:DataType="vm:EntryNode">
+                <StackPanel Orientation="Horizontal" Spacing="5">
+                  <TextBlock Text="{Binding Icon}" />
+                  <TextBlock Text="{Binding Name}" />
+                </StackPanel>
+              </TreeDataTemplate>
+            </TreeView.ItemTemplate>
+          </TreeView>
+  
+          <GridSplitter Grid.Column="1" ResizeDirection="Columns"
+                        Background="{DynamicResource SystemControlForegroundBaseLowBrush}" />
+  
+          <!-- File list -->
+          <DataGrid Grid.Column="2" ItemsSource="{Binding CurrentItems}"
+                    SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
+                    DoubleTapped="OnGridDoubleTapped" PointerPressed="OnGridPointerPressed"
+                    IsReadOnly="True" CanUserSortColumns="True" CanUserResizeColumns="True"
+                    CanUserReorderColumns="False"
+                    GridLinesVisibility="None" HeadersVisibility="Column">
+            <DataGrid.ContextMenu>
+              <ContextMenu x:DataType="vm:PackageViewModel">
+                <MenuItem Header="View" Click="OnViewClick" />
+                <MenuItem Header="Extract…" Click="OnExtractClick" />
+                <MenuItem Header="Replace…" Click="OnReplaceClick" />
+                <Separator IsVisible="{Binding HasSelectedPspTool}" />
+                <MenuItem Header="Decrypt manual (DOCUMENT.DAT)…" Click="OnDecryptManual"
+                          IsVisible="{Binding SelectedIsDocument}" />
+                <MenuItem Header="Unpack PBP…" Click="OnUnpackPbp"
+                          IsVisible="{Binding SelectedIsPbp}" />
+                <MenuItem Header="Extract PSP ISO…" Click="OnExtractPspIso"
+                          IsVisible="{Binding SelectedIsPbp}" />
+              </ContextMenu>
+            </DataGrid.ContextMenu>
+            <DataGrid.Columns>
+              <DataGridTemplateColumn Header="Name" Width="*" SortMemberPath="Name">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate x:DataType="vm:EntryNode">
+                    <StackPanel Orientation="Horizontal" Spacing="6" Margin="6,0">
+                      <TextBlock Text="{Binding Icon}" />
+                      <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                      <Border IsVisible="{Binding HasBadge}" VerticalAlignment="Center"
+                              Background="{DynamicResource SystemAccentColor}" CornerRadius="3" Padding="4,1"
+                              ToolTip.Tip="PSP-encrypted entry — its data uses the PSP AES key, not the PS3 key.">
+                        <TextBlock Text="{Binding Badge}" FontSize="10" FontWeight="SemiBold" Foreground="White" />
+                      </Border>
+                    </StackPanel>
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+              <DataGridTextColumn Header="Path" Binding="{Binding FullPath}"
+                                  SortMemberPath="FullPath" Width="2*" MinWidth="120" />
+              <DataGridTextColumn Header="Size" Binding="{Binding SizeDisplay}"
+                                  SortMemberPath="Size" Width="130" MinWidth="80" />
+            </DataGrid.Columns>
+          </DataGrid>
+  
+          </Grid>
+        </DockPanel>
+      </Panel>
+    </Border>
+  </Grid>
+  
+</UserControl>

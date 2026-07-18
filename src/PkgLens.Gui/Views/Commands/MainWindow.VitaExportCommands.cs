@@ -15,7 +15,7 @@ public partial class MainWindow
     private async void OnExportVitaClick(object? sender, RoutedEventArgs e) =>
         await StartVitaExportAsync(Vm.Package?.FilePath);
 
-    private async void OnHomeExportVita(object? sender, RoutedEventArgs e) =>
+    internal async void OnHomeExportVita(object? sender, RoutedEventArgs e) =>
         await StartVitaExportAsync(null);
 
     private async Task StartVitaExportAsync(string? sourcePath)

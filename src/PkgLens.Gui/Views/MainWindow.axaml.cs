@@ -20,6 +20,11 @@ namespace PkgLens.Gui.Views;
 
 public partial class MainWindow : Window
 {
+    private static readonly string[] PageNames =
+    [
+        "HomePage", "SuggestedPage", "PackagePage", "PackPage", "ResignPage", "DecryptPage", "KeysPage"
+    ];
+
     private Border? _dropOverlay;
     private MainWindowViewModel? _subscribedViewModel;
     private bool _showOperationPreflight;
@@ -67,6 +72,17 @@ public partial class MainWindow : Window
     }
 
     private MainWindowViewModel Vm => (MainWindowViewModel)DataContext!;
+
+    private T FindPageControl<T>(string name) where T : Control
+    {
+        foreach (string pageName in PageNames)
+        {
+            if (this.FindControl<UserControl>(pageName)?.FindControl<T>(name) is { } control)
+                return control;
+        }
+
+        throw new InvalidOperationException($"Page control '{name}' was not found.");
+    }
 
     protected override void OnDataContextChanged(EventArgs e)
     {

@@ -6,9 +6,9 @@ namespace PkgLens.Gui.Views;
 
 public partial class MainWindow
 {
-    private void OnBrowsePackageClick(object? sender, RoutedEventArgs e) => Vm.ActiveTool = ViewModels.ToolPage.Package;
+    internal void OnBrowsePackageClick(object? sender, RoutedEventArgs e) => Vm.ActiveTool = ViewModels.ToolPage.Package;
 
-    private async void OnRecommendedActionClick(object? sender, RoutedEventArgs e)
+    internal async void OnRecommendedActionClick(object? sender, RoutedEventArgs e)
     {
         if (sender is not Button { Tag: PackageActionRecommendation recommendation } || Vm.Package is not { } package)
             return;

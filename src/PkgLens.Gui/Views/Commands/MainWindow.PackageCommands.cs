@@ -20,15 +20,15 @@ namespace PkgLens.Gui.Views;
 
 public partial class MainWindow
 {
-    private async void OnRecentPackageClick(object? sender, RoutedEventArgs e)
+    internal async void OnRecentPackageClick(object? sender, RoutedEventArgs e)
     {
         if (sender is Button { Tag: RecentPackageItem recent })
             await Vm.LoadRecentAsync(recent);
     }
 
-    private void OnClearRecentPackages(object? sender, RoutedEventArgs e) => Vm.ClearRecentPackages();
+    internal void OnClearRecentPackages(object? sender, RoutedEventArgs e) => Vm.ClearRecentPackages();
 
-    private void OnClearFileFilter(object? sender, RoutedEventArgs e) => Vm.Package?.ClearFileFilter();
+    internal void OnClearFileFilter(object? sender, RoutedEventArgs e) => Vm.Package?.ClearFileFilter();
 
     private async void OnOpenClick(object? sender, RoutedEventArgs e)
     {
@@ -47,7 +47,7 @@ public partial class MainWindow
             await Vm.LoadAsync(path);
     }
 
-    private async void OnSetKeyClick(object? sender, RoutedEventArgs e)
+    internal async void OnSetKeyClick(object? sender, RoutedEventArgs e)
     {
         var key = await new KeyImportDialog().ShowDialog<byte[]?>(this);
         if (key is null)
@@ -67,7 +67,7 @@ public partial class MainWindow
         }
     }
 
-    private async void OnKeysClick(object? sender, RoutedEventArgs e)
+    internal async void OnKeysClick(object? sender, RoutedEventArgs e)
     {
         var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
         {
@@ -83,7 +83,7 @@ public partial class MainWindow
         }
     }
 
-    private async void OnManageRapsClick(object? sender, RoutedEventArgs e)
+    internal async void OnManageRapsClick(object? sender, RoutedEventArgs e)
     {
         var dialog = new RapManagerDialog(Vm.RapDirectory);
         await dialog.ShowDialog(this);
@@ -91,7 +91,7 @@ public partial class MainWindow
         Vm.RefreshRapStatus();
     }
 
-    private async void OnRapSearchFoldersClick(object? sender, RoutedEventArgs e)
+    internal async void OnRapSearchFoldersClick(object? sender, RoutedEventArgs e)
     {
         var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
         {
@@ -106,10 +106,10 @@ public partial class MainWindow
             Vm.SetRapSearchDirectories(paths);
     }
 
-    private void OnClearRapSearchFoldersClick(object? sender, RoutedEventArgs e) =>
+    internal void OnClearRapSearchFoldersClick(object? sender, RoutedEventArgs e) =>
         Vm.SetRapSearchDirectories(Array.Empty<string>());
 
-    private async void OnExtractClick(object? sender, RoutedEventArgs e)
+    internal async void OnExtractClick(object? sender, RoutedEventArgs e)
     {
         if (Vm.Package is not { SelectedItem: { IsDirectory: false, Entry: not null } node } package)
             return;
@@ -134,7 +134,7 @@ public partial class MainWindow
     }
 
     // Right-click selects the row under the cursor so the context menu acts on it.
-    private void OnGridPointerPressed(object? sender, PointerPressedEventArgs e)
+    internal void OnGridPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (e.GetCurrentPoint(sender as Visual).Properties.IsRightButtonPressed &&
             (e.Source as Control)?.DataContext is EntryNode node &&
@@ -169,7 +169,7 @@ public partial class MainWindow
         });
     }
 
-    private void OnGridDoubleTapped(object? sender, TappedEventArgs e)
+    internal void OnGridDoubleTapped(object? sender, TappedEventArgs e)
     {
         if (Vm.Package?.SelectedItem is not { } node)
             return;
@@ -184,7 +184,7 @@ public partial class MainWindow
             ViewSelected();
     }
 
-    private void OnViewClick(object? sender, RoutedEventArgs e) => ViewSelected();
+    internal void OnViewClick(object? sender, RoutedEventArgs e) => ViewSelected();
 
     private async void ViewSelected()
     {

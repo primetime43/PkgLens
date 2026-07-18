@@ -16,7 +16,7 @@ public partial class MainWindow
     private async void OnConvertCfwClick(object? sender, RoutedEventArgs e) =>
         await StartCfwConversionAsync(Vm.Package?.FilePath);
 
-    private async void OnHomeConvertCfw(object? sender, RoutedEventArgs e) =>
+    internal async void OnHomeConvertCfw(object? sender, RoutedEventArgs e) =>
         await StartCfwConversionAsync(null);
 
     private async Task StartCfwConversionAsync(string? sourcePath,

@@ -48,7 +48,7 @@ public partial class MainWindow
     private void OnScanFolderClick(object? sender, RoutedEventArgs e) =>
         new ScanDialog(Vm.KeysDirectory).ShowDialog(this);
 
-    private void OnDecryptManual(object? sender, RoutedEventArgs e) => ShowManual();
+    internal void OnDecryptManual(object? sender, RoutedEventArgs e) => ShowManual();
 
     /// <summary>Decrypts the selected DOCUMENT.DAT and opens its manual pages in a viewer.</summary>
     private async void ShowManual()
@@ -73,7 +73,7 @@ public partial class MainWindow
         });
     }
 
-    private async void OnUnpackPbp(object? sender, RoutedEventArgs e)
+    internal async void OnUnpackPbp(object? sender, RoutedEventArgs e)
     {
         if (Vm.Package is not { SelectedIsPbp: true } package)
         {
@@ -96,7 +96,7 @@ public partial class MainWindow
         });
     }
 
-    private async void OnExtractPspIso(object? sender, RoutedEventArgs e)
+    internal async void OnExtractPspIso(object? sender, RoutedEventArgs e)
     {
         if (Vm.Package is not { SelectedIsPbp: true } package)
         {
@@ -166,7 +166,7 @@ public partial class MainWindow
     private void OnAboutClick(object? sender, RoutedEventArgs e) =>
         new AboutDialog().ShowDialog(this);
 
-    private async void OnReplaceClick(object? sender, RoutedEventArgs e)
+    internal async void OnReplaceClick(object? sender, RoutedEventArgs e)
     {
         if (Vm.Package is not { SelectedItem: { IsDirectory: false, Entry: not null } node } package)
             return;

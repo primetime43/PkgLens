@@ -31,10 +31,10 @@ public partial class MainWindow
     private void SetDecryptResult(string? path)
     {
         _decryptResultPath = path;
-        this.FindControl<Button>("DecryptViewButton")!.IsVisible = path is not null;
+        FindPageControl<Button>("DecryptViewButton")!.IsVisible = path is not null;
     }
 
-    private async void OnDecryptBrowseFile(object? sender, RoutedEventArgs e)
+    internal async void OnDecryptBrowseFile(object? sender, RoutedEventArgs e)
     {
         var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
@@ -49,12 +49,12 @@ public partial class MainWindow
         if (files.FirstOrDefault()?.TryGetLocalPath() is not { } path)
             return;
         _decryptFile = path;
-        this.FindControl<TextBlock>("DecryptFileText")!.Text = Path.GetFileName(path);
+        FindPageControl<TextBlock>("DecryptFileText")!.Text = Path.GetFileName(path);
         HideResultBanner("DecryptBanner");
         SetDecryptResult(null); // a new input invalidates any previous result
     }
 
-    private async void OnDecryptBrowseRap(object? sender, RoutedEventArgs e)
+    internal async void OnDecryptBrowseRap(object? sender, RoutedEventArgs e)
     {
         var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
@@ -69,10 +69,10 @@ public partial class MainWindow
         if (files.FirstOrDefault()?.TryGetLocalPath() is not { } path)
             return;
         _decryptRap = path;
-        this.FindControl<TextBlock>("DecryptRapText")!.Text = Path.GetFileName(path);
+        FindPageControl<TextBlock>("DecryptRapText")!.Text = Path.GetFileName(path);
     }
 
-    private async void OnDecryptRun(object? sender, RoutedEventArgs e)
+    internal async void OnDecryptRun(object? sender, RoutedEventArgs e)
     {
         if (_decryptFile is null)
         {
@@ -140,7 +140,7 @@ public partial class MainWindow
         });
     }
 
-    private async void OnDecryptView(object? sender, RoutedEventArgs e)
+    internal async void OnDecryptView(object? sender, RoutedEventArgs e)
     {
         if (_decryptResultPath is not { } path || !File.Exists(path))
         {

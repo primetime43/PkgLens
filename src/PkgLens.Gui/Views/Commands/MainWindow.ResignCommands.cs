@@ -34,45 +34,45 @@ public partial class MainWindow
     };
 
     /// <summary>A card was clicked: hide the menu and show just that operation's controls.</summary>
-    private void OnResignCardClick(object? sender, RoutedEventArgs e)
+    internal void OnResignCardClick(object? sender, RoutedEventArgs e)
     {
         if (sender is Control { Tag: string key })
             ShowResignOp(key);
     }
 
     /// <summary>Back link: return to the card menu.</summary>
-    private void OnResignBack(object? sender, RoutedEventArgs e)
+    internal void OnResignBack(object? sender, RoutedEventArgs e)
     {
-        this.FindControl<Control>("ResignMenu")!.IsVisible = true;
-        this.FindControl<Control>("ResignDetail")!.IsVisible = false;
+        FindPageControl<Control>("ResignMenu")!.IsVisible = true;
+        FindPageControl<Control>("ResignDetail")!.IsVisible = false;
     }
 
     private void ShowResignOp(string key)
     {
-        this.FindControl<Control>("ResignMenu")!.IsVisible = false;
-        this.FindControl<Control>("ResignDetail")!.IsVisible = true;
+        FindPageControl<Control>("ResignMenu")!.IsVisible = false;
+        FindPageControl<Control>("ResignDetail")!.IsVisible = true;
         foreach (var (opKey, panel) in ResignOps)
-            this.FindControl<Control>(panel)!.IsVisible = opKey == key;
+            FindPageControl<Control>(panel)!.IsVisible = opKey == key;
     }
 
     // ==================== Home page (main menu) ====================
 
-    private void OnHomeOpenPkg(object? sender, RoutedEventArgs e) => OnOpenClick(sender, e);
-    private void OnHomeScan(object? sender, RoutedEventArgs e) => OnScanFolderClick(sender, e);
-    private void OnHomeFolderInfo(object? sender, RoutedEventArgs e) => OnFolderInfoClick(sender, e);
-    private void OnHomePack(object? sender, RoutedEventArgs e) => Vm.ActiveTool = ToolPage.Pack;
-    private void OnHomeDecrypt(object? sender, RoutedEventArgs e) => Vm.ActiveTool = ToolPage.Decrypt;
-    private void OnHomeKeys(object? sender, RoutedEventArgs e) => Vm.ActiveTool = ToolPage.Keys;
+    internal void OnHomeOpenPkg(object? sender, RoutedEventArgs e) => OnOpenClick(sender, e);
+    internal void OnHomeScan(object? sender, RoutedEventArgs e) => OnScanFolderClick(sender, e);
+    internal void OnHomeFolderInfo(object? sender, RoutedEventArgs e) => OnFolderInfoClick(sender, e);
+    internal void OnHomePack(object? sender, RoutedEventArgs e) => Vm.ActiveTool = ToolPage.Pack;
+    internal void OnHomeDecrypt(object? sender, RoutedEventArgs e) => Vm.ActiveTool = ToolPage.Decrypt;
+    internal void OnHomeKeys(object? sender, RoutedEventArgs e) => Vm.ActiveTool = ToolPage.Keys;
 
     /// <summary>A Home "SELF / EBOOT" card: open the Resign page focused on that operation.</summary>
-    private void OnHomeResign(object? sender, RoutedEventArgs e)
+    internal void OnHomeResign(object? sender, RoutedEventArgs e)
     {
         Vm.ActiveTool = ToolPage.Resign;
         if (sender is Control { Tag: string key })
             ShowResignOp(key);
     }
 
-    private async void OnSelfBrowse(object? sender, RoutedEventArgs e)
+    internal async void OnSelfBrowse(object? sender, RoutedEventArgs e)
     {
         var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
@@ -87,9 +87,9 @@ public partial class MainWindow
         if (files.FirstOrDefault()?.TryGetLocalPath() is not { } path)
             return;
 
-        this.FindControl<TextBlock>("SelfFileText")!.Text = Path.GetFileName(path);
-        var box = this.FindControl<Border>("SelfInfoBox")!;
-        var text = this.FindControl<TextBlock>("SelfInfoText")!;
+        FindPageControl<TextBlock>("SelfFileText")!.Text = Path.GetFileName(path);
+        var box = FindPageControl<Border>("SelfInfoBox")!;
+        var text = FindPageControl<TextBlock>("SelfInfoText")!;
 
         await RunOperationAsync("Inspecting SELF…", "SELF inspection failed", async (token, _) =>
         {
@@ -105,7 +105,7 @@ public partial class MainWindow
         });
     }
 
-    private async void OnMakeFself(object? sender, RoutedEventArgs e)
+    internal async void OnMakeFself(object? sender, RoutedEventArgs e)
     {
         var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
@@ -120,7 +120,7 @@ public partial class MainWindow
         if (files.FirstOrDefault()?.TryGetLocalPath() is not { } input)
             return;
 
-        bool npdrm = this.FindControl<CheckBox>("FselfNpdrmCheck")!.IsChecked == true;
+        bool npdrm = FindPageControl<CheckBox>("FselfNpdrmCheck")!.IsChecked == true;
 
         var opts = new PkgLens.Core.Ps3.Self.SelfBuilder.FakeSelfOptions { Npdrm = npdrm };
         if (!TryReadFselfCustomFields(opts, out string? fieldError))
@@ -158,7 +158,7 @@ public partial class MainWindow
 
     private void ShowFselfNotes(string? text)
     {
-        var notes = this.FindControl<TextBlock>("FselfNotes")!;
+        var notes = FindPageControl<TextBlock>("FselfNotes")!;
         notes.Text = text ?? string.Empty;
         notes.IsVisible = !string.IsNullOrEmpty(text);
     }
@@ -166,20 +166,20 @@ public partial class MainWindow
     private bool TryReadFselfCustomFields(PkgLens.Core.Ps3.Self.SelfBuilder.FakeSelfOptions opts, out string? error)
     {
         error = null;
-        if (!TryHexU64(this.FindControl<TextBox>("FselfAuthIdBox")!.Text, "Auth ID", out var authId, out error)) return false;
+        if (!TryHexU64(FindPageControl<TextBox>("FselfAuthIdBox")!.Text, "Auth ID", out var authId, out error)) return false;
         if (authId is not null) opts.AuthId = authId;
 
-        if (!TryHexU64(this.FindControl<TextBox>("FselfVendorIdBox")!.Text, "Vendor ID", out var vendor, out error)) return false;
+        if (!TryHexU64(FindPageControl<TextBox>("FselfVendorIdBox")!.Text, "Vendor ID", out var vendor, out error)) return false;
         if (vendor is not null)
         {
             if (vendor > uint.MaxValue) { error = "Vendor ID must fit in 32 bits."; return false; }
             opts.VendorId = (uint)vendor;
         }
 
-        if (!TryHexU64(this.FindControl<TextBox>("FselfAppVerBox")!.Text, "App version", out var ver, out error)) return false;
+        if (!TryHexU64(FindPageControl<TextBox>("FselfAppVerBox")!.Text, "App version", out var ver, out error)) return false;
         if (ver is not null) opts.AppVersion = ver;
 
-        string fw = (this.FindControl<TextBox>("FselfFwVerBox")!.Text ?? string.Empty).Trim();
+        string fw = (FindPageControl<TextBox>("FselfFwVerBox")!.Text ?? string.Empty).Trim();
         if (fw.Length > 0)
         {
             string[] parts = fw.Split('.');
@@ -192,7 +192,7 @@ public partial class MainWindow
             opts.FirmwareVersion = major * 10000UL + minor * 100UL;
         }
 
-        string flagsText = (this.FindControl<TextBox>("FselfCtrlFlagsBox")!.Text ?? string.Empty).Trim();
+        string flagsText = (FindPageControl<TextBox>("FselfCtrlFlagsBox")!.Text ?? string.Empty).Trim();
         if (flagsText.Length > 0)
         {
             if (flagsText.StartsWith("0x", StringComparison.OrdinalIgnoreCase)) flagsText = flagsText[2..];
@@ -203,10 +203,10 @@ public partial class MainWindow
             opts.ControlFlags = flags;
         }
 
-        string cid = (this.FindControl<TextBox>("FselfContentIdBox")!.Text ?? string.Empty).Trim();
+        string cid = (FindPageControl<TextBox>("FselfContentIdBox")!.Text ?? string.Empty).Trim();
         if (cid.Length > 0) opts.ContentId = cid;
 
-        string npLic = (this.FindControl<TextBox>("FselfNpLicenseBox")!.Text ?? string.Empty).Trim();
+        string npLic = (FindPageControl<TextBox>("FselfNpLicenseBox")!.Text ?? string.Empty).Trim();
         if (npLic.Length > 0)
         {
             if (!PkgLens.Core.Ps3.Self.SelfBuilder.TryParseNpLicenseType(npLic, out uint lic))
@@ -217,7 +217,7 @@ public partial class MainWindow
             opts.NpLicenseType = lic;
         }
 
-        string npApp = (this.FindControl<TextBox>("FselfNpAppTypeBox")!.Text ?? string.Empty).Trim();
+        string npApp = (FindPageControl<TextBox>("FselfNpAppTypeBox")!.Text ?? string.Empty).Trim();
         if (npApp.Length > 0)
         {
             if (!PkgLens.Core.Ps3.Self.SelfBuilder.TryParseNpAppType(npApp, out uint at))

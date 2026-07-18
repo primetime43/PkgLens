@@ -1,0 +1,71 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PkgLens.Gui.ViewModels"
+             xmlns:core="using:PkgLens.Core.Shared"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="PkgLens.Gui.Views.Pages.SuggestedPage"
+             x:DataType="vm:MainWindowViewModel">
+  <Grid>
+    <TextBlock IsVisible="{Binding !HasPackage}"
+               Text="Open a .pkg file to see suggested actions."
+               TextAlignment="Center" TextWrapping="Wrap" MaxWidth="420"
+               HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.45" />
+  
+    <ScrollViewer IsVisible="{Binding HasPackage}">
+      <Panel DataContext="{Binding Package}">
+        <StackPanel x:DataType="vm:PackageViewModel"
+                    Margin="24,20" Spacing="16" MaxWidth="820" HorizontalAlignment="Left">
+        <Grid ColumnDefinitions="Auto,*">
+          <Image Grid.Column="0" Source="{Binding Icon}" Width="56" Height="56" Margin="0,0,12,0"
+                 VerticalAlignment="Center" IsVisible="{Binding HasIcon}" />
+          <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+            <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="18" TextTrimming="CharacterEllipsis" />
+             <TextBlock Text="{Binding ContentIdRaw}" FontFamily="Consolas,monospace" FontSize="11"
+                        Opacity="0.7" TextTrimming="CharacterEllipsis" />
+             <TextBlock Text="{Binding ClassificationLine}" FontSize="12" FontWeight="SemiBold"
+                        TextWrapping="Wrap" />
+             <TextBlock Text="{Binding SummaryLine}" FontSize="11" Opacity="0.7" />
+          </StackPanel>
+        </Grid>
+  
+        <Border Classes="panel" Padding="14,11">
+          <StackPanel Spacing="3">
+            <TextBlock Text="{Binding RecommendationHeading}" FontWeight="SemiBold" FontSize="14" />
+            <TextBlock Text="{Binding RecommendationSummary}" TextWrapping="Wrap" FontSize="12" Opacity="0.75" />
+          </StackPanel>
+        </Border>
+  
+        <StackPanel Spacing="8">
+          <TextBlock Classes="sectionhead" Text="RECOMMENDED ACTIONS" />
+          <Border Classes="panel" Padding="4">
+            <ItemsControl ItemsSource="{Binding Recommendations}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="core:PackageActionRecommendation">
+                  <Button Classes="row" Tag="{Binding}" Click="OnRecommendedActionClick"
+                          HorizontalContentAlignment="Stretch">
+                    <Grid ColumnDefinitions="34,*,Auto">
+                      <materialIcons:MaterialIcon Grid.Column="0" Kind="LightbulbOnOutline" Width="20" Height="20"
+                                                  HorizontalAlignment="Left" VerticalAlignment="Center" />
+                      <StackPanel Grid.Column="1" Spacing="1" Margin="0,0,12,0" VerticalAlignment="Center">
+                        <TextBlock Classes="rowtitle" Text="{Binding Title}" />
+                        <TextBlock Classes="carddesc" Text="{Binding Description}" TextWrapping="Wrap" />
+                      </StackPanel>
+                      <Border Grid.Column="2" Classes="chip" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Badge}" />
+                      </Border>
+                    </Grid>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </Border>
+        </StackPanel>
+  
+        <Button Content="Browse package files →" Click="OnBrowsePackageClick"
+                HorizontalAlignment="Left" Padding="12,6" />
+        </StackPanel>
+      </Panel>
+    </ScrollViewer>
+  </Grid>
+  
+</UserControl>

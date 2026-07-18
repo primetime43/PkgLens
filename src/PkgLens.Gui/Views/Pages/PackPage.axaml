@@ -1,0 +1,108 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PkgLens.Gui.ViewModels"
+             xmlns:core="using:PkgLens.Core.Shared"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="PkgLens.Gui.Views.Pages.PackPage"
+             x:DataType="vm:MainWindowViewModel">
+  <ScrollViewer>
+    <StackPanel Margin="24,20" Spacing="16" MaxWidth="720" HorizontalAlignment="Left">
+      <StackPanel Spacing="3">
+        <TextBlock Classes="pagetitle" Text="Pack folder → .pkg" />
+        <TextBlock Classes="pagesubtitle"
+                   Text="{x:Static core:FeatureText.PackPageIntro}" />
+        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+          <Border Classes="chip"><TextBlock Text="PKG" /></Border>
+          <Border Classes="chip cfw"><TextBlock Text="CEX · CFW" /></Border>
+          <Border Classes="chip debug"><TextBlock Text="DEX · OFW" /></Border>
+        </StackPanel>
+      </StackPanel>
+  
+      <!-- Source -->
+      <Border Classes="panel">
+        <StackPanel Spacing="12">
+          <TextBlock Classes="sectionhead" Text="SOURCE" />
+          <Grid ColumnDefinitions="120,*" RowDefinitions="Auto,10,Auto,10,Auto,10,Auto,10,Auto">
+            <TextBlock Grid.Row="0" Grid.Column="0" Classes="fieldlabel" Text="Source folder" />
+            <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="8">
+              <Button Content="Browse…" Click="OnPackBrowseFolder" />
+              <TextBlock x:Name="PackFolderText" VerticalAlignment="Center" FontSize="12" Opacity="0.8"
+                         TextTrimming="CharacterEllipsis" Text="(none)" />
+            </StackPanel>
+  
+            <TextBlock Grid.Row="2" Grid.Column="0" Classes="fieldlabel" Text="Content ID" />
+            <TextBox   Grid.Row="2" Grid.Column="1" x:Name="PackContentIdBox"
+                       Watermark="UP0001-NPUB30910_00-EXAMPLE000000001" FontFamily="Consolas,monospace" />
+  
+            <TextBlock Grid.Row="4" Grid.Column="0" Classes="fieldlabel" Text="Install dir" />
+            <TextBox   Grid.Row="4" Grid.Column="1" x:Name="PackInstallDirBox" Watermark="NPUB30910" />
+  
+            <TextBlock Grid.Row="6" Grid.Column="0" Classes="fieldlabel" Text="Content type" />
+            <ComboBox  Grid.Row="6" Grid.Column="1" x:Name="PackContentTypeBox" HorizontalAlignment="Stretch" />
+  
+            <TextBlock Grid.Row="8" Grid.Column="0" Classes="fieldlabel" Text="DRM type" />
+            <StackPanel Grid.Row="8" Grid.Column="1" Orientation="Horizontal" Spacing="10">
+              <NumericUpDown x:Name="PackDrmBox" Minimum="0" Maximum="255" Increment="1" Value="3"
+                             ValueChanged="OnPackDrmChanged" HorizontalAlignment="Left" Width="120" />
+              <TextBlock x:Name="PackDrmName" VerticalAlignment="Center" FontSize="12" Opacity="0.8" Text="Free" />
+            </StackPanel>
+          </Grid>
+        </StackPanel>
+      </Border>
+  
+      <!-- Output -->
+      <Border Classes="panel">
+        <StackPanel Spacing="12">
+          <TextBlock Classes="sectionhead" Text="OUTPUT" />
+          <StackPanel Spacing="12">
+            <RadioButton x:Name="PackRetailRadio" GroupName="PackFin" IsChecked="True" VerticalContentAlignment="Top">
+              <StackPanel Spacing="3" Margin="2,1,0,0">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <TextBlock Text="Retail-encrypted" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center" />
+                  <Border Classes="chip cfw" VerticalAlignment="Center"><TextBlock Text="CEX · CFW" /></Border>
+                </StackPanel>
+                <TextBlock Classes="carddesc" MaxWidth="520"
+                           Text="Installs on jailbroken firmware / HEN. Unsigned — CFW skips the signature check." />
+              </StackPanel>
+            </RadioButton>
+            <RadioButton x:Name="PackDebugRadio" GroupName="PackFin" VerticalContentAlignment="Top">
+              <StackPanel Spacing="3" Margin="2,1,0,0">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <TextBlock Text="Non-finalized (debug)" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center" />
+                  <Border Classes="chip debug" VerticalAlignment="Center"><TextBlock Text="DEX · OFW" /></Border>
+                </StackPanel>
+                <TextBlock Classes="carddesc" MaxWidth="520"
+                           Text="Self-contained; opens in RPCS3 and debug / reference (DEX) consoles." />
+              </StackPanel>
+            </RadioButton>
+          </StackPanel>
+  
+          <Border Height="1" Background="{DynamicResource SystemControlForegroundBaseLowBrush}" />
+  
+          <StackPanel Spacing="6">
+            <CheckBox x:Name="PackResignCheck"
+                      Content="Resign EBOOT.BIN as it packs (boots on CFW without its license)" />
+            <StackPanel Orientation="Horizontal" Spacing="8" Margin="26,0,0,0">
+              <Button Content="Override RAP…" Click="OnPackPickRap" />
+              <TextBlock x:Name="PackRapText" VerticalAlignment="Center" FontSize="12" Opacity="0.8"
+                         TextTrimming="CharacterEllipsis" Text="(auto from RAP library)" />
+            </StackPanel>
+          </StackPanel>
+        </StackPanel>
+      </Border>
+  
+      <!-- Actions -->
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <Button Classes="primary" Content="Pack…" Click="OnPackBuild" />
+        <Button Content="Show folder info…" Click="OnPackFolderInfo" />
+      </StackPanel>
+  
+      <TextBlock x:Name="PackNotes" TextWrapping="Wrap" FontSize="12" Opacity="0.7" IsVisible="False" />
+  
+      <Border x:Name="FolderInfoBox" Classes="panel" IsVisible="False">
+        <TextBlock x:Name="FolderInfoText" FontFamily="Consolas,monospace" FontSize="12" TextWrapping="Wrap" />
+      </Border>
+    </StackPanel>
+  </ScrollViewer>
+  
+</UserControl>

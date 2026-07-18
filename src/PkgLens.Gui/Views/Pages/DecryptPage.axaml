@@ -1,0 +1,62 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PkgLens.Gui.ViewModels"
+             xmlns:core="using:PkgLens.Core.Shared"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="PkgLens.Gui.Views.Pages.DecryptPage"
+             x:DataType="vm:MainWindowViewModel">
+  <ScrollViewer>
+    <StackPanel Margin="24,20" Spacing="16" MaxWidth="720" HorizontalAlignment="Left">
+      <StackPanel Spacing="3">
+        <TextBlock Classes="pagetitle" Text="Decrypt EDAT / SDAT" />
+        <TextBlock Classes="pagesubtitle"
+                   Text="{x:Static core:FeatureText.DecryptPageIntro}" />
+        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+          <Border Classes="chip"><TextBlock Text="EDAT" /></Border>
+          <Border Classes="chip"><TextBlock Text="PS3 / PSP" /></Border>
+          <Border Classes="chip"><TextBlock Text="READ-ONLY" /></Border>
+        </StackPanel>
+      </StackPanel>
+  
+      <Border Classes="panel">
+        <StackPanel Spacing="12">
+          <TextBlock Classes="sectionhead" Text="INPUT" />
+          <Grid ColumnDefinitions="110,*" RowDefinitions="Auto,10,Auto">
+            <TextBlock Grid.Row="0" Grid.Column="0" Classes="fieldlabel" Text="EDAT file" />
+            <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="8">
+              <Button Content="Browse…" Click="OnDecryptBrowseFile" />
+              <TextBlock x:Name="DecryptFileText" VerticalAlignment="Center" FontSize="12" Opacity="0.8"
+                         TextTrimming="CharacterEllipsis" Text="(none)" />
+            </StackPanel>
+  
+            <TextBlock Grid.Row="2" Grid.Column="0" Classes="fieldlabel" Text="RAP override" />
+            <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Spacing="8">
+              <Button Content="Browse…" Click="OnDecryptBrowseRap" />
+              <TextBlock x:Name="DecryptRapText" VerticalAlignment="Center" FontSize="12" Opacity="0.8"
+                         TextTrimming="CharacterEllipsis" Text="(auto / not needed)" />
+            </StackPanel>
+          </Grid>
+        </StackPanel>
+      </Border>
+  
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <Button Classes="primary" Content="Decrypt…" Click="OnDecryptRun" />
+        <Button x:Name="DecryptViewButton" Content="View result…" Click="OnDecryptView" IsVisible="False"
+                ToolTip.Tip="Show the decrypted file's contents (image, text, or hex)." />
+      </StackPanel>
+  
+      <Border x:Name="DecryptBanner" Classes="resultbanner" IsVisible="False">
+        <Grid ColumnDefinitions="Auto,10,*,Auto">
+          <TextBlock Grid.Column="0" x:Name="DecryptBannerIcon" Classes="bannericon" Text="✓" />
+          <StackPanel Grid.Column="2" Spacing="3">
+            <TextBlock x:Name="DecryptBannerTitle" Classes="bannertitle" />
+            <SelectableTextBlock x:Name="DecryptBannerPath" Classes="bannerpath" IsVisible="False" />
+          </StackPanel>
+          <Button Grid.Column="3" x:Name="DecryptBannerShow" Content="Show in folder"
+                  Click="OnShowResultInFolder" IsVisible="False" VerticalAlignment="Center" Margin="10,0,0,0" />
+        </Grid>
+      </Border>
+    </StackPanel>
+  </ScrollViewer>
+  
+</UserControl>

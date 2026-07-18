@@ -23,14 +23,14 @@ public partial class MainWindow
 {
     private void ShowMagicNotes(string? text)
     {
-        var notes = this.FindControl<TextBlock>("MagicNotes")!;
+        var notes = FindPageControl<TextBlock>("MagicNotes")!;
         notes.Text = text ?? string.Empty;
         notes.IsVisible = !string.IsNullOrEmpty(text);
     }
 
-    private async void OnMagicPatch(object? sender, RoutedEventArgs e)
+    internal async void OnMagicPatch(object? sender, RoutedEventArgs e)
     {
-        string fw = (this.FindControl<TextBox>("MagicFwBox")!.Text ?? string.Empty).Trim();
+        string fw = (FindPageControl<TextBox>("MagicFwBox")!.Text ?? string.Empty).Trim();
         var parts = fw.Split('.');
         if (parts.Length != 2 || !int.TryParse(parts[0], out int major) || !int.TryParse(parts[1], out int minor)
             || major is < 0 or > 15 || minor is < 0 or > 99)
@@ -106,18 +106,18 @@ public partial class MainWindow
 
     private void ShowBytePatchNotes(string? text)
     {
-        var notes = this.FindControl<TextBlock>("BytePatchNotes")!;
+        var notes = FindPageControl<TextBlock>("BytePatchNotes")!;
         notes.Text = text ?? string.Empty;
         notes.IsVisible = !string.IsNullOrEmpty(text);
     }
 
-    private async void OnBytePatch(object? sender, RoutedEventArgs e)
+    internal async void OnBytePatch(object? sender, RoutedEventArgs e)
     {
         // Parse the find/replace and at-offset inputs up front so we fail before any file picker.
-        string findText = (this.FindControl<TextBox>("PatchFindBox")!.Text ?? string.Empty).Trim();
-        string replaceText = (this.FindControl<TextBox>("PatchReplaceBox")!.Text ?? string.Empty).Trim();
-        string offsetText = (this.FindControl<TextBox>("PatchAtOffsetBox")!.Text ?? string.Empty).Trim();
-        string atBytesText = (this.FindControl<TextBox>("PatchAtBytesBox")!.Text ?? string.Empty).Trim();
+        string findText = (FindPageControl<TextBox>("PatchFindBox")!.Text ?? string.Empty).Trim();
+        string replaceText = (FindPageControl<TextBox>("PatchReplaceBox")!.Text ?? string.Empty).Trim();
+        string offsetText = (FindPageControl<TextBox>("PatchAtOffsetBox")!.Text ?? string.Empty).Trim();
+        string atBytesText = (FindPageControl<TextBox>("PatchAtBytesBox")!.Text ?? string.Empty).Trim();
 
         byte[]? find = null, replace = null, atBytes = null;
         int atOffset = 0;
@@ -153,8 +153,8 @@ public partial class MainWindow
             return;
         }
 
-        bool resign = this.FindControl<CheckBox>("BytePatchResignCheck")!.IsChecked == true;
-        bool npdrmOverride = this.FindControl<CheckBox>("BytePatchNpdrmCheck")!.IsChecked == true;
+        bool resign = FindPageControl<CheckBox>("BytePatchResignCheck")!.IsChecked == true;
+        bool npdrmOverride = FindPageControl<CheckBox>("BytePatchNpdrmCheck")!.IsChecked == true;
 
         var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {

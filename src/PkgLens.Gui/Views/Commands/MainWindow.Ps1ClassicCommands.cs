@@ -17,7 +17,7 @@ public partial class MainWindow
     private async void OnExportPs1ClassicClick(object? sender, RoutedEventArgs e) =>
         await StartPs1ClassicExportAsync(Vm.Package?.FilePath);
 
-    private async void OnHomeExportPs1(object? sender, RoutedEventArgs e) =>
+    internal async void OnHomeExportPs1(object? sender, RoutedEventArgs e) =>
         await StartPs1ClassicExportAsync(Vm.Package?.FilePath);
 
     private async Task StartPs1ClassicExportAsync(string? sourcePath)

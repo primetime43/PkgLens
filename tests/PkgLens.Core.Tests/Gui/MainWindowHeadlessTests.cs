@@ -2,11 +2,32 @@ using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using PkgLens.Gui.ViewModels;
 using PkgLens.Gui.Views;
+using PkgLens.Gui.Views.Pages;
 
 namespace PkgLens.Core.Tests.Gui;
 
 public sealed class MainWindowHeadlessTests
 {
+    [AvaloniaFact]
+    public void Shell_ComposesDedicatedPageControls()
+    {
+        var window = new MainWindow { DataContext = new MainWindowViewModel() };
+        window.Show();
+
+        Assert.NotNull(window.FindControl<HomePage>("HomePage"));
+        Assert.NotNull(window.FindControl<SuggestedPage>("SuggestedPage"));
+        Assert.NotNull(window.FindControl<PackagePage>("PackagePage"));
+        Assert.NotNull(window.FindControl<KeysPage>("KeysPage"));
+
+        PackPage packPage = window.FindControl<PackPage>("PackPage")!;
+        ResignPage resignPage = window.FindControl<ResignPage>("ResignPage")!;
+        DecryptPage decryptPage = window.FindControl<DecryptPage>("DecryptPage")!;
+        Assert.NotNull(packPage.FindControl<ComboBox>("PackContentTypeBox"));
+        Assert.NotNull(resignPage.FindControl<Control>("ResignMenu"));
+        Assert.NotNull(decryptPage.FindControl<Button>("DecryptViewButton"));
+        window.Close();
+    }
+
     [AvaloniaFact]
     public void Navigation_StaysSynchronizedWithVisiblePage()
     {
@@ -16,18 +37,18 @@ public sealed class MainWindowHeadlessTests
 
         ListBox rail = window.FindControl<ListBox>("ToolRail")!;
         Assert.Equal(7, rail.ItemCount);
-        Assert.True(window.FindControl<ScrollViewer>("HomePage")!.IsVisible);
+        Assert.True(window.FindControl<Control>("HomePage")!.IsVisible);
 
         viewModel.ActiveTool = ToolPage.Keys;
 
         Assert.Equal((int)ToolPage.Keys, rail.SelectedIndex);
-        Assert.True(window.FindControl<ScrollViewer>("KeysPage")!.IsVisible);
-        Assert.False(window.FindControl<ScrollViewer>("HomePage")!.IsVisible);
+        Assert.True(window.FindControl<Control>("KeysPage")!.IsVisible);
+        Assert.False(window.FindControl<Control>("HomePage")!.IsVisible);
 
         rail.SelectedIndex = (int)ToolPage.Decrypt;
 
         Assert.Equal(ToolPage.Decrypt, viewModel.ActiveTool);
-        Assert.True(window.FindControl<ScrollViewer>("DecryptPage")!.IsVisible);
+        Assert.True(window.FindControl<Control>("DecryptPage")!.IsVisible);
         window.Close();
     }
 

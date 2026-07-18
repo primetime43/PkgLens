@@ -34,7 +34,7 @@ public partial class MainWindow
 
     private void PopulatePackContentTypes()
     {
-        var box = this.FindControl<ComboBox>("PackContentTypeBox")!;
+        var box = FindPageControl<ComboBox>("PackContentTypeBox")!;
         box.ItemsSource = PackTypeChoices.Select(t => $"{t} (0x{(uint)t:X})").ToList();
         box.SelectedIndex = 0; // GameExec
     }
@@ -44,7 +44,7 @@ public partial class MainWindow
 
     private string? _packRapPath;
 
-    private async void OnPackPickRap(object? sender, RoutedEventArgs e)
+    internal async void OnPackPickRap(object? sender, RoutedEventArgs e)
     {
         var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
@@ -59,10 +59,10 @@ public partial class MainWindow
         if (files.FirstOrDefault()?.TryGetLocalPath() is not { } path)
             return;
         _packRapPath = path;
-        this.FindControl<TextBlock>("PackRapText")!.Text = Path.GetFileName(path);
+        FindPageControl<TextBlock>("PackRapText")!.Text = Path.GetFileName(path);
     }
 
-    private async void OnPackFolderInfo(object? sender, RoutedEventArgs e)
+    internal async void OnPackFolderInfo(object? sender, RoutedEventArgs e)
     {
         if (_packFolder is null)
         {
@@ -70,8 +70,8 @@ public partial class MainWindow
             return;
         }
 
-        var box = this.FindControl<Border>("FolderInfoBox")!;
-        var text = this.FindControl<TextBlock>("FolderInfoText")!;
+        var box = FindPageControl<Border>("FolderInfoBox")!;
+        var text = FindPageControl<TextBlock>("FolderInfoText")!;
         await RunOperationAsync("Inspecting folder…", "Folder inspection failed", async (token, _) =>
         {
             var report = await Task.Run(() => PkgLens.Core.Shared.GameFolderInfo.Describe(_packFolder), token);
@@ -81,14 +81,14 @@ public partial class MainWindow
         });
     }
 
-    private void OnPackDrmChanged(object? sender, Avalonia.Controls.NumericUpDownValueChangedEventArgs e)
+    internal void OnPackDrmChanged(object? sender, Avalonia.Controls.NumericUpDownValueChangedEventArgs e)
     {
-        var label = this.FindControl<TextBlock>("PackDrmName");
+        var label = FindPageControl<TextBlock>("PackDrmName");
         if (label is not null)
             label.Text = PkgLens.Core.Shared.Models.DrmType.Name((uint)(e.NewValue ?? 3));
     }
 
-    private async void OnPackBrowseFolder(object? sender, RoutedEventArgs e)
+    internal async void OnPackBrowseFolder(object? sender, RoutedEventArgs e)
     {
         var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
         {
@@ -99,22 +99,22 @@ public partial class MainWindow
             return;
 
         _packFolder = folder;
-        this.FindControl<TextBlock>("PackFolderText")!.Text = folder;
+        FindPageControl<TextBlock>("PackFolderText")!.Text = folder;
 
         // Fast-Pack inference to pre-fill the fields (blank fallback if it can't infer).
         await RunOperationAsync("Inspecting package folder…", "Folder inference failed", async (token, _) =>
         {
             var plan = await Task.Run(() => PkgLens.Core.Shared.FolderPackage.Plan(folder), token);
-            this.FindControl<TextBox>("PackContentIdBox")!.Text = plan.ContentId;
-            this.FindControl<TextBox>("PackInstallDirBox")!.Text = plan.InstallDirectory;
-            this.FindControl<NumericUpDown>("PackDrmBox")!.Value = plan.DrmType;
+            FindPageControl<TextBox>("PackContentIdBox")!.Text = plan.ContentId;
+            FindPageControl<TextBox>("PackInstallDirBox")!.Text = plan.InstallDirectory;
+            FindPageControl<NumericUpDown>("PackDrmBox")!.Value = plan.DrmType;
             SelectPackContentType(plan.ContentType);
             ShowPackNotes(plan.Notes.Count > 0 ? "Inferred: " + string.Join("; ", plan.Notes) : null);
             Vm.Status = $"Ready to pack {plan.FileCount} file(s) from {Path.GetFileName(folder)}.";
         });
     }
 
-    private async void OnPackBuild(object? sender, RoutedEventArgs e)
+    internal async void OnPackBuild(object? sender, RoutedEventArgs e)
     {
         if (_packFolder is null)
         {
@@ -122,16 +122,16 @@ public partial class MainWindow
             return;
         }
 
-        string contentId = (this.FindControl<TextBox>("PackContentIdBox")!.Text ?? string.Empty).Trim();
+        string contentId = (FindPageControl<TextBox>("PackContentIdBox")!.Text ?? string.Empty).Trim();
         if (contentId.Length == 0)
         {
             Vm.Status = "A content id is required (e.g. UP0001-NPUB30910_00-EXAMPLE000000001).";
             return;
         }
 
-        string installDir = (this.FindControl<TextBox>("PackInstallDirBox")!.Text ?? string.Empty).Trim();
-        bool retail = this.FindControl<RadioButton>("PackRetailRadio")!.IsChecked == true;
-        bool resign = this.FindControl<CheckBox>("PackResignCheck")!.IsChecked == true;
+        string installDir = (FindPageControl<TextBox>("PackInstallDirBox")!.Text ?? string.Empty).Trim();
+        bool retail = FindPageControl<RadioButton>("PackRetailRadio")!.IsChecked == true;
+        bool resign = FindPageControl<CheckBox>("PackResignCheck")!.IsChecked == true;
 
         string? rapPath = _packRapPath;
         string? rapDirectory = Vm.RapDirectory;
@@ -144,7 +144,7 @@ public partial class MainWindow
             ContentId = contentId,
             InstallDirectory = installDir.Length == 0 ? null : installDir,
             ContentType = SelectedPackContentType(),
-            DrmType = (uint)(this.FindControl<NumericUpDown>("PackDrmBox")!.Value ?? 3),
+            DrmType = (uint)(FindPageControl<NumericUpDown>("PackDrmBox")!.Value ?? 3),
             Finalization = retail ? PkgFinalization.Retail : PkgFinalization.Debug,
             ResignEboot = resign,
             EbootKlicenseeResolver = resign
@@ -188,18 +188,18 @@ public partial class MainWindow
     private void SelectPackContentType(uint value)
     {
         int idx = Array.FindIndex(PackTypeChoices, t => (uint)t == value);
-        if (idx >= 0) this.FindControl<ComboBox>("PackContentTypeBox")!.SelectedIndex = idx;
+        if (idx >= 0) FindPageControl<ComboBox>("PackContentTypeBox")!.SelectedIndex = idx;
     }
 
     private uint SelectedPackContentType()
     {
-        int idx = this.FindControl<ComboBox>("PackContentTypeBox")!.SelectedIndex;
+        int idx = FindPageControl<ComboBox>("PackContentTypeBox")!.SelectedIndex;
         return idx >= 0 ? (uint)PackTypeChoices[idx] : (uint)PkgContentType.GameExec;
     }
 
     private void ShowPackNotes(string? text)
     {
-        var notes = this.FindControl<TextBlock>("PackNotes")!;
+        var notes = FindPageControl<TextBlock>("PackNotes")!;
         notes.Text = text ?? string.Empty;
         notes.IsVisible = !string.IsNullOrEmpty(text);
     }

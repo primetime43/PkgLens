@@ -17,7 +17,7 @@ public partial class MainWindow
     private async void OnExportPspClick(object? sender, RoutedEventArgs e) =>
         await StartPspExportAsync(Vm.Package?.FilePath);
 
-    private async void OnHomeExportPsp(object? sender, RoutedEventArgs e) =>
+    internal async void OnHomeExportPsp(object? sender, RoutedEventArgs e) =>
         await StartPspExportAsync(null);
 
     private async Task StartPspExportAsync(string? sourcePath)

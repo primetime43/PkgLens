@@ -23,7 +23,7 @@ public partial class MainWindow
 {
     private string? _unselfRapPath;
 
-    private async void OnPickRap(object? sender, RoutedEventArgs e)
+    internal async void OnPickRap(object? sender, RoutedEventArgs e)
     {
         var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
@@ -39,10 +39,10 @@ public partial class MainWindow
             return;
 
         _unselfRapPath = path;
-        this.FindControl<TextBlock>("UnselfRapText")!.Text = Path.GetFileName(path);
+        FindPageControl<TextBlock>("UnselfRapText")!.Text = Path.GetFileName(path);
     }
 
-    private async void OnUnself(object? sender, RoutedEventArgs e)
+    internal async void OnUnself(object? sender, RoutedEventArgs e)
     {
         var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
@@ -57,7 +57,7 @@ public partial class MainWindow
         if (files.FirstOrDefault()?.TryGetLocalPath() is not { } input)
             return;
 
-        bool chain = this.FindControl<CheckBox>("UnselfThenResignCheck")!.IsChecked == true;
+        bool chain = FindPageControl<CheckBox>("UnselfThenResignCheck")!.IsChecked == true;
         string? rap = _unselfRapPath;
 
         string baseName = Path.GetFileNameWithoutExtension(input);
@@ -119,11 +119,11 @@ public partial class MainWindow
     /// </summary>
     private void ShowResultBanner(string banner, bool ok, string title, string? path)
     {
-        var box = this.FindControl<Border>(banner)!;
-        var icon = this.FindControl<TextBlock>($"{banner}Icon")!;
-        var titleText = this.FindControl<TextBlock>($"{banner}Title")!;
-        var pathText = this.FindControl<SelectableTextBlock>($"{banner}Path")!;
-        var show = this.FindControl<Button>($"{banner}Show")!;
+        var box = FindPageControl<Border>(banner)!;
+        var icon = FindPageControl<TextBlock>($"{banner}Icon")!;
+        var titleText = FindPageControl<TextBlock>($"{banner}Title")!;
+        var pathText = FindPageControl<SelectableTextBlock>($"{banner}Path")!;
+        var show = FindPageControl<Button>($"{banner}Show")!;
 
         box.Classes.Set("error", !ok);
         icon.Text = ok ? "✓" : "✕"; // ✓ / ✕
@@ -136,10 +136,10 @@ public partial class MainWindow
     }
 
     private void HideResultBanner(string banner)
-        => this.FindControl<Border>(banner)!.IsVisible = false;
+        => FindPageControl<Border>(banner)!.IsVisible = false;
 
     /// <summary>"Show in folder": open the OS file browser with the result file selected.</summary>
-    private void OnShowResultInFolder(object? sender, RoutedEventArgs e)
+    internal void OnShowResultInFolder(object? sender, RoutedEventArgs e)
     {
         if (sender is not Button { Tag: string path } || !File.Exists(path))
             return;
