@@ -1,6 +1,7 @@
 using System.Buffers.Binary;
 using PkgLens.Core.Ps3.Npd;
 using PkgLens.Core.Ps3.Self;
+using PkgLens.Core.Ps2;
 using PkgLens.Core.Psp;
 using PkgLens.Core.Shared.Keys;
 using PkgLens.Core.Shared.Models;
@@ -34,6 +35,65 @@ public sealed class OperationPreflightReport
 /// <summary>Read-only readiness checks shared by GUI decrypt, export, and conversion workflows.</summary>
 public static class OperationPreflight
 {
+    public static OperationPreflightReport Ps2ClassicExport(string inputPath, string outputPath,
+        IKeyProvider keys, string? rapDirectory, bool rebuildCfwPackage)
+    {
+        using var package = File.OpenRead(inputPath);
+        PkgInfo info = PkgReader.Read(package, keys);
+        Ps2ClassicExportEligibility eligibility = Ps2ClassicPackageExporter.CheckEligibility(
+            package, info, keys, rapDirectory);
+        var checks = new List<PreflightCheck>
+        {
+            Check("Package type", eligibility.CanExport, eligibility.Reason),
+            Check("Package key", info.IsDecrypted,
+                info.IsDecrypted ? "PS3 package contents decrypted successfully."
+                    : info.DecryptionNote ?? "The package key could not be resolved."),
+            Check("PS2 disc image", eligibility.CanExport,
+                eligibility.CanExport ? $"Authenticated ISO.BIN.ENC header detected; expected ISO size {FormatBytes(eligibility.IsoSize)}."
+                    : eligibility.Reason),
+            Check("License / RAP", eligibility.RapAvailable,
+                eligibility.RapAvailable
+                    ? eligibility.RapRequired ? $"A RAP for {eligibility.ContentId} is available."
+                        : $"The built-in key for {eligibility.ContentId} is available."
+                    : $"A valid RAP for {eligibility.ContentId} is required."),
+        };
+        if (rebuildCfwPackage)
+        {
+            PkgEntry? edatEntry = info.Entries.FirstOrDefault(entry => entry.IsFile &&
+                Path.GetFileName(entry.Name).Equals("ISO.BIN.EDAT", StringComparison.OrdinalIgnoreCase));
+            checks.Add(Check("CFW package license record", edatEntry is not null,
+                edatEntry is not null ? "ISO.BIN.EDAT is present and will be converted to the standard PS2 Classics placeholder license."
+                    : "ISO.BIN.EDAT is missing; a self-contained CFW package cannot be created."));
+            if (edatEntry is not null)
+            {
+                try
+                {
+                    using Stream edat = PkgReader.OpenEntry(package, info.Header, edatEntry, keys);
+                    NpdInfo npd = EdatFile.ParseHeader(edat);
+                    bool builtIn = npd.ContentId.Equals(Ps2ClassicImage.PlaceholderContentId, StringComparison.OrdinalIgnoreCase) ||
+                                   npd.ContentId.Equals(Ps2ClassicImage.ReactPsnContentId, StringComparison.OrdinalIgnoreCase);
+                    bool available = !npd.NeedsKlicensee || builtIn || RapStore.Find(npd.ContentId, rapDirectory) is not null;
+                    checks.Add(Check("EDAT license / RAP", available,
+                        available ? $"License material for {npd.ContentId} is available."
+                            : $"A valid RAP for the ISO.BIN.EDAT content ID {npd.ContentId} is required."));
+                }
+                catch (Exception ex) when (ex is PkgFormatException or PkgKeyException or ArgumentException)
+                {
+                    checks.Add(Error("EDAT license / RAP", ex.Message));
+                }
+            }
+            checks.Add(Warning("CFW/HEN only", "The rebuilt package is unsigned and will not install on stock firmware."));
+        }
+        long expected = eligibility.IsoSize;
+        if (rebuildCfwPackage)
+            expected = checked(expected + new FileInfo(inputPath).Length);
+        checks.Add(Pass("Expected output", rebuildCfwPackage
+            ? $"Approximately {FormatBytes(expected)} across the ISO and rebuilt package."
+            : $"Exact ISO size: {FormatBytes(expected)}."));
+        return Complete(rebuildCfwPackage ? "Export PS2 Classic and rebuild CFW package" : "Export PS2 Classic ISO",
+            inputPath, outputPath, expected, outputIsDirectory: false, checks);
+    }
+
     public static OperationPreflightReport PspExport(string inputPath, string outputPath,
         PspExportFormat format, IKeyProvider keys)
     {

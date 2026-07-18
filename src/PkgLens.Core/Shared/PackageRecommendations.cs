@@ -7,6 +7,7 @@ namespace PkgLens.Core.Shared;
 public enum PackageRecommendedAction
 {
     ExportPsp,
+    ExportPs2Classic,
     ExportVita,
     ConvertCfw,
     ExtractAll,
@@ -124,6 +125,24 @@ public static class PackageRecommendationEngine
         bool hasExecutables = info.Entries.Any(entry => entry.IsFile && IsPs3Executable(entry.Name));
         bool canConvertForCfw = hasExecutables && info.Header.IsRetail;
         var actions = new List<PackageActionRecommendation>();
+
+        if (info.Metadata.ContentType == PkgContentType.Ps2Classic)
+        {
+            bool hasImage = info.Entries.Any(entry => entry.IsFile &&
+                Path.GetFileName(entry.Name).Equals("ISO.BIN.ENC", StringComparison.OrdinalIgnoreCase));
+            if (hasImage)
+                actions.Add(new(PackageRecommendedAction.ExportPs2Classic, "Export PS2 Classic",
+                    "Resolve the RAP automatically, verify and decrypt ISO.BIN.ENC, then optionally rebuild a CFW/HEN package copy.",
+                    "RECOMMENDED", true));
+            actions.Add(new(PackageRecommendedAction.ExtractAll, "Extract package files",
+                "Extract the original PS2 Classic package directory without decrypting the disc image.", "FOLDER",
+                IsPrimary: !hasImage));
+            AddLicenseAudit(info, actions);
+            actions.Add(Verify());
+            return new(classification,
+                hasImage ? "ISO.BIN.ENC was detected; direct ISO export and CFW/HEN conversion are available."
+                    : "No ISO.BIN.ENC disc image was found; raw extraction is available.", actions);
+        }
 
         if (canConvertForCfw)
         {

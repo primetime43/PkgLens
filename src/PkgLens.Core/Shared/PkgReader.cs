@@ -1,4 +1,5 @@
 using PkgLens.Core.Shared.Formats;
+using PkgLens.Core.Shared.Crypto;
 using PkgLens.Core.Shared.Keys;
 using PkgLens.Core.Shared.Models;
 
@@ -61,6 +62,19 @@ public static class PkgReader
             cancellationToken: cancellationToken, progress: progress);
     }
 
+    public static Stream OpenEntry(Stream stream, PkgHeader header, PkgEntry entry, IKeyProvider keys)
+    {
+        ArgumentNullException.ThrowIfNull(stream);
+        ArgumentNullException.ThrowIfNull(entry);
+        if (!stream.CanRead || !stream.CanSeek)
+            throw new ArgumentException("The package stream must be readable and seekable.", nameof(stream));
+        if (entry.IsDirectory || entry.FileSize > long.MaxValue)
+            throw new PkgFormatException($"Entry '{entry.Name}' cannot be opened as a file stream.");
+
+        PkgDecryptorSet decryptors = ResolveDecryptorSet(header, keys);
+        return new EntryReadStream(stream, header, entry, decryptors, decryptors.For(entry));
+    }
+
     /// <summary>
     /// Extracts every file to <paramref name="outputDir"/>, rebuilding the package's directory tree.
     /// An optional <paramref name="filter"/> selects which entries to write; <paramref name="onExtracted"/>
@@ -118,6 +132,72 @@ public static class PkgReader
     private sealed class InlineProgress<T>(Action<T> report) : IProgress<T>
     {
         public void Report(T value) => report(value);
+    }
+
+    private sealed class EntryReadStream(
+        Stream source, PkgHeader header, PkgEntry entry, PkgDecryptorSet decryptors,
+        IPkgDecryptor decryptor) : Stream
+    {
+        private readonly long _length = checked((long)entry.FileSize);
+        private long _position;
+
+        public override bool CanRead => true;
+        public override bool CanSeek => true;
+        public override bool CanWrite => false;
+        public override long Length => _length;
+        public override long Position
+        {
+            get => _position;
+            set
+            {
+                if (value < 0 || value > _length) throw new ArgumentOutOfRangeException(nameof(value));
+                _position = value;
+            }
+        }
+
+        public override int Read(byte[] buffer, int offset, int count) =>
+            Read(buffer.AsSpan(offset, count));
+
+        public override int Read(Span<byte> buffer)
+        {
+            int count = (int)Math.Min(buffer.Length, _length - _position);
+            if (count <= 0) return 0;
+            long absolute = checked((long)header.DataOffset + (long)entry.FileOffset + _position);
+            source.Position = absolute;
+            int total = 0;
+            while (total < count)
+            {
+                int read = source.Read(buffer.Slice(total, count - total));
+                if (read <= 0) throw new PkgFormatException($"Truncated PKG entry '{entry.Name}'.");
+                total += read;
+            }
+            decryptor.DecryptInPlace(buffer[..count], checked((long)entry.FileOffset + _position));
+            _position += count;
+            return count;
+        }
+
+        public override long Seek(long offset, SeekOrigin origin)
+        {
+            long target = origin switch
+            {
+                SeekOrigin.Begin => offset,
+                SeekOrigin.Current => checked(_position + offset),
+                SeekOrigin.End => checked(_length + offset),
+                _ => throw new ArgumentOutOfRangeException(nameof(origin)),
+            };
+            Position = target;
+            return target;
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing) decryptors.Dispose();
+            base.Dispose(disposing);
+        }
+
+        public override void Flush() { }
+        public override void SetLength(long value) => throw new NotSupportedException();
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
     }
 
     private static string SafeCombine(string rootWithSep, string relative)

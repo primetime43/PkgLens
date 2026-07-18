@@ -20,6 +20,8 @@
         <Separator />
         <MenuItem Header="_Pack folder → .pkg…" Click="OnGoPackClick" />
         <MenuItem Header="_Convert package → CFW…" Click="OnConvertCfwClick" />
+        <MenuItem Header="Export PS_2 Classic…" Click="OnExportPs2ClassicClick"
+                  ToolTip.Tip="Export a PS2 Classic package to ISO and optionally rebuild a CFW/HEN package copy." />
         <MenuItem Header="Export _PSP package…" Click="OnExportPspClick" />
         <MenuItem Header="Export PS_Vita package…" Click="OnExportVitaClick" />
         <MenuItem Header="Extract _all…" Click="OnExtractAllClick"

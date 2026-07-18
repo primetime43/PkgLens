@@ -18,6 +18,9 @@ public partial class MainWindow
             case PackageRecommendedAction.ExportPsp:
                 await StartPspExportAsync(package.FilePath);
                 break;
+            case PackageRecommendedAction.ExportPs2Classic:
+                await StartPs2ClassicExportAsync(package.FilePath);
+                break;
             case PackageRecommendedAction.ExportVita:
                 await StartVitaExportAsync(package.FilePath);
                 break;

@@ -1,0 +1,36 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="PkgLens.Gui.Views.Ps2ClassicExportDialog"
+        Width="580" SizeToContent="Height" CanResize="False"
+        WindowStartupLocation="CenterOwner" Title="Export PS2 Classic">
+  <StackPanel Margin="18" Spacing="14">
+    <StackPanel Spacing="4">
+      <TextBlock Text="Export PS2 Classic" FontSize="20" FontWeight="SemiBold" />
+      <TextBlock Text="PkgLens verifies ISO.BIN.ENC, resolves its RAP automatically, and exports a standard PS2 ISO."
+                 TextWrapping="Wrap" Opacity="0.75" />
+    </StackPanel>
+    <Border Padding="10" Classes="panel">
+      <StackPanel Spacing="3">
+        <TextBlock x:Name="SourceText" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" />
+        <TextBlock x:Name="DetailsText" FontSize="12" Opacity="0.72" TextWrapping="Wrap" />
+      </StackPanel>
+    </Border>
+    <StackPanel Spacing="10">
+      <RadioButton x:Name="IsoOnlyRadio" GroupName="Output" IsChecked="True"
+                   Content="Export ISO only — for PCSX2, archival, or inspection"
+                   ToolTip.Tip="Decrypt and authenticate every ISO.BIN.ENC segment, then save the original PS2 disc image." />
+      <RadioButton x:Name="CfwRadio" GroupName="Output"
+                   Content="Export ISO and rebuild a CFW/HEN package copy"
+                   ToolTip.Tip="Also convert ISO.BIN.ENC and ISO.BIN.EDAT to the standard PS2 Classics placeholder license and rebuild a separate package." />
+    </StackPanel>
+    <Border Padding="10" Background="#160078D4" BorderBrush="#660078D4" BorderThickness="1" CornerRadius="4">
+      <TextBlock TextWrapping="Wrap"
+                 Text="The CFW/HEN option creates a separate unsigned package using the standard PS2 Classics placeholder license. It does not modify the original and will not install on stock firmware." />
+    </Border>
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+      <Button Content="Cancel" Click="OnCancel" ToolTip.Tip="Close without exporting anything." />
+      <Button Content="Continue…" Click="OnContinue" Classes="primary"
+              ToolTip.Tip="Choose the ISO destination and begin the selected workflow." />
+    </StackPanel>
+  </StackPanel>
+</Window>

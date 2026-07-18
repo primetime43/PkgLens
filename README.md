@@ -99,6 +99,10 @@ header, metadata, and `PARAM.SFO`. **File → Convert package → CFW…** perfo
 - Decrypt a minis `DATA.PSAR` (NPUMDIMG) to a mountable `.iso` (`psar decrypt`) — keyless, no RAP.
 - Export a PSP package directly to `EBOOT.PBP`, decrypted `.iso`, or PSP-compatible compressed `.cso`
   (`pspexport`), without manually extracting the package and PBP first.
+- Detect PS2 Classic packages, resolve built-in placeholder/reactPSN keys or a matching RAP automatically,
+  authenticate every `ISO.BIN.ENC` segment, and export the original PS2 `.iso` from the GUI. The guided
+  workflow can also convert `ISO.BIN.ENC` plus `ISO.BIN.EDAT` to the standard placeholder license and
+  stream a separate CFW/HEN-only package copy with a transformation report.
 - Identify Vita app, update, DLC, and theme packages, validate key revisions 2–4, report Vita SFO
   metadata, and export to `app/`, `patch/`, or `addcont/` layout (`vitaexport`). A matching 512-byte
   `work.bin`/RIF can be included; package keys do not replace licenses for inner Vita content.

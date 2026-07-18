@@ -32,6 +32,21 @@ public static class PkgWriter
         CancellationToken cancellationToken = default,
         IProgress<PkgOperationProgress>? progress = null)
     {
+        ArgumentNullException.ThrowIfNull(replacements);
+        Repack(source, info, replacements.ToDictionary(pair => pair.Key,
+            pair => PkgReplacement.FromBytes(pair.Value)), keys, destination,
+            cancellationToken, progress);
+    }
+
+    public static void Repack(
+        Stream source,
+        PkgInfo info,
+        IReadOnlyDictionary<PkgEntry, PkgReplacement> replacements,
+        IKeyProvider keys,
+        Stream destination,
+        CancellationToken cancellationToken = default,
+        IProgress<PkgOperationProgress>? progress = null)
+    {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(info);
         ArgumentNullException.ThrowIfNull(replacements);
@@ -108,11 +123,11 @@ public static class PkgWriter
     }
 
     private static long ReplacementOrOriginalSize(PkgEntry entry,
-        IReadOnlyDictionary<PkgEntry, byte[]> replacements)
+        IReadOnlyDictionary<PkgEntry, PkgReplacement> replacements)
     {
         if (entry.IsDirectory) return 0;
-        if (replacements.TryGetValue(entry, out byte[]? replacement))
-            return replacement.LongLength;
+        if (replacements.TryGetValue(entry, out PkgReplacement? replacement))
+            return replacement.Length;
         if (entry.FileSize > long.MaxValue)
             throw new PkgFormatException($"Entry '{entry.Name}' is too large for this runtime.");
         return (long)entry.FileSize;
@@ -170,7 +185,7 @@ public static class PkgWriter
     }
 
     private static void WriteFiles(Stream source, Stream destination, PkgHeader header,
-        IReadOnlyList<PkgEntry> entries, IReadOnlyDictionary<PkgEntry, byte[]> replacements,
+        IReadOnlyList<PkgEntry> entries, IReadOnlyDictionary<PkgEntry, PkgReplacement> replacements,
         IReadOnlyList<long> fileOffsets, IReadOnlyList<long> fileSizes,
         PkgDecryptorSet decryptors, byte[] buffer, CancellationToken cancellationToken,
         IProgress<PkgOperationProgress>? progress)
@@ -184,7 +199,7 @@ public static class PkgWriter
 
             PkgEntry entry = entries[i];
             IPkgDecryptor decryptor = decryptors.For(entry);
-            if (replacements.TryGetValue(entry, out byte[]? replacement) && !entry.IsDirectory)
+            if (replacements.TryGetValue(entry, out PkgReplacement? replacement) && !entry.IsDirectory)
                 WriteReplacement(destination, replacement, fileOffsets[i], decryptor, buffer,
                     cancellationToken, progress, completedBytes, totalBytes, entry.Name);
             else
@@ -194,16 +209,22 @@ public static class PkgWriter
         }
     }
 
-    private static void WriteReplacement(Stream destination, byte[] replacement, long newOffset,
+    private static void WriteReplacement(Stream destination, PkgReplacement replacement, long newOffset,
         IPkgDecryptor decryptor, byte[] buffer, CancellationToken cancellationToken,
         IProgress<PkgOperationProgress>? progress, long completedBeforeEntry, long totalBytes, string name)
     {
-        int sourceOffset = 0;
+        if (replacement.Length < 0)
+            throw new PkgFormatException($"Replacement '{name}' has a negative length.");
+        using Stream replacementStream = replacement.OpenRead();
+        if (!replacementStream.CanRead)
+            throw new PkgFormatException($"Replacement '{name}' is not readable.");
+
+        long sourceOffset = 0;
         while (sourceOffset < replacement.Length)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            int count = Math.Min(buffer.Length, replacement.Length - sourceOffset);
-            replacement.AsSpan(sourceOffset, count).CopyTo(buffer);
+            int count = (int)Math.Min(buffer.Length, replacement.Length - sourceOffset);
+            ReadExact(replacementStream, buffer, count, $"replacement '{name}'");
             decryptor.DecryptInPlace(buffer.AsSpan(0, count), checked(newOffset + sourceOffset));
             destination.Write(buffer, 0, count);
             sourceOffset += count;

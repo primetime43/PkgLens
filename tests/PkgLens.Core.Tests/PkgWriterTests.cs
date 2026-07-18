@@ -135,6 +135,34 @@ public class PkgWriterTests
     }
 
     [Fact]
+    public void Repack_LargeReplacement_IsStreamedInBoundedChunks()
+    {
+        byte[] replacement = Enumerable.Range(0, 5 * 1024 * 1024 + 321)
+            .Select(index => (byte)(index * 13 + 1)).ToArray();
+        byte[] pkg = new SyntheticPkgBuilder().AddFile("DATA.BIN", new byte[8]).Build();
+        using var source = new MemoryStream(pkg);
+        var keys = new InMemoryKeyProvider();
+        PkgInfo info = PkgReader.Read(source, keys);
+        PkgEntry target = info.Entries.Single(entry => entry.Name == "DATA.BIN");
+        MaxReadSizeStream? replacementStream = null;
+        var replacements = new Dictionary<PkgEntry, PkgReplacement>
+        {
+            [target] = new(replacement.Length, () => replacementStream =
+                new MaxReadSizeStream(new MemoryStream(replacement), 1 << 20)),
+        };
+
+        using var destination = new MemoryStream();
+        PkgWriter.Repack(source, info, replacements, keys, destination);
+
+        Assert.NotNull(replacementStream);
+        Assert.True(replacementStream.MaxObservedRead <= 1 << 20);
+        using var repacked = new MemoryStream(destination.ToArray());
+        PkgInfo repackedInfo = PkgReader.Read(repacked, keys);
+        PkgEntry entry = repackedInfo.Entries.Single(candidate => candidate.Name == "DATA.BIN");
+        Assert.Equal(replacement, PkgReader.ExtractEntryBytes(repacked, repackedInfo.Header, entry, keys));
+    }
+
+    [Fact]
     public void Repack_CancelledToken_StopsBeforeWriting()
     {
         byte[] pkg = new SyntheticPkgBuilder().AddFile("DATA.BIN", new byte[1024]).Build();
