@@ -1,0 +1,16 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="PkgLens.Gui.Views.ConfirmationDialog"
+        Width="520" SizeToContent="Height" CanResize="False"
+        WindowStartupLocation="CenterOwner" Title="Confirm operation">
+  <StackPanel Margin="18" Spacing="14">
+    <StackPanel Spacing="6">
+      <TextBlock x:Name="HeadingText" FontSize="17" FontWeight="SemiBold" TextWrapping="Wrap" />
+      <TextBlock x:Name="MessageText" TextWrapping="Wrap" Opacity="0.78" />
+    </StackPanel>
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+      <Button Content="Cancel" Click="OnCancel" />
+      <Button x:Name="ConfirmButton" Click="OnConfirm" Classes="primary" />
+    </StackPanel>
+  </StackPanel>
+</Window>

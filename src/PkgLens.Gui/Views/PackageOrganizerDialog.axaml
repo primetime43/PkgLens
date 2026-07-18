@@ -1,0 +1,104 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="PkgLens.Gui.Views.PackageOrganizerDialog"
+        x:CompileBindings="False"
+        Width="1320" Height="720" MinWidth="940" MinHeight="520"
+        WindowStartupLocation="CenterOwner" DragDrop.AllowDrop="True"
+        Title="Duplicate and package organizer">
+
+  <DockPanel Margin="12">
+    <StackPanel x:Name="SetupPanel" DockPanel.Dock="Top" Spacing="9" Margin="0,0,0,10">
+      <Grid ColumnDefinitions="Auto,*,Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="7">
+        <Button Grid.Row="0" Grid.Column="0" Content="Source folder…" Click="OnChooseSource"
+                ToolTip.Tip="Choose the folder containing the original .pkg files to scan. Nothing is changed during scanning." />
+        <TextBlock x:Name="SourceText" Grid.Row="0" Grid.Column="1" VerticalAlignment="Center"
+                   Text="Drop or choose a package folder" TextTrimming="CharacterEllipsis" Opacity="0.8" />
+        <Button Grid.Row="0" Grid.Column="2" Content="Output folder…" Click="OnChooseOutput"
+                ToolTip.Tip="Choose where the organized PS3 / PSP / Vita folder structure will be created." />
+        <TextBlock x:Name="OutputText" Grid.Row="0" Grid.Column="3" VerticalAlignment="Center"
+                   Text="(not selected)" TextTrimming="CharacterEllipsis" Opacity="0.8" />
+
+        <CheckBox x:Name="RecursiveCheck" Grid.Row="1" Grid.Column="0" Content="Recursive" IsChecked="True"
+                  VerticalAlignment="Center" />
+        <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Spacing="12">
+          <RadioButton x:Name="CopyMode" GroupName="Mode" Content="Copy files (recommended)" IsChecked="True" Checked="OnModeChanged"
+                       ToolTip.Tip="Creates verified copies in the output library. Every original package remains untouched." />
+          <RadioButton x:Name="MoveMode" GroupName="Mode" Content="Move after verified copy" Checked="OnModeChanged"
+                       ToolTip.Tip="Copies each package, verifies its SHA-256 hash, then removes that original. Exact duplicates are never removed automatically." />
+        </StackPanel>
+        <TextBlock Grid.Row="1" Grid.Column="2" Text="Show" VerticalAlignment="Center" />
+        <StackPanel Grid.Row="1" Grid.Column="3" Orientation="Horizontal" Spacing="8">
+          <ComboBox x:Name="FilterBox" Width="190" SelectionChanged="OnFilterChanged"
+                    ToolTip.Tip="Filter the preview grid without changing the organization plan." />
+          <Button x:Name="PreviewButton" Content="Scan and preview" Click="OnPreview" IsEnabled="False"
+                  ToolTip.Tip="Reads metadata and calculates SHA-256 hashes, then previews duplicates, superseded updates, and destinations. No files are copied, moved, or deleted." />
+        </StackPanel>
+      </Grid>
+
+      <Border Classes="panel" Padding="10,8">
+        <StackPanel Spacing="3">
+          <TextBlock Text="Preview first: exact duplicates are reported but never copied, moved, or deleted automatically. Content-ID variants are preserved with hash suffixes."
+                     TextWrapping="Wrap" />
+          <TextBlock Text="Move mode copies to the organized library, verifies SHA-256, and only then removes the original. Older updates are kept under Updates/Superseded."
+                     FontSize="11" Opacity="0.68" TextWrapping="Wrap" />
+        </StackPanel>
+      </Border>
+
+      <Border x:Name="SummaryPanel" Classes="panel" Padding="10,7" IsVisible="False">
+        <TextBlock x:Name="SummaryText" TextWrapping="Wrap" FontWeight="SemiBold" />
+      </Border>
+
+      <Border Classes="panel" Padding="10,7">
+        <Grid ColumnDefinitions="Auto,*">
+          <TextBlock Grid.Column="0" Text="NEXT ACTION" FontSize="11" FontWeight="SemiBold"
+                     Opacity="0.58" Margin="0,0,10,0" VerticalAlignment="Top" />
+          <TextBlock x:Name="ActionHelpText" Grid.Column="1" TextWrapping="Wrap"
+                     Text="Create organized copies writes verified copies into the output folder. Original packages remain unchanged." />
+        </Grid>
+      </Border>
+    </StackPanel>
+
+    <Grid DockPanel.Dock="Bottom" RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto" Margin="0,9,0,0">
+      <TextBlock x:Name="StatusText" Grid.Row="0" Grid.Column="0" VerticalAlignment="Center"
+                 Text="Choose a source folder or drop one into this window." TextTrimming="CharacterEllipsis" Opacity="0.8" />
+      <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="12,0,0,0">
+        <Button x:Name="SavePlanButton" Content="Export preview JSON…" Click="OnSavePlan" IsEnabled="False"
+                ToolTip.Tip="Saves the current preview, hashes, duplicate findings, and planned destinations as JSON. It does not copy, move, or delete any package." />
+        <Button x:Name="OrganizeButton" Content="Create organized copies" Click="OnOrganize" IsEnabled="False" Classes="primary"
+                ToolTip.Tip="Copies packages marked Organize into the displayed destinations and verifies every copied SHA-256 hash. Originals remain untouched." />
+        <Button x:Name="CancelButton" Content="Cancel" Click="OnCancel" IsVisible="False"
+                ToolTip.Tip="Stops at a safe checkpoint and removes any unfinished temporary copy." />
+        <Button x:Name="OpenOutputButton" Content="Open output" Click="OnOpenOutput" IsEnabled="False"
+                ToolTip.Tip="Opens the organized output folder in your system file browser." />
+        <Button Content="Close" Click="OnClose" ToolTip.Tip="Close the organizer window." />
+      </StackPanel>
+      <ProgressBar x:Name="Progress" Grid.Row="1" Grid.ColumnSpan="2" Height="5" Margin="0,8,0,0"
+                   Minimum="0" Maximum="100" IsVisible="False" />
+    </Grid>
+
+    <Grid>
+      <DataGrid x:Name="Grid" AutoGenerateColumns="False" IsReadOnly="True" x:CompileBindings="False"
+                GridLinesVisibility="Horizontal" CanUserResizeColumns="True" CanUserSortColumns="True">
+        <DataGrid.Columns>
+          <DataGridTextColumn Header="Action" Binding="{Binding Action}" Width="105" />
+          <DataGridTextColumn Header="Package" Binding="{Binding Package}" Width="2*" />
+          <DataGridTextColumn Header="Title" Binding="{Binding Title}" Width="2*" />
+          <DataGridTextColumn Header="Platform" Binding="{Binding Platform}" Width="80" />
+          <DataGridTextColumn Header="Role" Binding="{Binding Role}" Width="80" />
+          <DataGridTextColumn Header="Version" Binding="{Binding Version}" Width="75" />
+          <DataGridTextColumn Header="Relationship" Binding="{Binding Relationship}" Width="2.4*" />
+          <DataGridTextColumn Header="Result" Binding="{Binding Result}" Width="1.8*" />
+          <DataGridTextColumn Header="Destination" Binding="{Binding Destination}" Width="2.5*" />
+        </DataGrid.Columns>
+      </DataGrid>
+
+      <Border x:Name="DropOverlay" IsVisible="False" Background="#D9222222" BorderBrush="#2D8CFF"
+              BorderThickness="2" CornerRadius="8" Margin="18" IsHitTestVisible="False">
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
+          <TextBlock Text="Drop package library folder here" FontSize="24" FontWeight="SemiBold" />
+          <TextBlock Text="PkgLens will hash, classify, detect duplicates, and preview destinations." Opacity="0.75" />
+        </StackPanel>
+      </Border>
+    </Grid>
+  </DockPanel>
+</Window>

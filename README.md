@@ -49,7 +49,9 @@ header, metadata, and `PARAM.SFO`. **File → Convert package → CFW…** perfo
   PSP package directly into `EBOOT.PBP`, a decrypted ISO, or a compressed CSO. **Tools → Key /
   license audit…** scans a package, protected-content file, or folder and can save the report as JSON.
   **Tools → Batch processing center…** accepts a package folder and runs resumable audit,
-  classification, verification, extraction, PSP export, or CFW-conversion jobs.
+  classification, verification, extraction, PSP export, or CFW-conversion jobs. **Tools →
+  Duplicate / package organizer…** hashes a library, identifies duplicates and superseded updates,
+  and previews a PS3 / PSP / Vita folder layout before copying or moving anything.
 
 ## What it does
 
@@ -70,6 +72,9 @@ header, metadata, and `PARAM.SFO`. **File → Convert package → CFW…** perfo
 - Drop a folder into the batch processing center to audit, classify, verify, extract, PSP-export, or
   CFW-convert multiple packages. A manifest is saved after every package, completed jobs are skipped
   on resume, failed jobs can be retried, and mixed libraries automatically skip incompatible formats.
+- Detect exact SHA-256 duplicates, same-content-ID variants, and superseded update versions, then
+  organize packages into `PS3|PSP|Vita / title / Base|Updates|DLC` folders. Exact duplicates are
+  never deleted automatically; Move mode copies and verifies the hash before removing each source.
 - Automatically classify each opened package and show only relevant next actions, such as PSP/Vita
   export, PS3 CFW conversion, update/game-data extraction, license audit, or integrity verification.
 - Run a blocking operation preflight before PSP/Vita export, CFW conversion, EDAT/SDAT decrypt, or

@@ -48,6 +48,7 @@
         <MenuItem Header="_Folder info…" Click="OnFolderInfoClick" />
         <MenuItem Header="Scan package _library…" Click="OnScanFolderClick" />
         <MenuItem Header="_Batch processing center…" Click="OnBatchCenterClick" />
+        <MenuItem Header="Duplicate / package _organizer…" Click="OnPackageOrganizerClick" />
         <MenuItem Header="Key / _license audit…" Click="OnKeyLicenseAuditClick" />
         <Separator />
         <MenuItem Header="Import _override key…" Click="OnSetKeyClick" />
@@ -238,6 +239,19 @@
                       <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                         <Border Classes="chip"><TextBlock Text="FOLDER" /></Border>
                         <Border Classes="chip"><TextBlock Text="RESUMABLE" /></Border>
+                      </StackPanel>
+                    </Grid>
+                  </Button>
+                  <Button Classes="row" Click="OnHomeOrganizer">
+                    <Grid ColumnDefinitions="34,*,Auto">
+                      <materialIcons:MaterialIcon Grid.Column="0" Kind="FolderMoveOutline" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="1,0,0,0" />
+                      <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
+                        <TextBlock Classes="rowtitle" Text="Duplicate / package organizer…" />
+                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="Find hash/content duplicates and older updates, then preview a PS3 / PSP / Vita library layout." />
+                      </StackPanel>
+                      <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Border Classes="chip"><TextBlock Text="FOLDER" /></Border>
+                        <Border Classes="chip"><TextBlock Text="PREVIEW FIRST" /></Border>
                       </StackPanel>
                     </Grid>
                   </Button>
