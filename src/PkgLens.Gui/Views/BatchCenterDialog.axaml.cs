@@ -20,25 +20,7 @@ public partial class BatchCenterDialog : Window
 {
     private readonly string? _keysDirectory;
     private readonly string? _rapDirectory;
-    private readonly IReadOnlyList<BatchOperationChoice> _operations =
-    [
-        new(BatchOperation.Audit, "Audit keys and licenses",
-            "Reads package keys, SELF revisions, content IDs, licenses, RAP availability, and unsupported encryption. Saves one JSON report per package."),
-        new(BatchOperation.Classify, "Classify and match library",
-            "Classifies base games, updates, DLC, themes, regions, and versions. Also writes a combined library report with missing-base and region warnings."),
-        new(BatchOperation.Verify, "Verify package integrity",
-            "Checks package structure, bounds, authentication, signatures, and decrypted item tables. Saves a verification report for every package."),
-        new(BatchOperation.Extract, "Extract every package",
-            "Rebuilds each decrypted package directory tree under the output folder. Packages without a usable key fail with an actionable error."),
-        new(BatchOperation.ExportPbp, "Export PSP packages to PBP",
-            "Exports EBOOT.PBP from PSP packages and skips PS3, Vita, or incompatible packages automatically."),
-        new(BatchOperation.ExportIso, "Export PSP packages to ISO",
-            "Decrypts PSP disc images directly to ISO, verifies ISO9660 structure, and skips packages without a PSP disc image."),
-        new(BatchOperation.ExportCso, "Export PSP packages to CSO",
-            "Decrypts and compresses PSP disc images to CSO, then decompresses every block again for verification."),
-        new(BatchOperation.ConvertCfw, "Convert PS3 packages for CFW",
-            "Decrypts and fake-signs embedded EBOOT/SELF/SPRX files, rebuilds the package, verifies the package and every converted executable, and skips non-PS3 packages."),
-    ];
+    private readonly IReadOnlyList<OperationDefinition> _operations = OperationCatalog.BatchOperations;
 
     private string? _sourceDirectory;
     private string? _outputDirectory;
@@ -71,7 +53,7 @@ public partial class BatchCenterDialog : Window
         InitializeComponent();
         FindControls();
         _operationBox.ItemsSource = _operations;
-        _operationBox.SelectedItem = _operations.First(choice => choice.Operation == BatchOperation.Verify);
+        _operationBox.SelectedItem = OperationCatalog.ForBatch(BatchOperation.Verify);
         AddHandler(DragDrop.DragOverEvent, OnDragOver, handledEventsToo: true);
         AddHandler(DragDrop.DragLeaveEvent, OnDragLeave, handledEventsToo: true);
         AddHandler(DragDrop.DropEvent, OnDrop, handledEventsToo: true);
@@ -140,8 +122,8 @@ public partial class BatchCenterDialog : Window
 
     private void OnOperationChanged(object? sender, SelectionChangedEventArgs e)
     {
-        if (_operationBox.SelectedItem is not BatchOperationChoice choice) return;
-        _description.Text = choice.Description;
+        if (_operationBox.SelectedItem is not OperationDefinition choice) return;
+        _description.Text = choice.BatchDescription;
         if (_loadingManifest) return;
         ClearPreparedJobs("Operation changed. Prepare jobs again.");
         UpdateButtons();
@@ -150,7 +132,7 @@ public partial class BatchCenterDialog : Window
     private async void OnPrepare(object? sender, RoutedEventArgs e)
     {
         if (_sourceDirectory is null || _outputDirectory is null ||
-            _operationBox.SelectedItem is not BatchOperationChoice choice) return;
+            _operationBox.SelectedItem is not OperationDefinition choice || choice.BatchOperation is not { } batchOperation) return;
 
         using var cancellation = new CancellationTokenSource();
         _cancellation = cancellation;
@@ -168,7 +150,7 @@ public partial class BatchCenterDialog : Window
             string output = _outputDirectory;
             bool recursive = _recursive.IsChecked == true;
             string? keysDirectory = _keysDirectory;
-            _manifest = await Task.Run(() => BatchProcessor.Create(source, output, choice.Operation,
+            _manifest = await Task.Run(() => BatchProcessor.Create(source, output, batchOperation,
                 recursive, new FileKeyProvider(keysDirectory), cancellation.Token, discoveryProgress),
                 cancellation.Token);
             RefreshRows();
@@ -215,7 +197,7 @@ public partial class BatchCenterDialog : Window
             _loadingManifest = true;
             try
             {
-                _operationBox.SelectedItem = _operations.First(choice => choice.Operation == _manifest.Operation);
+                _operationBox.SelectedItem = OperationCatalog.ForBatch(_manifest.Operation);
             }
             finally
             {
@@ -377,7 +359,6 @@ public partial class BatchCenterDialog : Window
     }
 }
 
-public sealed record BatchOperationChoice(BatchOperation Operation, string Label, string Description);
 
 public sealed record BatchJobDisplayRow(
     string Status, string Package, string Title, string Platform, string Role,

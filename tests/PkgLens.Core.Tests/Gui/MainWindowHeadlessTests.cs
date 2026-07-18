@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
+using PkgLens.Core.Shared;
 using PkgLens.Gui.ViewModels;
 using PkgLens.Gui.Views;
 using PkgLens.Gui.Views.Pages;
@@ -8,6 +9,22 @@ namespace PkgLens.Core.Tests.Gui;
 
 public sealed class MainWindowHeadlessTests
 {
+    [AvaloniaFact]
+    public void OperationMenus_AreBuiltFromCatalogWithEligibilityBindings()
+    {
+        var window = new MainWindow { DataContext = new MainWindowViewModel() };
+        window.Show();
+
+        MenuItem fileMenu = window.FindControl<MenuItem>("FileMenu")!;
+        MenuItem[] items = Descendants(fileMenu).ToArray();
+        MenuItem open = Assert.Single(items, item => Equals(item.Tag, OperationId.OpenPackage));
+        MenuItem close = Assert.Single(items, item => Equals(item.Tag, OperationId.ClosePackage));
+        Assert.True(open.IsEnabled);
+        Assert.False(close.IsEnabled);
+        Assert.Equal(OperationCatalog.Get(OperationId.OpenPackage).Tooltip, ToolTip.GetTip(open));
+        window.Close();
+    }
+
     [AvaloniaFact]
     public void Shell_ComposesDedicatedPageControls()
     {
@@ -74,5 +91,17 @@ public sealed class MainWindowHeadlessTests
         Assert.False(window.FindControl<Grid>("OperationProgressPanel")!.IsVisible);
         Assert.True(window.FindControl<Grid>("ToolContentShell")!.IsEnabled);
         window.Close();
+    }
+
+    private static IEnumerable<MenuItem> Descendants(MenuItem root)
+    {
+        foreach (object? item in root.Items)
+        {
+            if (item is not MenuItem menuItem)
+                continue;
+            yield return menuItem;
+            foreach (MenuItem child in Descendants(menuItem))
+                yield return child;
+        }
     }
 }

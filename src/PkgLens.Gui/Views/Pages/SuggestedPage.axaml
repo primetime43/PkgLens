@@ -42,6 +42,7 @@
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="core:PackageActionRecommendation">
                   <Button Classes="row" Tag="{Binding}" Click="OnRecommendedActionClick"
+                          ToolTip.Tip="{Binding Tooltip}"
                           HorizontalContentAlignment="Stretch">
                     <Grid ColumnDefinitions="34,*,Auto">
                       <materialIcons:MaterialIcon Grid.Column="0" Kind="LightbulbOnOutline" Width="20" Height="20"

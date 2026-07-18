@@ -19,7 +19,7 @@
 
         <TextBlock Grid.Row="1" Grid.Column="0" Text="Operation" VerticalAlignment="Center" />
         <ComboBox x:Name="OperationBox" Grid.Row="1" Grid.Column="1" SelectionChanged="OnOperationChanged"
-                  DisplayMemberBinding="{Binding Label}" MinWidth="240" HorizontalAlignment="Left" />
+                  DisplayMemberBinding="{Binding BatchLabel}" MinWidth="240" HorizontalAlignment="Left" />
         <CheckBox x:Name="RecursiveCheck" Grid.Row="1" Grid.Column="2" Content="Recursive"
                   IsChecked="True" VerticalAlignment="Center" />
         <StackPanel Grid.Row="1" Grid.Column="3" Orientation="Horizontal" Spacing="8">

@@ -23,7 +23,10 @@ public sealed record PackageActionRecommendation(
     string Title,
     string Description,
     string Badge,
-    bool IsPrimary = false);
+    bool IsPrimary = false)
+{
+    public string Tooltip => OperationCatalog.ForRecommendation(Action).Tooltip;
+}
 
 public sealed record PackageRecommendationSet(
     string Classification,
@@ -56,27 +59,22 @@ public static class PackageRecommendationEngine
             info.DecryptionNote ?? "PkgLens could read the header but could not decrypt the package contents.",
             new[]
             {
-                new PackageActionRecommendation(PackageRecommendedAction.KeyLicenseAudit,
-                    "Check keys and licenses", FeatureText.KeyLicenseAudit,
-                    "RECOMMENDED", true),
-                new PackageActionRecommendation(PackageRecommendedAction.Verify,
-                    "Verify package", "Check the cleartext header and structural integrity that remain available.",
-                    "READ-ONLY"),
+                Recommend(PackageRecommendedAction.KeyLicenseAudit, "RECOMMENDED", true),
+                Recommend(PackageRecommendedAction.Verify, "READ-ONLY",
+                    title: "Verify package",
+                    description: "Check the cleartext header and structural integrity that remain available."),
             });
     }
 
     private static PackageRecommendationSet Psp(PkgInfo info)
     {
-        PspExportEligibility eligibility = PspPackageExporter.CheckEligibility(info);
+        OperationEligibilityResult eligibility = OperationCatalog.CheckSuggested(PackageRecommendedAction.ExportPsp, info);
         var actions = new List<PackageActionRecommendation>();
-        if (eligibility.CanExport)
-        {
-            actions.Add(new(PackageRecommendedAction.ExportPsp, "Export PSP game",
-                FeatureText.ExportPsp, "RECOMMENDED", true));
-        }
-        actions.Add(new(PackageRecommendedAction.ExtractAll, "Extract package files",
-            "Extract the original PSP package directory without converting it.", "FOLDER",
-            IsPrimary: !eligibility.CanExport));
+        if (eligibility.Eligible)
+            actions.Add(Recommend(PackageRecommendedAction.ExportPsp, "RECOMMENDED", true));
+        actions.Add(Recommend(PackageRecommendedAction.ExtractAll, "FOLDER",
+            IsPrimary: !eligibility.Eligible,
+            description: "Extract the original PSP package directory without converting it."));
         AddLicenseAudit(info, actions);
         actions.Add(Verify());
 
@@ -90,14 +88,17 @@ public static class PackageRecommendationEngine
             VitaPackageDetails details = VitaPackageExporter.Inspect(info);
             var actions = new List<PackageActionRecommendation>
             {
-                new(PackageRecommendedAction.ExportVita, $"Export Vita {details.Kind.ToString().ToLowerInvariant()}",
-                    $"Create the correct {details.RelativeRoot} directory structure.", "RECOMMENDED", true),
-                new(PackageRecommendedAction.ExtractAll, "Extract raw package files",
-                    "Extract the package without creating Vita app/patch/addcont layout.", "FOLDER"),
+                Recommend(PackageRecommendedAction.ExportVita, "RECOMMENDED", true,
+                    title: $"Export Vita {details.Kind.ToString().ToLowerInvariant()}",
+                    description: $"Create the correct {details.RelativeRoot} directory structure."),
+                Recommend(PackageRecommendedAction.ExtractAll, "FOLDER",
+                    title: "Extract raw package files",
+                    description: "Extract the package without creating Vita app/patch/addcont layout."),
             };
             if (details.RequiresLicense)
-                actions.Add(new(PackageRecommendedAction.KeyLicenseAudit, "Check Vita license readiness",
-                    "Review package encryption and the license material still required by inner Vita content.", "LICENSE"));
+                actions.Add(Recommend(PackageRecommendedAction.KeyLicenseAudit, "LICENSE",
+                    title: "Check Vita license readiness",
+                    description: "Review package encryption and the license material still required by inner Vita content."));
             actions.Add(Verify());
             return new($"PSVita {details.Kind.ToString().ToLowerInvariant()} package",
                 details.RequiresLicense
@@ -124,22 +125,18 @@ public static class PackageRecommendationEngine
             { } contentType => $"PS3 {contentType} package",
             null => "PS3 package",
         };
-        bool hasExecutables = info.Entries.Any(entry => entry.IsFile && IsPs3Executable(entry.Name));
-        bool canConvertForCfw = hasExecutables && info.Header.IsRetail;
+        bool hasExecutables = OperationCatalog.CheckSuggested(PackageRecommendedAction.AnalyzeFirmware, info).Eligible;
+        bool canConvertForCfw = OperationCatalog.CheckSuggested(PackageRecommendedAction.ConvertCfw, info).Eligible;
         var actions = new List<PackageActionRecommendation>();
 
         if (info.Metadata.ContentType == PkgContentType.Ps1Emu)
         {
-            bool hasImage = info.Entries.Any(entry => entry.IsFile &&
-                (Path.GetFileName(entry.Name).Equals("EBOOT.PBP", StringComparison.OrdinalIgnoreCase) ||
-                 Path.GetFileName(entry.Name).Equals("ISO.BIN.EDAT", StringComparison.OrdinalIgnoreCase)));
+            bool hasImage = OperationCatalog.CheckSuggested(PackageRecommendedAction.ExportPs1Classic, info).Eligible;
             if (hasImage)
-                actions.Add(new(PackageRecommendedAction.ExportPs1Classic, "Export PS1 Classic",
-                    FeatureText.ExportPs1,
-                    "RECOMMENDED", true));
-            actions.Add(new(PackageRecommendedAction.ExtractAll, "Extract package files",
-                "Extract the original PS1 Classic package directory without reconstructing its disc image.", "FOLDER",
-                IsPrimary: !hasImage));
+                actions.Add(Recommend(PackageRecommendedAction.ExportPs1Classic, "RECOMMENDED", true));
+            actions.Add(Recommend(PackageRecommendedAction.ExtractAll, "FOLDER",
+                IsPrimary: !hasImage,
+                description: "Extract the original PS1 Classic package directory without reconstructing its disc image."));
             AddLicenseAudit(info, actions);
             actions.Add(Verify());
             return new(classification,
@@ -149,15 +146,12 @@ public static class PackageRecommendationEngine
 
         if (info.Metadata.ContentType == PkgContentType.Ps2Classic)
         {
-            bool hasImage = info.Entries.Any(entry => entry.IsFile &&
-                Path.GetFileName(entry.Name).Equals("ISO.BIN.ENC", StringComparison.OrdinalIgnoreCase));
+            bool hasImage = OperationCatalog.CheckSuggested(PackageRecommendedAction.ExportPs2Classic, info).Eligible;
             if (hasImage)
-                actions.Add(new(PackageRecommendedAction.ExportPs2Classic, "Export PS2 Classic",
-                    FeatureText.ExportPs2,
-                    "RECOMMENDED", true));
-            actions.Add(new(PackageRecommendedAction.ExtractAll, "Extract package files",
-                "Extract the original PS2 Classic package directory without decrypting the disc image.", "FOLDER",
-                IsPrimary: !hasImage));
+                actions.Add(Recommend(PackageRecommendedAction.ExportPs2Classic, "RECOMMENDED", true));
+            actions.Add(Recommend(PackageRecommendedAction.ExtractAll, "FOLDER",
+                IsPrimary: !hasImage,
+                description: "Extract the original PS2 Classic package directory without decrypting the disc image."));
             AddLicenseAudit(info, actions);
             actions.Add(Verify());
             return new(classification,
@@ -167,18 +161,13 @@ public static class PackageRecommendationEngine
 
         if (canConvertForCfw)
         {
-            actions.Add(new(PackageRecommendedAction.ConvertCfw, "Convert package for CFW",
-                FeatureText.ConvertCfw,
-                "RECOMMENDED", true));
+            actions.Add(Recommend(PackageRecommendedAction.ConvertCfw, "RECOMMENDED", true));
         }
-        actions.Add(new(PackageRecommendedAction.ExtractAll,
-            info.Metadata.ContentType == PkgContentType.GameData ? "Extract update/game data" : "Extract package files",
-            "Rebuild the package directory tree on disk without modifying its contents.", "FOLDER",
-            IsPrimary: !canConvertForCfw));
+        actions.Add(Recommend(PackageRecommendedAction.ExtractAll, "FOLDER",
+            IsPrimary: !canConvertForCfw,
+            title: info.Metadata.ContentType == PkgContentType.GameData ? "Extract update/game data" : null));
         if (hasExecutables)
-            actions.Add(new(PackageRecommendedAction.AnalyzeFirmware, "Analyze required firmware",
-                FeatureText.AnalyzeFirmware,
-                "READ-ONLY"));
+            actions.Add(Recommend(PackageRecommendedAction.AnalyzeFirmware, "READ-ONLY"));
         AddLicenseAudit(info, actions);
         actions.Add(Verify());
 
@@ -194,8 +183,8 @@ public static class PackageRecommendationEngine
     {
         var actions = new List<PackageActionRecommendation>
         {
-            new(PackageRecommendedAction.ExtractAll, "Extract package files",
-                "Extract all readable package entries to a folder.", "RECOMMENDED", true),
+            Recommend(PackageRecommendedAction.ExtractAll, "RECOMMENDED", true,
+                description: "Extract all readable package entries to a folder."),
         };
         AddLicenseAudit(info, actions);
         actions.Add(Verify());
@@ -204,19 +193,20 @@ public static class PackageRecommendationEngine
 
     private static void AddLicenseAudit(PkgInfo info, List<PackageActionRecommendation> actions)
     {
-        if (info.Metadata.DrmType is uint drm && drm != (uint)PkgDrmType.Free)
-            actions.Add(new(PackageRecommendedAction.KeyLicenseAudit, "Check license readiness",
-                $"Package metadata reports {DrmType.Name(drm)} DRM; check RAPs and inner content licenses.", "LICENSE"));
+        if (OperationCatalog.CheckSuggested(PackageRecommendedAction.KeyLicenseAudit, info).Eligible &&
+            info.Metadata.DrmType is uint drm)
+            actions.Add(Recommend(PackageRecommendedAction.KeyLicenseAudit, "LICENSE",
+                title: "Check license readiness",
+                description: $"Package metadata reports {DrmType.Name(drm)} DRM; check RAPs and inner content licenses."));
     }
 
-    private static PackageActionRecommendation Verify() => new(PackageRecommendedAction.Verify,
-        "Verify package integrity", FeatureText.VerifyPackage, "READ-ONLY");
+    private static PackageActionRecommendation Verify() =>
+        Recommend(PackageRecommendedAction.Verify, "READ-ONLY");
 
-    private static bool IsPs3Executable(string path)
+    private static PackageActionRecommendation Recommend(PackageRecommendedAction action, string badge,
+        bool IsPrimary = false, string? title = null, string? description = null)
     {
-        string name = Path.GetFileName(path);
-        return name.Equals("EBOOT.BIN", StringComparison.OrdinalIgnoreCase) ||
-               Path.GetExtension(name).Equals(".self", StringComparison.OrdinalIgnoreCase) ||
-               Path.GetExtension(name).Equals(".sprx", StringComparison.OrdinalIgnoreCase);
+        OperationDefinition operation = OperationCatalog.ForRecommendation(action);
+        return new(action, title ?? operation.Name, description ?? operation.Description, badge, IsPrimary);
     }
 }

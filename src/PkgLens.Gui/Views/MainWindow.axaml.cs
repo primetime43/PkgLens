@@ -32,6 +32,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        InitializeOperationMenus();
         // handledEventsToo: true so the drop still reaches the window even when a child control
         // (e.g. the file list) marks the drag event handled.
         AddHandler(DragDrop.DragOverEvent, OnDragOver, handledEventsToo: true);

@@ -15,92 +15,9 @@
 
     <!-- Menu -->
     <Menu DockPanel.Dock="Top" IsEnabled="{Binding IsNotBusy}">
-      <MenuItem Header="_File">
-        <MenuItem Header="_Open package…" Click="OnOpenClick"
-                  ToolTip.Tip="Open and inspect a PS3, PSP, or PSVita package." />
-        <MenuItem Header="_Close package" Click="OnCloseClick" IsEnabled="{Binding HasPackage}"
-                  ToolTip.Tip="Close the currently opened package without exiting PkgLens." />
-        <Separator />
-        <MenuItem Header="_Build and convert">
-          <MenuItem Header="_Pack folder into package…" Click="OnGoPackClick"
-                    ToolTip.Tip="Open the Pack page to build a new package from an extracted content folder." />
-          <MenuItem Header="_Compare packages / create update…" Click="OnComparePackagesClick"
-                    ToolTip.Tip="Compare base and target package files and PARAM.SFO values, then create a compact CFW/HEN or RPCS3 overlay package." />
-          <MenuItem Header="Convert PS3 package for a _target…" Click="OnConvertCfwClick"
-                    ToolTip.Tip="Check RPCS3, CEX CFW, DEX, or HEN compatibility before decrypting, fake-signing, optionally lowering firmware requirements, and rebuilding a package copy." />
-        </MenuItem>
-        <MenuItem Header="_Export platform content">
-          <MenuItem Header="PS_1 Classic → BIN / CUE / metadata…" Click="OnExportPs1ClassicClick"
-                    ToolTip.Tip="Identify a PS1 Classic, resolve its RAP, export PBP metadata, and reconstruct emulator-ready BIN/CUE images." />
-          <MenuItem Header="PS_2 Classic → ISO / CFW package…" Click="OnExportPs2ClassicClick"
-                    ToolTip.Tip="Authenticate and decrypt ISO.BIN.ENC to ISO, with an optional CFW/HEN package rebuild." />
-          <MenuItem Header="_PSP → PBP / ISO / CSO…" Click="OnExportPspClick"
-                    ToolTip.Tip="Export a PSP package directly to EBOOT.PBP, decrypted ISO, or compressed CSO." />
-          <MenuItem Header="PS_Vita → app / patch / addcont…" Click="OnExportVitaClick"
-                    ToolTip.Tip="Export a Vita package into the correct app, patch, or addcont directory layout." />
-        </MenuItem>
-        <MenuItem Header="_Extract and repack">
-          <MenuItem Header="Browse / rebuild _PSARC archive…" Click="OnBrowsePsarcClick"
-                    ToolTip.Tip="Browse, extract, queue replacements, and rebuild a verified copy of a standard zlib PSARC archive." />
-          <Separator />
-          <MenuItem Header="Extract _all files…" Click="OnExtractAllClick"
-                    IsEnabled="{Binding Package.IsDecrypted, FallbackValue=False}"
-                    ToolTip.Tip="Extract the currently opened package and recreate its directory tree on disk." />
-          <MenuItem Header="Save package _as…" Click="OnSaveAsClick"
-                    IsEnabled="{Binding Package.IsDecrypted, FallbackValue=False}"
-                    ToolTip.Tip="Rebuild a separate package containing replacements or PARAM.SFO edits. The original remains unchanged." />
-        </MenuItem>
-        <Separator />
-        <MenuItem Header="E_xit PkgLens" Click="OnExitClick" />
-      </MenuItem>
-      <MenuItem Header="_Edit">
-        <MenuItem Header="Edit _PARAM.SFO…" Click="OnEditSfoClick"
-                  IsEnabled="{Binding Package.CanEditSfo, FallbackValue=False}" />
-        <MenuItem Header="_Replace selected file…" Click="OnReplaceClick"
-                  IsEnabled="{Binding Package.HasSelectedFile, FallbackValue=False}" />
-        <Separator />
-        <MenuItem Header="E_xtract selected file…" Click="OnExtractClick"
-                  IsEnabled="{Binding Package.HasSelectedFile, FallbackValue=False}" />
-        <MenuItem Header="_View selected file…" Click="OnViewClick"
-                  IsEnabled="{Binding Package.HasSelectedFile, FallbackValue=False}" />
-      </MenuItem>
-      <MenuItem Header="_Tools">
-        <MenuItem Header="Analyze / patch package _firmware…"
-                  Click="OnFirmwareAnalysisClick"
-                  ToolTip.Tip="Scan every SELF/SPRX, report the required firmware, and offer safe package patching when supported." />
-        <Separator />
-        <MenuItem Header="_Firmware and CFW">
-          <MenuItem Header="Analyze extracted firmware _folder…"
-                    Click="OnFirmwareFolderAnalysisClick"
-                    ToolTip.Tip="Scan SELF and SPRX files in an extracted folder and report their firmware requirements." />
-          <MenuItem Header="_Target compatibility and package conversion…"
-                    Click="OnConvertCfwClick"
-                    ToolTip.Tip="Choose RPCS3, CEX CFW, DEX, or HEN; explain blocking compatibility failures before conversion starts." />
-          <Separator />
-          <MenuItem Header="Patch one _SELF / EBOOT firmware…"
-                    Click="OnGoFirmwarePatchClick"
-                    ToolTip.Tip="Open the guided SELF/EBOOT firmware patch and fake-sign tool." />
-          <MenuItem Header="Raw _byte patch SELF / EBOOT…"
-                    Click="OnGoBytePatchClick"
-                    ToolTip.Tip="Open the advanced byte-patch tool for a single SELF or EBOOT file." />
-        </MenuItem>
-        <MenuItem Header="_Inspect and verify">
-          <MenuItem Header="_Verify package integrity…" Click="OnVerifyClick" IsEnabled="{Binding HasPackage}" />
-          <MenuItem Header="Package _info…" Click="OnInfoClick" IsEnabled="{Binding HasPackage}" />
-          <MenuItem Header="_Folder info…" Click="OnFolderInfoClick" />
-          <MenuItem Header="Key / _license audit…" Click="OnKeyLicenseAuditClick" />
-        </MenuItem>
-        <MenuItem Header="_Library and batch">
-          <MenuItem Header="Scan package _library…" Click="OnScanFolderClick" />
-          <MenuItem Header="_Batch processing center…" Click="OnBatchCenterClick" />
-          <MenuItem Header="Duplicate / package _organizer…" Click="OnPackageOrganizerClick" />
-        </MenuItem>
-        <MenuItem Header="_Keys and licenses">
-          <MenuItem Header="Import _override key…" Click="OnSetKeyClick" />
-          <MenuItem Header="Keys _folder…" Click="OnKeysClick" />
-          <MenuItem Header="_RAP library…" Click="OnManageRapsClick" />
-        </MenuItem>
-      </MenuItem>
+      <MenuItem x:Name="FileMenu" Header="_File" />
+      <MenuItem x:Name="EditMenu" Header="_Edit" />
+      <MenuItem x:Name="ToolsMenu" Header="_Tools" />
       <MenuItem Header="_View">
         <MenuItem Header="_Theme">
           <MenuItem x:Name="ThemeSystemItem" Header="_System" ToggleType="Radio" Click="OnThemeSystem" />

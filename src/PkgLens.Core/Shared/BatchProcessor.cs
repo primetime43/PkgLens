@@ -318,8 +318,9 @@ public static class BatchProcessor
         {
             using var source = File.OpenRead(job.SourcePath);
             PkgInfo info = PkgReader.Read(source, keys);
-            if (!info.IsDecrypted)
-                throw new PkgKeyException(info.DecryptionNote ?? "Package contents could not be decrypted.");
+            OperationEligibilityResult eligibility = OperationCatalog.CheckBatch(BatchOperation.Extract, info);
+            if (!eligibility.Eligible)
+                throw new BatchSkipException(eligibility.Reason);
             var pkgProgress = new InlineProgress<PkgOperationProgress>(value => progress.Report(value.Percent));
             int count = PkgReader.ExtractAll(source, info, partial, keys,
                 cancellationToken: cancellationToken, progress: pkgProgress);
@@ -338,8 +339,16 @@ public static class BatchProcessor
     {
         using (var source = File.OpenRead(job.SourcePath))
         {
-            PspExportEligibility eligibility = PspPackageExporter.CheckEligibility(source, keys);
-            if (!eligibility.CanExport) throw new BatchSkipException(eligibility.Reason);
+            PkgInfo info = PkgReader.Read(source, keys);
+            BatchOperation operation = format switch
+            {
+                PspExportFormat.Pbp => BatchOperation.ExportPbp,
+                PspExportFormat.Iso => BatchOperation.ExportIso,
+                PspExportFormat.Cso => BatchOperation.ExportCso,
+                _ => throw new ArgumentOutOfRangeException(nameof(format)),
+            };
+            OperationEligibilityResult eligibility = OperationCatalog.CheckBatch(operation, info);
+            if (!eligibility.Eligible) throw new BatchSkipException(eligibility.Reason);
         }
 
         PspExportResult? result = null;
@@ -360,11 +369,9 @@ public static class BatchProcessor
         using (var source = File.OpenRead(job.SourcePath))
         {
             PkgInfo info = PkgReader.Read(source, keys);
-            if (!info.Header.IsPs3)
-                throw new BatchSkipException($"This is a {info.Header.PlatformDisplay} package, not a PS3 package.");
-            bool hasExecutable = info.Entries.Any(entry => entry.IsFile && IsExecutable(entry.Name));
-            if (!hasExecutable)
-                throw new BatchSkipException("No EBOOT.BIN, SELF, or SPRX executables were found.");
+            OperationEligibilityResult eligibility = OperationCatalog.CheckBatch(BatchOperation.ConvertCfw, info);
+            if (!eligibility.Eligible)
+                throw new BatchSkipException(eligibility.Reason);
         }
 
         CfwConversionReport? report = null;
