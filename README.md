@@ -53,6 +53,11 @@ header, metadata, and `PARAM.SFO`. **File → Convert package → CFW…** perfo
   Duplicate / package organizer…** hashes a library, identifies duplicates and superseded updates,
   and previews a PS3 / PSP / Vita folder layout before copying or moving anything.
 
+Use **File → Build and convert → Compare packages / create update…** to select a base/older package
+and a newer or modified target. PkgLens decrypts and SHA-256 hashes every file, shows file and
+`PARAM.SFO` changes, warns about reversed versions or title/region mismatches, and can build a compact
+PS3 overlay package containing only added/modified target files plus a patch-category `PARAM.SFO`.
+
 Open **File → Extract and repack → Browse / rebuild PSARC archive…**, or drop a `.psarc` onto the
 window, to search, preview, extract, replace, and rebuild files inside common PS3 archives. Rebuilds
 stream one block at a time, preserve the archive's version/path mode/block size, and are fully
@@ -75,6 +80,8 @@ LZMA, encrypted, and PSARC-MSELF hybrid variants are detected and rejected witho
   SELF revision, content IDs, license types, installed/missing RAPs, and unsupported encryption.
 - Match a package library by title ID, region, content ID, version, and SFO category; base games,
   updates, and DLC are grouped together with missing-base and likely region-mismatch warnings.
+- Compare two packages by decrypted SHA-256 content, path, size, version, role, and every `PARAM.SFO`
+  value. Identical files can be hidden while added, removed, and modified paths remain visible.
 - Drop a folder into the batch processing center to audit, classify, verify, extract, PSP-export, or
   CFW-convert multiple packages. A manifest is saved after every package, completed jobs are skipped
   on resume, failed jobs can be retried, and mixed libraries automatically skip incompatible formats.
@@ -121,6 +128,10 @@ LZMA, encrypted, and PSARC-MSELF hybrid variants are detected and rejected witho
 ### Pack & repack
 
 - Replace a file and save a new `.pkg`.
+- Create a compact PS3 CFW/HEN or RPCS3 overlay package from a comparison. The output contains the
+  target's added and modified files plus a generated `CATEGORY=GP` `PARAM.SFO`; removed files are
+  reported but cannot be represented by a normal overlay PKG. Every generated payload is hashed back
+  against the target package before success is reported, and mismatched title IDs disable creation.
 - Browse and filter standard PSARC v1.3/v1.4 zlib archives, preview or safely extract entries, queue
   file replacements, and stream a separately verified rebuilt archive. Unsafe manifest traversal,
   encrypted archives, LZMA archives, and PSARC-MSELF hybrids are rejected explicitly.

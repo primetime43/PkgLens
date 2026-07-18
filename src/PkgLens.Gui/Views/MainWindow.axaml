@@ -23,6 +23,8 @@
         <MenuItem Header="_Build and convert">
           <MenuItem Header="_Pack folder into package…" Click="OnGoPackClick"
                     ToolTip.Tip="Open the Pack page to build a new package from an extracted content folder." />
+          <MenuItem Header="_Compare packages / create update…" Click="OnComparePackagesClick"
+                    ToolTip.Tip="Compare base and target package files and PARAM.SFO values, then create a compact CFW/HEN or RPCS3 overlay package." />
           <MenuItem Header="Convert PS3 package for _CFW…" Click="OnConvertCfwClick"
                     ToolTip.Tip="Decrypt and fake-sign supported PS3 executables, optionally lower firmware requirements, and rebuild a CFW/HEN package copy." />
         </MenuItem>

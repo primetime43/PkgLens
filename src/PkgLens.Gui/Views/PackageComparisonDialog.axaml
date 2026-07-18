@@ -1,0 +1,100 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="PkgLens.Gui.Views.PackageComparisonDialog"
+        x:CompileBindings="False"
+        Width="1320" Height="760" MinWidth="940" MinHeight="560"
+        WindowStartupLocation="CenterOwner"
+        Title="Compare packages and create overlay update">
+
+  <DockPanel Margin="12">
+    <StackPanel x:Name="SetupPanel" DockPanel.Dock="Top" Spacing="9" Margin="0,0,0,10">
+      <StackPanel Spacing="2">
+        <TextBlock Text="Package comparison" FontSize="20" FontWeight="SemiBold" />
+        <TextBlock Text="Compare decrypted files and PARAM.SFO values, then create a compact PS3 overlay package from the target's additions and changes."
+                   TextWrapping="Wrap" Opacity="0.72" />
+      </StackPanel>
+
+      <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="7">
+        <Button Grid.Row="0" Grid.Column="0" Content="Base package…" Click="OnChooseBase"
+                ToolTip.Tip="Choose the installed/base or older package used as the comparison starting point." />
+        <TextBlock x:Name="BasePathText" Grid.Row="0" Grid.Column="1" VerticalAlignment="Center"
+                   Text="Choose the base or older package" TextTrimming="CharacterEllipsis" />
+        <Button Grid.Row="0" Grid.Column="2" Content="Swap" Click="OnSwap"
+                ToolTip.Tip="Swap the base and target selections when the versions were chosen in the wrong order." />
+
+        <Button Grid.Row="1" Grid.Column="0" Content="Target package…" Click="OnChooseTarget"
+                ToolTip.Tip="Choose the newer, modified, or update package whose changed files should be included." />
+        <TextBlock x:Name="TargetPathText" Grid.Row="1" Grid.Column="1" VerticalAlignment="Center"
+                   Text="Choose the newer or modified target package" TextTrimming="CharacterEllipsis" />
+        <Button x:Name="CompareButton" Grid.Row="1" Grid.Column="2" Content="Compare packages" Click="OnCompare"
+                Classes="primary" IsEnabled="False"
+                ToolTip.Tip="Decrypt and SHA-256 hash both packages, then compare paths, contents, sizes, versions, and PARAM.SFO values." />
+      </Grid>
+
+      <Border Classes="panel" Padding="10,8">
+        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+          <TextBlock Grid.Column="0" Text="HOW OUTPUT WORKS" FontSize="11" FontWeight="SemiBold" Opacity="0.58" />
+          <TextBlock Grid.Column="1" TextWrapping="Wrap"
+                     Text="The generated package is an overlay for CFW/HEN or RPCS3: it includes target files marked Added or Modified plus a patch-category PARAM.SFO. It cannot delete files, never changes either source package, and is not signed for stock firmware." />
+        </Grid>
+      </Border>
+
+      <Border x:Name="SummaryPanel" Classes="panel" Padding="10,8" IsVisible="False">
+        <StackPanel Spacing="4">
+          <TextBlock x:Name="SummaryText" FontWeight="SemiBold" TextWrapping="Wrap" />
+          <TextBlock x:Name="WarningText" FontSize="11" Foreground="#E58A00" TextWrapping="Wrap" />
+        </StackPanel>
+      </Border>
+    </StackPanel>
+
+    <Grid DockPanel.Dock="Bottom" RowDefinitions="Auto,Auto" Margin="0,9,0,0">
+      <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="12">
+        <TextBlock x:Name="StatusText" Grid.Column="0" VerticalAlignment="Center"
+                   Text="Choose a base package and a target package." TextTrimming="CharacterEllipsis" />
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+          <CheckBox x:Name="ShowUnchangedCheck" Content="Show unchanged" IsChecked="False"
+                    IsEnabled="False" Checked="OnShowUnchangedChanged" Unchecked="OnShowUnchangedChanged"
+                    ToolTip.Tip="Include identical files and SFO values in the result grids." />
+          <Button x:Name="ExportButton" Content="Export report JSON…" Click="OnExportReport" IsEnabled="False"
+                  ToolTip.Tip="Save paths, sizes, SHA-256 hashes, SFO changes, versions, and warnings. No package is modified." />
+          <Button x:Name="BuildButton" Content="Create overlay package…" Click="OnBuildOverlay"
+                  Classes="primary" IsEnabled="False"
+                  ToolTip.Tip="Build and verify a separate compact package containing the target's added and modified files. Removed files are reported but cannot be deleted by an overlay." />
+          <Button x:Name="CancelButton" Content="Cancel" Click="OnCancel" IsVisible="False"
+                  ToolTip.Tip="Cancel at the next safe file or streaming checkpoint and remove unfinished output." />
+          <Button x:Name="CloseButton" Content="Close" Click="OnClose"
+                  ToolTip.Tip="Close the comparison window. Compared packages remain unchanged." />
+        </StackPanel>
+      </Grid>
+      <ProgressBar x:Name="Progress" Grid.Row="1" Height="5" Margin="0,8,0,0"
+                   Minimum="0" Maximum="100" IsVisible="False" />
+    </Grid>
+
+    <TabControl>
+      <TabItem Header="Changed files">
+        <DataGrid x:Name="FilesGrid" AutoGenerateColumns="False" IsReadOnly="True"
+                  GridLinesVisibility="Horizontal" CanUserResizeColumns="True" CanUserSortColumns="True">
+          <DataGrid.Columns>
+            <DataGridTextColumn Header="Change" Binding="{Binding Change}" Width="105" />
+            <DataGridTextColumn Header="Path" Binding="{Binding Path}" Width="3*" />
+            <DataGridTextColumn Header="Base size" Binding="{Binding BaseSize}" Width="115" />
+            <DataGridTextColumn Header="Target size" Binding="{Binding TargetSize}" Width="115" />
+            <DataGridTextColumn Header="Base SHA-256" Binding="{Binding BaseHash}" Width="1.5*" />
+            <DataGridTextColumn Header="Target SHA-256" Binding="{Binding TargetHash}" Width="1.5*" />
+          </DataGrid.Columns>
+        </DataGrid>
+      </TabItem>
+      <TabItem Header="PARAM.SFO values">
+        <DataGrid x:Name="SfoGrid" AutoGenerateColumns="False" IsReadOnly="True"
+                  GridLinesVisibility="Horizontal" CanUserResizeColumns="True" CanUserSortColumns="True">
+          <DataGrid.Columns>
+            <DataGridTextColumn Header="Change" Binding="{Binding Change}" Width="105" />
+            <DataGridTextColumn Header="Key" Binding="{Binding Key}" Width="180" />
+            <DataGridTextColumn Header="Base value" Binding="{Binding BaseValue}" Width="2*" />
+            <DataGridTextColumn Header="Target value" Binding="{Binding TargetValue}" Width="2*" />
+          </DataGrid.Columns>
+        </DataGrid>
+      </TabItem>
+    </TabControl>
+  </DockPanel>
+</Window>
