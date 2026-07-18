@@ -15,21 +15,35 @@
     <!-- Menu -->
     <Menu DockPanel.Dock="Top" IsEnabled="{Binding IsNotBusy}">
       <MenuItem Header="_File">
-        <MenuItem Header="_Open .pkg…" Click="OnOpenClick" />
-        <MenuItem Header="_Close" Click="OnCloseClick" IsEnabled="{Binding HasPackage}" />
+        <MenuItem Header="_Open package…" Click="OnOpenClick"
+                  ToolTip.Tip="Open and inspect a PS3, PSP, or PSVita package." />
+        <MenuItem Header="_Close package" Click="OnCloseClick" IsEnabled="{Binding HasPackage}"
+                  ToolTip.Tip="Close the currently opened package without exiting PkgLens." />
         <Separator />
-        <MenuItem Header="_Pack folder → .pkg…" Click="OnGoPackClick" />
-        <MenuItem Header="_Convert package → CFW…" Click="OnConvertCfwClick" />
-        <MenuItem Header="Export PS_2 Classic…" Click="OnExportPs2ClassicClick"
-                  ToolTip.Tip="Export a PS2 Classic package to ISO and optionally rebuild a CFW/HEN package copy." />
-        <MenuItem Header="Export _PSP package…" Click="OnExportPspClick" />
-        <MenuItem Header="Export PS_Vita package…" Click="OnExportVitaClick" />
-        <MenuItem Header="Extract _all…" Click="OnExtractAllClick"
-                  IsEnabled="{Binding Package.IsDecrypted, FallbackValue=False}" />
-        <MenuItem Header="Save _As… (repack)" Click="OnSaveAsClick"
-                  IsEnabled="{Binding Package.IsDecrypted, FallbackValue=False}" />
+        <MenuItem Header="_Build and convert">
+          <MenuItem Header="_Pack folder into package…" Click="OnGoPackClick"
+                    ToolTip.Tip="Open the Pack page to build a new package from an extracted content folder." />
+          <MenuItem Header="Convert PS3 package for _CFW…" Click="OnConvertCfwClick"
+                    ToolTip.Tip="Decrypt and fake-sign supported PS3 executables, optionally lower firmware requirements, and rebuild a CFW/HEN package copy." />
+        </MenuItem>
+        <MenuItem Header="_Export platform content">
+          <MenuItem Header="PS_2 Classic → ISO / CFW package…" Click="OnExportPs2ClassicClick"
+                    ToolTip.Tip="Authenticate and decrypt ISO.BIN.ENC to ISO, with an optional CFW/HEN package rebuild." />
+          <MenuItem Header="_PSP → PBP / ISO / CSO…" Click="OnExportPspClick"
+                    ToolTip.Tip="Export a PSP package directly to EBOOT.PBP, decrypted ISO, or compressed CSO." />
+          <MenuItem Header="PS_Vita → app / patch / addcont…" Click="OnExportVitaClick"
+                    ToolTip.Tip="Export a Vita package into the correct app, patch, or addcont directory layout." />
+        </MenuItem>
+        <MenuItem Header="_Extract and repack">
+          <MenuItem Header="Extract _all files…" Click="OnExtractAllClick"
+                    IsEnabled="{Binding Package.IsDecrypted, FallbackValue=False}"
+                    ToolTip.Tip="Extract the currently opened package and recreate its directory tree on disk." />
+          <MenuItem Header="Save package _as…" Click="OnSaveAsClick"
+                    IsEnabled="{Binding Package.IsDecrypted, FallbackValue=False}"
+                    ToolTip.Tip="Rebuild a separate package containing replacements or PARAM.SFO edits. The original remains unchanged." />
+        </MenuItem>
         <Separator />
-        <MenuItem Header="E_xit" Click="OnExitClick" />
+        <MenuItem Header="E_xit PkgLens" Click="OnExitClick" />
       </MenuItem>
       <MenuItem Header="_Edit">
         <MenuItem Header="Edit _PARAM.SFO…" Click="OnEditSfoClick"
