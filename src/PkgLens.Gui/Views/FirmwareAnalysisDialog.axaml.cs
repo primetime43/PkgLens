@@ -16,6 +16,7 @@ public partial class FirmwareAnalysisDialog : Window
 {
     private readonly FirmwareAnalysisReport _report;
     private readonly bool _canPatchPackage;
+    private readonly int _highestPatchableVersion;
     private TextBox _targetBox = null!;
     private TextBlock _patchError = null!;
 
@@ -25,9 +26,17 @@ public partial class FirmwareAnalysisDialog : Window
     {
         _report = report;
         _canPatchPackage = canPatchPackage && report.PatchableCount > 0;
+        _highestPatchableVersion = report.Items.Where(item => item.CanPatch)
+            .Select(item => item.RequiredVersion)
+            .DefaultIfEmpty(0)
+            .Max();
         InitializeComponent();
         _targetBox = this.FindControl<TextBox>("TargetBox")!;
         _patchError = this.FindControl<TextBlock>("PatchErrorText")!;
+        _targetBox.Text = SuggestTarget(_highestPatchableVersion);
+        _targetBox.Watermark = _highestPatchableVersion > 0
+            ? $"Below {FirmwareAnalysisReport.FormatVersion(_highestPatchableVersion)}"
+            : "Target";
         this.FindControl<TextBlock>("SummaryText")!.Text = !report.IsApplicable
             ? "PS3 firmware analysis does not apply to this package."
             : report.Items.Count == 0
@@ -50,6 +59,16 @@ public partial class FirmwareAnalysisDialog : Window
                 "Choose a PS3 package or folder containing EBOOT.BIN, .self, or .sprx files.";
         }
         this.FindControl<StackPanel>("PatchPanel")!.IsVisible = _canPatchPackage;
+        int incompleteCount = report.Items.Count - report.FullyAnalyzedCount;
+        if (_canPatchPackage && incompleteCount > 0)
+        {
+            this.FindControl<Border>("CoverageWarningPanel")!.IsVisible = true;
+            this.FindControl<TextBlock>("CoverageWarningText")!.Text =
+                $"Only {report.FullyAnalyzedCount} of {report.Items.Count} executable(s) were fully analyzed. " +
+                $"The {report.PatchableCount} verified executable(s) can be patched, but {incompleteCount} " +
+                $"header-only executable(s) will remain unchanged. Compatibility below " +
+                $"{report.HighestRequiredFirmware ?? "the detected requirement"} is not guaranteed.";
+        }
         if (report.MissingRapCount > 0)
         {
             this.FindControl<Border>("RapHintPanel")!.IsVisible = true;
@@ -74,12 +93,34 @@ public partial class FirmwareAnalysisDialog : Window
             return;
         }
         int target = major * 100 + minor;
-        if (_report.HighestRequiredVersion > 0 && target >= _report.HighestRequiredVersion)
+        if (_highestPatchableVersion > 0 && target >= _highestPatchableVersion)
         {
-            Fail($"Choose a target below {_report.HighestRequiredFirmware}.");
+            Fail($"Choose a target below {FirmwareAnalysisReport.FormatVersion(_highestPatchableVersion)}.");
             return;
         }
         Close(new FirmwarePatchRequest(new CfwFirmwareTarget(major, minor)));
+    }
+
+    private void OnFirmwareRowSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        Border panel = this.FindControl<Border>("SelectedDetailsPanel")!;
+        if (sender is not DataGrid { SelectedItem: FirmwareAnalysisRow row })
+        {
+            panel.IsVisible = false;
+            return;
+        }
+
+        this.FindControl<TextBlock>("SelectedDetailsText")!.Text = $"{row.Path}: {row.Status}";
+        panel.IsVisible = true;
+    }
+
+    private static string SuggestTarget(int requiredVersion)
+    {
+        if (requiredVersion <= 100)
+            return string.Empty;
+
+        int suggested = requiredVersion - 10;
+        return $"{suggested / 100}.{suggested % 100:00}";
     }
 
     private async void OnSaveReport(object? sender, RoutedEventArgs e)

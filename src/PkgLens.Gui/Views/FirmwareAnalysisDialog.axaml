@@ -38,27 +38,46 @@
               Background="#18E08A00" BorderBrush="#99B66A00" BorderThickness="1" CornerRadius="4">
         <TextBlock x:Name="RapHintText" TextWrapping="Wrap" FontSize="12" />
       </Border>
+      <Border x:Name="CoverageWarningPanel" Padding="10,7" Margin="0,5,0,0" IsVisible="False"
+              Background="#18E08A00" BorderBrush="#99B66A00" BorderThickness="1" CornerRadius="4">
+        <StackPanel Spacing="2">
+          <TextBlock Text="Partial patch coverage" FontWeight="SemiBold" />
+          <TextBlock x:Name="CoverageWarningText" TextWrapping="Wrap" FontSize="12" />
+        </StackPanel>
+      </Border>
     </StackPanel>
 
     <Grid DockPanel.Dock="Bottom" ColumnDefinitions="*,Auto" Margin="0,12,0,0">
-      <StackPanel x:Name="PatchPanel" Grid.Column="0" Orientation="Horizontal" Spacing="8"
-                  VerticalAlignment="Center" IsVisible="False">
-        <TextBlock Text="Lower verified SDK requirements to" VerticalAlignment="Center" />
-        <TextBox x:Name="TargetBox" Width="75" Text="4.00" Watermark="4.00" />
-        <Button Content="Patch package copy…" Click="OnPatch" Classes="primary" />
-        <TextBlock x:Name="PatchErrorText" Foreground="IndianRed" VerticalAlignment="Center"
-                   IsVisible="False" TextWrapping="Wrap" MaxWidth="300" />
+      <StackPanel x:Name="PatchPanel" Grid.Column="0" Spacing="7" IsVisible="False">
+        <Border Padding="10,7" Margin="0,0,12,0" Background="#160078D4"
+                BorderBrush="#660078D4" BorderThickness="1" CornerRadius="4">
+          <TextBlock TextWrapping="Wrap"
+                     Text="Firmware patching lowers the verified SDK requirement so the game may start on older CFW/HEN or compatible emulator firmware. It creates a separate fake-signed package; it does not modify the original, replace missing licenses, or guarantee compatibility." />
+        </Border>
+        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+          <TextBlock Text="Lower verified SDK requirements to" VerticalAlignment="Center"
+                     ToolTip.Tip="Only verified sys_process_param SDK markers above this target are lowered." />
+          <TextBox x:Name="TargetBox" Width="75" Watermark="Target"
+                   ToolTip.Tip="Target firmware for verified executables. It must be lower than the currently detected patchable requirement." />
+          <Button Content="Patch package copy…" Click="OnPatch" Classes="primary"
+                  ToolTip.Tip="Create a separate CFW/HEN package copy with verified SDK markers lowered to the selected firmware. The original package is unchanged." />
+          <TextBlock x:Name="PatchErrorText" Foreground="IndianRed" VerticalAlignment="Center"
+                     IsVisible="False" TextWrapping="Wrap" MaxWidth="300" />
+        </StackPanel>
       </StackPanel>
-      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-        <Button Content="Save report…" Click="OnSaveReport" />
-        <Button Content="Close" Click="OnClose" />
+      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Bottom">
+        <Button Content="Save report…" Click="OnSaveReport" Classes="primary"
+                ToolTip.Tip="Save this analysis, including every executable and patchability result, as a text file. No package files are changed." />
+        <Button Content="Close" Click="OnClose"
+                ToolTip.Tip="Close the analysis without patching or changing the package." />
       </StackPanel>
     </Grid>
 
-    <Grid RowDefinitions="*,Auto">
+    <Grid RowDefinitions="*,Auto,Auto">
       <DataGrid x:Name="ItemsGrid" Grid.Row="0" AutoGenerateColumns="False" IsReadOnly="True"
                 GridLinesVisibility="Horizontal" CanUserResizeColumns="True" CanUserSortColumns="True"
-                CanUserReorderColumns="True" HorizontalScrollBarVisibility="Auto" x:CompileBindings="False">
+                CanUserReorderColumns="True" HorizontalScrollBarVisibility="Auto" x:CompileBindings="False"
+                SelectionMode="Single" SelectionChanged="OnFirmwareRowSelectionChanged">
         <DataGrid.Columns>
           <DataGridTextColumn Binding="{Binding Path}" Width="2*" MinWidth="240">
             <DataGridTextColumn.Header>
@@ -85,14 +104,27 @@
               <TextBlock Text="Analysis" ToolTip.Tip="How completely PkgLens analyzed the executable and whether it is ready for safe patching." />
             </DataGridTextColumn.Header>
           </DataGridTextColumn>
-          <DataGridTextColumn Binding="{Binding Status}" Width="3*" MinWidth="360">
-            <DataGridTextColumn.Header>
+          <DataGridTemplateColumn Width="3*" MinWidth="360">
+            <DataGridTemplateColumn.Header>
               <TextBlock Text="Details" ToolTip.Tip="Explanation of the result, including why patching is available or what key or license material is missing." />
-            </DataGridTextColumn.Header>
-          </DataGridTextColumn>
+            </DataGridTemplateColumn.Header>
+            <DataGridTemplateColumn.CellTemplate>
+              <DataTemplate>
+                <TextBlock Text="{Binding Status}" TextTrimming="CharacterEllipsis"
+                           ToolTip.Tip="{Binding Status}" VerticalAlignment="Center" />
+              </DataTemplate>
+            </DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
         </DataGrid.Columns>
       </DataGrid>
-      <TextBlock Grid.Row="1" Margin="0,8,0,0" FontSize="11" Opacity="0.65" TextWrapping="Wrap"
+      <Border x:Name="SelectedDetailsPanel" Grid.Row="1" Classes="panel" Padding="10,7"
+              Margin="0,8,0,0" IsVisible="False">
+        <StackPanel Spacing="3">
+          <TextBlock Text="Selected result details" FontWeight="SemiBold" />
+          <TextBlock x:Name="SelectedDetailsText" TextWrapping="Wrap" />
+        </StackPanel>
+      </Border>
+      <TextBlock Grid.Row="2" Margin="0,8,0,0" FontSize="11" Opacity="0.65" TextWrapping="Wrap"
                  Text="Firmware lowering changes only a verified sys_process_param SDK marker. Patched package output is fake-signed and intended for CFW/HEN or compatible emulators; compatibility is not guaranteed." />
     </Grid>
   </DockPanel>
