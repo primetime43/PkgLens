@@ -7,7 +7,7 @@
   <Grid Margin="18" RowDefinitions="Auto,Auto,Auto,*,Auto" RowSpacing="14">
     <StackPanel Grid.Row="0" Spacing="4">
       <TextBlock Text="One-click CFW conversion" FontSize="20" FontWeight="SemiBold" />
-      <TextBlock Text="Extracts every EBOOT.BIN, resolves RAPs, fake-signs it, and rebuilds the package." TextWrapping="Wrap" Opacity="0.75" />
+      <TextBlock Text="Processes every EBOOT.BIN, SELF, and SPRX, resolves RAPs, fake-signs them, and rebuilds the package." TextWrapping="Wrap" Opacity="0.75" />
     </StackPanel>
 
     <Border Grid.Row="1" Padding="10" CornerRadius="5"
@@ -26,7 +26,7 @@
 
     <StackPanel Grid.Row="3" Spacing="8">
       <TextBlock x:Name="ErrorText" Foreground="IndianRed" IsVisible="False" TextWrapping="Wrap" />
-      <TextBlock Text="Licensed EBOOTs must have a matching RAP in Keys → RAP Library. Output is unsigned and runs only on CFW/HEN or compatible emulators."
+      <TextBlock Text="Licensed executables must have a matching RAP in Keys → RAP Library. Output is unsigned and runs only on CFW/HEN or compatible emulators."
                  TextWrapping="Wrap" FontSize="11" Opacity="0.7" />
     </StackPanel>
 

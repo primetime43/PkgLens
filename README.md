@@ -59,6 +59,8 @@ header, metadata, and `PARAM.SFO`. **File → Convert package → CFW…** perfo
 - View files inline: images (ICON0/PIC1), text, or a hex dump.
 - Read a SELF / EBOOT.BIN / SPRX header — program type, key revision, segments, control blocks,
   firmware version, NPDRM content id. No keys needed.
+- Scan every EBOOT, SELF, and SPRX in a package or extracted folder, report the highest header/SDK
+  firmware requirement, and identify which executables have a verified `sys_process_param` patch.
 - Audit a package, individual protected-content file, or folder for the required package/SELF key,
   SELF revision, content IDs, license types, installed/missing RAPs, and unsupported encryption.
 - Match a package library by title ID, region, content ID, version, and SFO category; base games,
@@ -100,8 +102,9 @@ header, metadata, and `PARAM.SFO`. **File → Convert package → CFW…** perfo
 - Fake-sign a plaintext ELF into a SELF that boots on CFW (`resign`), with optional custom sign
   fields.
 - Fake-sign a folder's `EBOOT.BIN` while packing (`pack --resign`).
-- Convert a PS3 package for CFW in one GUI workflow: find every `EBOOT.BIN`, resolve licensed SELFs
-  from the RAP library, decrypt and fake-sign them, optionally lower their firmware requirement,
+- Convert a PS3 package for CFW in one GUI workflow: find every `EBOOT.BIN`, SELF, and SPRX, resolve
+  licensed executables from the RAP library, decrypt and fake-sign them, optionally lower only newer
+  verified SDK requirements,
   stream the rebuilt `.pkg`, and write a per-executable transformation report beside it.
 
 ### Patch & verify

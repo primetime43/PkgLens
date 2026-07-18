@@ -43,6 +43,8 @@
       <MenuItem Header="_Tools">
         <MenuItem Header="_Verify integrity…" Click="OnVerifyClick" IsEnabled="{Binding HasPackage}" />
         <MenuItem Header="Package _info…" Click="OnInfoClick" IsEnabled="{Binding HasPackage}" />
+        <MenuItem Header="Analyze _firmware…" Click="OnFirmwareAnalysisClick" />
+        <MenuItem Header="Analyze firmware _folder…" Click="OnFirmwareFolderAnalysisClick" />
         <MenuItem Header="_Folder info…" Click="OnFolderInfoClick" />
         <MenuItem Header="Scan package _library…" Click="OnScanFolderClick" />
         <MenuItem Header="Key / _license audit…" Click="OnKeyLicenseAuditClick" />

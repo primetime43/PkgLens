@@ -33,6 +33,9 @@ public partial class MainWindow
             case PackageRecommendedAction.KeyLicenseAudit:
                 await new KeyLicenseAuditDialog(Vm.KeysDirectory, package.FilePath, autoStart: true).ShowDialog(this);
                 break;
+            case PackageRecommendedAction.AnalyzeFirmware:
+                await StartFirmwareAnalysisAsync(package.FilePath, canPatchPackage: true);
+                break;
         }
     }
 }

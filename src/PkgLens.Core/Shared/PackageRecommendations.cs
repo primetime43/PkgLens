@@ -12,6 +12,7 @@ public enum PackageRecommendedAction
     ExtractAll,
     Verify,
     KeyLicenseAudit,
+    AnalyzeFirmware,
 }
 
 public sealed record PackageActionRecommendation(
@@ -120,29 +121,32 @@ public static class PackageRecommendationEngine
             { } contentType => $"PS3 {contentType} package",
             null => "PS3 package",
         };
-        bool hasEboot = info.Entries.Any(entry => entry.IsFile &&
-            Path.GetFileName(entry.Name).Equals("EBOOT.BIN", StringComparison.OrdinalIgnoreCase));
-        bool canConvertForCfw = hasEboot && info.Header.IsRetail;
+        bool hasExecutables = info.Entries.Any(entry => entry.IsFile && IsPs3Executable(entry.Name));
+        bool canConvertForCfw = hasExecutables && info.Header.IsRetail;
         var actions = new List<PackageActionRecommendation>();
 
         if (canConvertForCfw)
         {
             actions.Add(new(PackageRecommendedAction.ConvertCfw, "Convert package for CFW",
-                "Process embedded EBOOTs, resolve RAPs, fake-sign them, and rebuild the package.",
+                "Process embedded EBOOT/SELF/SPRX files, resolve RAPs, fake-sign them, and rebuild the package.",
                 "RECOMMENDED", true));
         }
         actions.Add(new(PackageRecommendedAction.ExtractAll,
             info.Metadata.ContentType == PkgContentType.GameData ? "Extract update/game data" : "Extract package files",
             "Rebuild the package directory tree on disk without modifying its contents.", "FOLDER",
             IsPrimary: !canConvertForCfw));
+        if (hasExecutables)
+            actions.Add(new(PackageRecommendedAction.AnalyzeFirmware, "Analyze required firmware",
+                "Scan every EBOOT, SELF, and SPRX; report the highest requirement and verified patch support.",
+                "READ-ONLY"));
         AddLicenseAudit(info, actions);
         actions.Add(Verify());
 
         string summary = canConvertForCfw
-            ? "One or more EBOOT.BIN files were detected; CFW conversion is available."
-            : hasEboot
+            ? "One or more PS3 executables were detected; firmware analysis and CFW conversion are available."
+            : hasExecutables
                 ? "This non-finalized package already uses the debug package path; extraction is recommended instead of retail CFW conversion."
-            : $"No convertible EBOOT.BIN was detected; extraction is the safest next action for this {classification.ToLowerInvariant()}.";
+            : $"No convertible EBOOT/SELF/SPRX was detected; extraction is the safest next action for this {classification.ToLowerInvariant()}.";
         return new(classification, summary, actions);
     }
 
@@ -167,4 +171,12 @@ public static class PackageRecommendationEngine
 
     private static PackageActionRecommendation Verify() => new(PackageRecommendedAction.Verify,
         "Verify package integrity", "Check header authentication, signatures, and structural bounds.", "READ-ONLY");
+
+    private static bool IsPs3Executable(string path)
+    {
+        string name = Path.GetFileName(path);
+        return name.Equals("EBOOT.BIN", StringComparison.OrdinalIgnoreCase) ||
+               Path.GetExtension(name).Equals(".self", StringComparison.OrdinalIgnoreCase) ||
+               Path.GetExtension(name).Equals(".sprx", StringComparison.OrdinalIgnoreCase);
+    }
 }

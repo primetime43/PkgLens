@@ -117,11 +117,11 @@ public static class CfwPackageConverter
         if (!info.IsDecrypted)
             throw new PkgKeyException("The package contents could not be decrypted with the available package keys.");
 
-        List<PkgEntry> eboots = info.Entries
-            .Where(entry => entry.IsFile && IsEboot(entry.Name))
+        List<PkgEntry> executables = info.Entries
+            .Where(entry => entry.IsFile && IsExecutable(entry.Name))
             .ToList();
-        if (eboots.Count == 0)
-            throw new PkgFormatException("The package contains no EBOOT.BIN executables to convert.");
+        if (executables.Count == 0)
+            throw new PkgFormatException("The package contains no EBOOT.BIN, SELF, or SPRX executables to convert.");
 
         var replacements = new Dictionary<PkgEntry, byte[]>();
         var transformations = new List<CfwExecutableTransformation>();
@@ -130,12 +130,12 @@ public static class CfwPackageConverter
             "The rebuilt package is unsigned and is intended only for CFW/HEN or compatible emulators, not stock OFW.",
         };
 
-        for (int index = 0; index < eboots.Count; index++)
+        for (int index = 0; index < executables.Count; index++)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            PkgEntry entry = eboots[index];
+            PkgEntry entry = executables[index];
             progress?.Report(new CfwConversionProgress(
-                $"Extracting and converting {entry.Name}…", index * 20d / eboots.Count));
+                $"Extracting and converting {entry.Name}…", index * 20d / executables.Count));
             byte[] original = ExtractExecutable(source, info.Header, entry, packageKeys, cancellationToken);
             (byte[] converted, CfwExecutableTransformation transformation, string? warning) =
                 ConvertExecutable(entry.Name, original, options, cancellationToken);
@@ -240,14 +240,19 @@ public static class CfwPackageConverter
         string? warning = null;
         if (options.FirmwareTarget is { } target)
         {
-            SdkVersion? previous = EbootPatcher.SetFirmwareVersion(elf, target.Major, target.Minor);
+            SdkVersion? previous = EbootPatcher.FindSdkVersion(elf);
             if (previous is null)
             {
                 firmwareChange = $"target {target} requested; sys_process_param not found";
                 warning = $"{path}: firmware was not changed because the ELF has no sys_process_param SDK marker.";
             }
+            else if (previous.ComparableVersion <= target.Major * 100 + target.Minor)
+            {
+                firmwareChange = $"{previous.Display} already at or below {target}; unchanged";
+            }
             else
             {
+                EbootPatcher.SetFirmwareVersion(elf, target.Major, target.Minor);
                 firmwareChange = $"{previous.Display} → {target}";
                 action += " → firmware patched";
             }
@@ -266,8 +271,13 @@ public static class CfwPackageConverter
             licenseSource, firmwareChange), warning);
     }
 
-    private static bool IsEboot(string path) =>
-        path.Split('/', '\\').Last().Equals("EBOOT.BIN", StringComparison.OrdinalIgnoreCase);
+    private static bool IsExecutable(string path)
+    {
+        string name = path.Split('/', '\\').Last();
+        return name.Equals("EBOOT.BIN", StringComparison.OrdinalIgnoreCase) ||
+               Path.GetExtension(name).Equals(".self", StringComparison.OrdinalIgnoreCase) ||
+               Path.GetExtension(name).Equals(".sprx", StringComparison.OrdinalIgnoreCase);
+    }
 
     private static byte[] ExtractExecutable(Stream source, PkgHeader header, PkgEntry entry,
         IKeyProvider packageKeys, CancellationToken cancellationToken)

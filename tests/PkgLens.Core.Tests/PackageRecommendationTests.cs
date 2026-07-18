@@ -64,6 +64,7 @@ public sealed class PackageRecommendationTests
         Assert.Equal("PS3 game/executable package", result.Classification);
         Assert.Equal(PackageRecommendedAction.ConvertCfw, result.Actions[0].Action);
         Assert.True(result.Actions[0].IsPrimary);
+        Assert.Contains(result.Actions, action => action.Action == PackageRecommendedAction.AnalyzeFirmware);
     }
 
     [Fact]

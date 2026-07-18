@@ -1,0 +1,75 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="PkgLens.Gui.Views.FirmwareAnalysisDialog"
+        Width="1050" Height="620" MinWidth="780" MinHeight="450"
+        WindowStartupLocation="CenterOwner" Title="Firmware analysis">
+  <DockPanel Margin="14">
+    <StackPanel DockPanel.Dock="Top" Spacing="4" Margin="0,0,0,12">
+      <TextBlock Text="SELF / SPRX firmware analysis" FontSize="20" FontWeight="SemiBold" />
+      <TextBlock x:Name="SummaryText" TextWrapping="Wrap" />
+      <TextBlock x:Name="SourceText" FontSize="12" Opacity="0.65" TextWrapping="Wrap" />
+      <Border x:Name="GuidancePanel" Classes="panel" Padding="10" Margin="0,8,0,0">
+        <Grid ColumnDefinitions="*,*,*" ColumnSpacing="16">
+          <StackPanel Grid.Column="0" Spacing="3">
+            <TextBlock Text="1  Open package" FontWeight="SemiBold" />
+            <TextBlock Text="The package key opens the PKG container automatically. A RAP is not used for this step."
+                       FontSize="11" Opacity="0.72" TextWrapping="Wrap" />
+          </StackPanel>
+          <StackPanel Grid.Column="1" Spacing="3">
+            <TextBlock Text="2  Read SELF headers" FontWeight="SemiBold" />
+            <TextBlock Text="Declared firmware is read from every SELF/SPRX header without a RAP."
+                       FontSize="11" Opacity="0.72" TextWrapping="Wrap" />
+          </StackPanel>
+          <StackPanel Grid.Column="2" Spacing="3">
+            <TextBlock Text="3  Verify safe patching" FontWeight="SemiBold" />
+            <TextBlock Text="Only licensed retail executables need their matching RAP to decrypt and verify the SDK patch marker."
+                       FontSize="11" Opacity="0.72" TextWrapping="Wrap" />
+          </StackPanel>
+        </Grid>
+      </Border>
+      <Border x:Name="EmptyPanel" Padding="16" Margin="0,8,0,0" IsVisible="False"
+              Background="#160078D4" BorderBrush="#660078D4" BorderThickness="1" CornerRadius="5">
+        <StackPanel Spacing="5">
+          <TextBlock x:Name="EmptyTitleText" FontSize="16" FontWeight="SemiBold" />
+          <TextBlock x:Name="EmptyGuidanceText" TextWrapping="Wrap" />
+        </StackPanel>
+      </Border>
+      <Border x:Name="RapHintPanel" Padding="10,7" Margin="0,5,0,0" IsVisible="False"
+              Background="#18E08A00" BorderBrush="#99B66A00" BorderThickness="1" CornerRadius="4">
+        <TextBlock x:Name="RapHintText" TextWrapping="Wrap" FontSize="12" />
+      </Border>
+    </StackPanel>
+
+    <Grid DockPanel.Dock="Bottom" ColumnDefinitions="*,Auto" Margin="0,12,0,0">
+      <StackPanel x:Name="PatchPanel" Grid.Column="0" Orientation="Horizontal" Spacing="8"
+                  VerticalAlignment="Center" IsVisible="False">
+        <TextBlock Text="Lower verified SDK requirements to" VerticalAlignment="Center" />
+        <TextBox x:Name="TargetBox" Width="75" Text="4.00" Watermark="4.00" />
+        <Button Content="Patch package copy…" Click="OnPatch" Classes="primary" />
+        <TextBlock x:Name="PatchErrorText" Foreground="IndianRed" VerticalAlignment="Center"
+                   IsVisible="False" TextWrapping="Wrap" MaxWidth="300" />
+      </StackPanel>
+      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+        <Button Content="Save report…" Click="OnSaveReport" />
+        <Button Content="Close" Click="OnClose" />
+      </StackPanel>
+    </Grid>
+
+    <Grid RowDefinitions="*,Auto">
+      <DataGrid x:Name="ItemsGrid" Grid.Row="0" AutoGenerateColumns="False" IsReadOnly="True"
+                GridLinesVisibility="Horizontal" CanUserResizeColumns="True" CanUserSortColumns="True"
+                CanUserReorderColumns="True" HorizontalScrollBarVisibility="Auto" x:CompileBindings="False">
+        <DataGrid.Columns>
+          <DataGridTextColumn Header="Path" Binding="{Binding Path}" Width="2*" MinWidth="240" />
+          <DataGridTextColumn Header="Type" Binding="{Binding Kind}" Width="Auto" MinWidth="100" />
+          <DataGridTextColumn Header="Header FW" Binding="{Binding HeaderFirmware}" Width="Auto" MinWidth="90" />
+          <DataGridTextColumn Header="SDK FW" Binding="{Binding SdkFirmware}" Width="Auto" MinWidth="80" />
+          <DataGridTextColumn Header="Analysis" Binding="{Binding Analysis}" Width="Auto" MinWidth="130" />
+          <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="3*" MinWidth="360" />
+        </DataGrid.Columns>
+      </DataGrid>
+      <TextBlock Grid.Row="1" Margin="0,8,0,0" FontSize="11" Opacity="0.65" TextWrapping="Wrap"
+                 Text="Firmware lowering changes only a verified sys_process_param SDK marker. Patched package output is fake-signed and intended for CFW/HEN or compatible emulators; compatibility is not guaranteed." />
+    </Grid>
+  </DockPanel>
+</Window>

@@ -14,8 +14,12 @@ public sealed record SdkVersion(int Offset, uint Value)
 
     private int MinorOnes => (int)((Value >> 12) & 0xF);
 
+    public int Major => VersionByte >> 4;
+    public int Minor => (VersionByte & 0xF) * 10 + MinorOnes;
+    public int ComparableVersion => Major * 100 + Minor;
+
     /// <summary>A friendly firmware string, e.g. "4.46" — both minor digits decoded, not just the tens.</summary>
-    public string Display => $"{VersionByte >> 4}.{VersionByte & 0xF}{MinorOnes}";
+    public string Display => $"{Major}.{Minor:D2}";
 }
 
 /// <summary>

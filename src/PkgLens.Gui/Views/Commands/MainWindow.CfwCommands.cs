@@ -19,7 +19,8 @@ public partial class MainWindow
     private async void OnHomeConvertCfw(object? sender, RoutedEventArgs e) =>
         await StartCfwConversionAsync(null);
 
-    private async Task StartCfwConversionAsync(string? sourcePath)
+    private async Task StartCfwConversionAsync(string? sourcePath,
+        CfwConversionDialogResult? presetSettings = null)
     {
         if (sourcePath is null)
         {
@@ -37,7 +38,7 @@ public partial class MainWindow
             if (sourcePath is null) return;
         }
 
-        CfwConversionDialogResult? settings =
+        CfwConversionDialogResult? settings = presetSettings ??
             await new CfwConversionDialog(sourcePath).ShowDialog<CfwConversionDialogResult?>(this);
         if (settings is null) return;
 
@@ -100,7 +101,7 @@ public partial class MainWindow
             string reportText = report!.ToText();
             await AtomicOutput.WriteAllTextAsync(reportPath, reportText, token);
             Vm.RefreshRapStatus();
-            Vm.Status = $"Converted {Path.GetFileName(destinationPath)} — {report.Executables.Count} EBOOT(s); report: {Path.GetFileName(reportPath)}";
+            Vm.Status = $"Converted {Path.GetFileName(destinationPath)} — {report.Executables.Count} executable(s); report: {Path.GetFileName(reportPath)}";
             await new FileViewerDialog(Path.GetFileName(reportPath), Encoding.UTF8.GetBytes(reportText)).ShowDialog(this);
         });
     }
