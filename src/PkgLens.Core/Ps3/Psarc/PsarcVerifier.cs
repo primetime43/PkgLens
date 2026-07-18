@@ -18,8 +18,8 @@ public static class PsarcVerifier
             var itemProgress = new PsarcProgressRelay(value =>
                 progress?.Report(new PsarcProgress(itemBase + value.Completed, total, entry.Path)));
             var raw = new PsarcReader.RawEntry(entry.NameDigest, entry.FirstBlockIndex, entry.Length, entry.DataOffset);
-            PsarcReader.ExtractRawEntry(source, raw, blockLengths, archive.Header.BlockSize, Stream.Null,
-                cancellationToken, itemProgress, entry.Path);
+            PsarcReader.ExtractRawEntry(source, raw, blockLengths, archive.Header.BlockSize,
+                archive.Header.Compression, Stream.Null, cancellationToken, itemProgress, entry.Path);
             completed += checked((long)entry.Length);
             progress?.Report(new PsarcProgress(completed, total, entry.Path));
         }

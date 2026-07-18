@@ -1,5 +1,4 @@
 using System.Buffers.Binary;
-using System.IO.Compression;
 using System.Text;
 
 namespace PkgLens.Core.Ps3.Psarc;
@@ -37,8 +36,8 @@ public static class PsarcReader
             throw new NotSupportedException($"PSARC version {major}.{minor} is not supported; versions 1.3 and 1.4 are supported.");
 
         string compression = Encoding.ASCII.GetString(headerBytes[8..12]);
-        if (compression != "zlib")
-            throw new NotSupportedException($"PSARC compression '{compression}' is not supported. This browser currently supports standard zlib archives.");
+        if (!PsarcBlockCodec.IsSupported(compression))
+            throw new NotSupportedException($"PSARC compression '{compression}' is not supported. Supported compression types are zlib and LZMA.");
 
         uint dataOffset = BinaryPrimitives.ReadUInt32BigEndian(headerBytes[12..]);
         uint tocEntrySize = BinaryPrimitives.ReadUInt32BigEndian(headerBytes[16..]);
@@ -93,7 +92,8 @@ public static class PsarcReader
             throw new InvalidDataException("The PSARC manifest is too large to inspect safely.");
 
         using var manifest = new MemoryStream(checked((int)records[0].Length));
-        ExtractRawEntry(stream, records[0], blockLengths, blockSize, manifest, CancellationToken.None, null, null);
+        ExtractRawEntry(stream, records[0], blockLengths, blockSize, compression, manifest,
+            CancellationToken.None, null, null);
         string manifestText = new UTF8Encoding(false, true).GetString(manifest.ToArray()).TrimEnd('\0');
         string[] names = manifestText.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
         while (names.Length > 0 && names[^1].Length == 0)
@@ -133,8 +133,8 @@ public static class PsarcReader
 
         var raw = new RawEntry(entry.NameDigest, entry.FirstBlockIndex, entry.Length, entry.DataOffset);
         uint[] lengths = ReadBlockLengths(source, archive.Header);
-        ExtractRawEntry(source, raw, lengths, archive.Header.BlockSize, destination, cancellationToken,
-            progress, entry.Path);
+        ExtractRawEntry(source, raw, lengths, archive.Header.BlockSize, archive.Header.Compression,
+            destination, cancellationToken, progress, entry.Path);
     }
 
     public static byte[] ExtractEntryBytes(Stream source, PsarcArchiveInfo archive, PsarcEntry entry,
@@ -177,8 +177,8 @@ public static class PsarcReader
                     var raw = new RawEntry(entry.NameDigest, entry.FirstBlockIndex, entry.Length, entry.DataOffset);
                     var itemProgress = new PsarcProgressRelay(value =>
                         progress?.Report(new PsarcProgress(completed + value.Completed, total, entry.Path)));
-                    ExtractRawEntry(source, raw, lengths, archive.Header.BlockSize, output, cancellationToken,
-                        itemProgress, entry.Path);
+                    ExtractRawEntry(source, raw, lengths, archive.Header.BlockSize, archive.Header.Compression,
+                        output, cancellationToken, itemProgress, entry.Path);
                 }
                 File.Move(temporary, outputPath, true);
                 completed += checked((long)entry.Length);
@@ -209,7 +209,8 @@ public static class PsarcReader
     }
 
     internal static void ExtractRawEntry(Stream source, RawEntry entry, uint[] blockLengths, uint blockSize,
-        Stream destination, CancellationToken cancellationToken, IProgress<PsarcProgress>? progress, string? item)
+        string compression, Stream destination, CancellationToken cancellationToken,
+        IProgress<PsarcProgress>? progress, string? item)
     {
         int count = GetEntryBlockCount(entry.Length, blockSize);
         ulong remaining = entry.Length;
@@ -227,25 +228,8 @@ public static class PsarcReader
             int storedSize = storedMarker == 0 ? logicalSize : checked((int)storedMarker);
             ReadExactly(source, compressed.AsSpan(0, storedSize));
 
-            if (storedMarker == 0)
-            {
-                destination.Write(compressed, 0, logicalSize);
-            }
-            else
-            {
-                using var input = new MemoryStream(compressed, 0, storedSize, writable: false, publiclyVisible: true);
-                using var zlib = new ZLibStream(input, CompressionMode.Decompress, leaveOpen: true);
-                int written = 0;
-                while (written < logicalSize)
-                {
-                    int read = zlib.Read(plain, written, logicalSize - written);
-                    if (read == 0) break;
-                    written += read;
-                }
-                if (written != logicalSize || zlib.ReadByte() != -1)
-                    throw new InvalidDataException($"A compressed PSARC block for {item ?? "the manifest"} has an invalid decompressed size.");
-                destination.Write(plain, 0, logicalSize);
-            }
+            PsarcBlockCodec.Decode(compression, compressed, storedSize, plain, logicalSize, blockSize, item);
+            destination.Write(plain, 0, logicalSize);
 
             remaining -= (uint)logicalSize;
             completed += logicalSize;

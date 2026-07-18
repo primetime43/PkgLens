@@ -28,6 +28,34 @@ public sealed class PsarcTests
     }
 
     [Fact]
+    public void LzmaGoldenBlock_DecodesClassicThirteenByteHeader()
+    {
+        byte[] stored = Convert.FromBase64String(
+            "XQAAAQDIAAAAAAAAAAAoFMQlrSwmJZR2HyrtAzctAmr4Qc637MEKGUrQuiWvof//+EXgAA==");
+        byte[] expected = Encoding.ASCII.GetBytes(string.Concat(Enumerable.Repeat("PSARC LZMA golden block.\n", 8)));
+        byte[] actual = new byte[expected.Length];
+
+        PsarcBlockCodec.Decode("lzma", stored, stored.Length, actual, actual.Length, 65_536, "golden.bin");
+
+        Assert.Equal(expected, actual);
+    }
+
+    [Fact]
+    public void Read_AndExtract_StandardLzmaArchive()
+    {
+        byte[] first = Encoding.UTF8.GetBytes(string.Concat(Enumerable.Repeat("LZMA PSARC entry\n", 12)));
+        byte[] second = Enumerable.Repeat((byte)0x5A, 173).ToArray();
+        byte[] bytes = BuildArchiveWithCompression("lzma", ("text/readme.txt", first), ("data/pattern.bin", second));
+
+        using var source = new MemoryStream(bytes);
+        PsarcArchiveInfo archive = PsarcReader.Read(source);
+
+        Assert.Equal("lzma", archive.Header.Compression);
+        Assert.Equal(first, PsarcReader.ExtractEntryBytes(source, archive, archive.Entries[0]));
+        Assert.Equal(second, PsarcReader.ExtractEntryBytes(source, archive, archive.Entries[1]));
+    }
+
+    [Fact]
     public void Repack_ReplacesOneEntry_AndPreservesMultiBlockEntry()
     {
         byte[] preserved = Enumerable.Range(0, 211).Select(index => (byte)(index * 17 + 9)).ToArray();
@@ -53,6 +81,39 @@ public sealed class PsarcTests
             Assert.Equal(preserved, PsarcReader.ExtractEntryBytes(output, rebuilt, rebuilt.Entries[1]));
             Assert.Equal(archive.Header.Flags, rebuilt.Header.Flags);
             Assert.Equal(archive.Header.BlockSize, rebuilt.Header.BlockSize);
+        }
+        finally
+        {
+            File.Delete(sourcePath);
+            File.Delete(destinationPath);
+        }
+    }
+
+    [Fact]
+    public void Repack_PreservesLzmaCompression_AndVerifiesEveryEntry()
+    {
+        byte[] preserved = Enumerable.Range(0, 211).Select(index => (byte)(index * 17 + 9)).ToArray();
+        byte[] sourceBytes = BuildArchiveWithCompression("lzma",
+            ("replace.txt", Encoding.ASCII.GetBytes("old")), ("folder/preserved.bin", preserved));
+        string sourcePath = Path.GetTempFileName();
+        string destinationPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.psarc");
+        try
+        {
+            File.WriteAllBytes(sourcePath, sourceBytes);
+            PsarcArchiveInfo archive = PsarcReader.Read(sourcePath);
+            byte[] replacement = Enumerable.Repeat((byte)'A', 321).ToArray();
+            var replacements = new Dictionary<PsarcEntry, PsarcReplacement>
+            {
+                [archive.Entries[0]] = PsarcReplacement.FromBytes(replacement),
+            };
+
+            PsarcWriter.Repack(sourcePath, archive, replacements, destinationPath);
+
+            PsarcArchiveInfo rebuilt = PsarcVerifier.Verify(destinationPath);
+            using var output = File.OpenRead(destinationPath);
+            Assert.Equal("lzma", rebuilt.Header.Compression);
+            Assert.Equal(replacement, PsarcReader.ExtractEntryBytes(output, rebuilt, rebuilt.Entries[0]));
+            Assert.Equal(preserved, PsarcReader.ExtractEntryBytes(output, rebuilt, rebuilt.Entries[1]));
         }
         finally
         {
@@ -92,17 +153,44 @@ public sealed class PsarcTests
     }
 
     [Fact]
-    public void Read_RejectsLzmaAndEncryptedArchives()
+    public void Read_RejectsUnknownCompressionAndEncryptedArchives()
     {
-        byte[] lzma = BuildArchive(("file.bin", new byte[] { 1 }));
-        Encoding.ASCII.GetBytes("lzma").CopyTo(lzma, 8);
-        using var lzmaStream = new MemoryStream(lzma);
-        Assert.Throws<NotSupportedException>(() => PsarcReader.Read(lzmaStream));
+        byte[] unknown = BuildArchive(("file.bin", new byte[] { 1 }));
+        Encoding.ASCII.GetBytes("xxxx").CopyTo(unknown, 8);
+        using var unknownStream = new MemoryStream(unknown);
+        Assert.Throws<NotSupportedException>(() => PsarcReader.Read(unknownStream));
 
         byte[] encrypted = BuildArchive(("file.bin", new byte[] { 1 }));
         BinaryPrimitives.WriteUInt32BigEndian(encrypted.AsSpan(28, 4), (uint)PsarcArchiveFlags.Encrypted);
         using var encryptedStream = new MemoryStream(encrypted);
         Assert.Throws<NotSupportedException>(() => PsarcReader.Read(encryptedStream));
+    }
+
+    [Fact]
+    public void LzmaBlock_RejectsIncorrectDeclaredSize()
+    {
+        byte[] stored = Convert.FromBase64String(
+            "XQAAAQDIAAAAAAAAAAAoFMQlrSwmJZR2HyrtAzctAmr4Qc637MEKGUrQuiWvof//+EXgAA==");
+        stored[5]--;
+        byte[] output = new byte[200];
+
+        InvalidDataException exception = Assert.Throws<InvalidDataException>(() =>
+            PsarcBlockCodec.Decode("lzma", stored, stored.Length, output, output.Length, 65_536, "broken.bin"));
+
+        Assert.Contains("declares", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void LzmaBlock_RejectsDictionaryLargerThanArchiveBlockSize()
+    {
+        byte[] stored = Convert.FromBase64String(
+            "XQAAAQDIAAAAAAAAAAAoFMQlrSwmJZR2HyrtAzctAmr4Qc637MEKGUrQuiWvof//+EXgAA==");
+        byte[] output = new byte[200];
+
+        InvalidDataException exception = Assert.Throws<InvalidDataException>(() =>
+            PsarcBlockCodec.Decode("lzma", stored, stored.Length, output, output.Length, 32_768, "unsafe.bin"));
+
+        Assert.Contains("dictionary", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -123,16 +211,21 @@ public sealed class PsarcTests
     }
 
     private static byte[] BuildArchive(params (string Path, byte[] Data)[] files)
+        => BuildArchiveWithCompression("zlib", files);
+
+    private static byte[] BuildArchiveWithCompression(string compression,
+        params (string Path, byte[] Data)[] files)
     {
         const int blockSize = 64;
         const int headerSize = 0x20;
         const int tocSize = 0x1E;
+        int blockLengthSize = PsarcReader.GetBlockLengthSize(blockSize);
         string manifestText = string.Join('\n', files.Select(file => file.Path)) + '\n';
         var entries = new List<(string Path, byte[] Data)> { (string.Empty, Encoding.UTF8.GetBytes(manifestText)) };
         entries.AddRange(files);
 
         var payloads = new List<byte[]>();
-        var blockLengths = new List<ushort>();
+        var blockLengths = new List<uint>();
         var records = new List<(byte[] Digest, uint FirstBlock, ulong Length, ulong StoredLength)>();
         foreach ((string path, byte[] data) in entries)
         {
@@ -141,10 +234,18 @@ public sealed class PsarcTests
             for (int offset = 0; offset < data.Length; offset += blockSize)
             {
                 byte[] plain = data.AsSpan(offset, Math.Min(blockSize, data.Length - offset)).ToArray();
-                using var compressed = new MemoryStream();
-                using (var zlib = new ZLibStream(compressed, CompressionLevel.SmallestSize, true))
-                    zlib.Write(plain);
-                byte[] stored = compressed.ToArray();
+                byte[] stored;
+                if (compression == "zlib")
+                {
+                    using var compressed = new MemoryStream();
+                    using (var zlib = new ZLibStream(compressed, CompressionLevel.SmallestSize, true))
+                        zlib.Write(plain);
+                    stored = compressed.ToArray();
+                }
+                else
+                {
+                    stored = PsarcBlockCodec.Encode(compression, plain, plain.Length, blockSize);
+                }
                 if (stored.Length >= plain.Length)
                 {
                     blockLengths.Add(0);
@@ -153,7 +254,7 @@ public sealed class PsarcTests
                 }
                 else
                 {
-                    blockLengths.Add(checked((ushort)stored.Length));
+                    blockLengths.Add(checked((uint)stored.Length));
                     payloads.Add(stored);
                     storedLength += (uint)stored.Length;
                 }
@@ -162,13 +263,13 @@ public sealed class PsarcTests
             records.Add((digest, firstBlock, (ulong)data.Length, storedLength));
         }
 
-        uint dataOffset = checked((uint)(headerSize + tocSize * records.Count + sizeof(ushort) * blockLengths.Count));
+        uint dataOffset = checked((uint)(headerSize + tocSize * records.Count + blockLengthSize * blockLengths.Count));
         using var output = new MemoryStream();
         Span<byte> header = stackalloc byte[headerSize];
         BinaryPrimitives.WriteUInt32BigEndian(header, 0x50534152);
         BinaryPrimitives.WriteUInt16BigEndian(header[4..], 1);
         BinaryPrimitives.WriteUInt16BigEndian(header[6..], 4);
-        Encoding.ASCII.GetBytes("zlib", header[8..12]);
+        Encoding.ASCII.GetBytes(compression, header[8..12]);
         BinaryPrimitives.WriteUInt32BigEndian(header[12..], dataOffset);
         BinaryPrimitives.WriteUInt32BigEndian(header[16..], tocSize);
         BinaryPrimitives.WriteUInt32BigEndian(header[20..], (uint)records.Count);
@@ -188,12 +289,12 @@ public sealed class PsarcTests
             output.Write(toc);
             offsetInArchive += record.StoredLength;
         }
-        byte[] blockLengthBytes = new byte[2];
-        foreach (ushort length in blockLengths)
+        byte[] blockLengthBytes = new byte[4];
+        foreach (uint length in blockLengths)
         {
             Span<byte> bytes = blockLengthBytes;
-            BinaryPrimitives.WriteUInt16BigEndian(bytes, length);
-            output.Write(bytes);
+            BinaryPrimitives.WriteUInt32BigEndian(bytes, length);
+            output.Write(bytes[(4 - blockLengthSize)..]);
         }
         foreach (byte[] payload in payloads) output.Write(payload);
         return output.ToArray();

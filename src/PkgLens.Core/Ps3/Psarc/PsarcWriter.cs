@@ -1,5 +1,4 @@
 using System.Buffers.Binary;
-using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -85,7 +84,7 @@ public static class PsarcWriter
 
         using (var manifest = new MemoryStream(manifestBytes, writable: false))
             staged.Add(StageEntry(manifest, manifestBytes.LongLength, new byte[16], output, blockSize,
-                allBlockLengths, cancellationToken, null, null));
+                original.Compression, allBlockLengths, cancellationToken, null, null));
 
         foreach (PsarcEntry entry in archive.Entries)
         {
@@ -98,8 +97,8 @@ public static class PsarcWriter
                 long itemBase = completed;
                 var itemProgress = new PsarcProgressRelay(value =>
                     progress?.Report(new PsarcProgress(itemBase + value.Completed, total, entry.Path)));
-                staged.Add(StageEntry(input, replacement.Length, digest, output, blockSize, allBlockLengths,
-                    cancellationToken, itemProgress, entry.Path));
+                staged.Add(StageEntry(input, replacement.Length, digest, output, blockSize, original.Compression,
+                    allBlockLengths, cancellationToken, itemProgress, entry.Path));
                 if (input.ReadByte() != -1)
                     throw new InvalidDataException($"The replacement for {entry.Path} is longer than its declared length.");
                 completed += replacement.Length;
@@ -112,7 +111,7 @@ public static class PsarcWriter
                 var itemProgress = new PsarcProgressRelay(value =>
                     progress?.Report(new PsarcProgress(itemBase + value.Completed, total, entry.Path)));
                 staged.Add(StageEntry(plain, checked((long)entry.Length), digest, output, blockSize,
-                    allBlockLengths, cancellationToken, itemProgress, entry.Path));
+                    original.Compression, allBlockLengths, cancellationToken, itemProgress, entry.Path));
                 completed += checked((long)entry.Length);
             }
             progress?.Report(new PsarcProgress(completed, total, entry.Path));
@@ -128,7 +127,8 @@ public static class PsarcWriter
     }
 
     private static StagedEntry StageEntry(Stream input, long length, byte[] digest, Stream payload, uint blockSize,
-        List<uint> allBlockLengths, CancellationToken cancellationToken, IProgress<PsarcProgress>? progress, string? item)
+        string compression, List<uint> allBlockLengths, CancellationToken cancellationToken,
+        IProgress<PsarcProgress>? progress, string? item)
     {
         if (length < 0) throw new ArgumentOutOfRangeException(nameof(length));
         long payloadStart = payload.Position;
@@ -141,15 +141,12 @@ public static class PsarcWriter
             cancellationToken.ThrowIfCancellationRequested();
             int logicalSize = (int)Math.Min(blockSize, remaining);
             ReadExactly(input, plain.AsSpan(0, logicalSize), item);
-            using var compressed = new MemoryStream(logicalSize);
-            using (var zlib = new ZLibStream(compressed, CompressionLevel.SmallestSize, leaveOpen: true))
-                zlib.Write(plain, 0, logicalSize);
+            byte[] compressed = PsarcBlockCodec.Encode(compression, plain, logicalSize, blockSize);
 
             if (compressed.Length < logicalSize && compressed.Length < blockSize)
             {
                 allBlockLengths.Add(checked((uint)compressed.Length));
-                compressed.Position = 0;
-                compressed.CopyTo(payload);
+                payload.Write(compressed);
             }
             else
             {
@@ -180,7 +177,9 @@ public static class PsarcWriter
         BinaryPrimitives.WriteUInt32BigEndian(bytes, 0x50534152);
         BinaryPrimitives.WriteUInt16BigEndian(bytes[4..], original.MajorVersion);
         BinaryPrimitives.WriteUInt16BigEndian(bytes[6..], original.MinorVersion);
-        Encoding.ASCII.GetBytes("zlib", bytes[8..12]);
+        if (!PsarcBlockCodec.IsSupported(original.Compression) || original.Compression.Length != 4)
+            throw new NotSupportedException($"PSARC compression '{original.Compression}' is not supported.");
+        Encoding.ASCII.GetBytes(original.Compression, bytes[8..12]);
         BinaryPrimitives.WriteUInt32BigEndian(bytes[12..], dataOffset);
         BinaryPrimitives.WriteUInt32BigEndian(bytes[16..], TocEntrySize);
         BinaryPrimitives.WriteUInt32BigEndian(bytes[20..], entryCount);
@@ -237,6 +236,7 @@ public static class PsarcWriter
         private readonly PsarcEntry _entry;
         private readonly uint[] _blockLengths;
         private readonly uint _blockSize;
+        private readonly string _compression;
         private readonly CancellationToken _cancellationToken;
         private readonly byte[] _storedBuffer;
         private readonly byte[] _plainBuffer;
@@ -253,6 +253,7 @@ public static class PsarcWriter
             _entry = entry;
             _blockLengths = blockLengths;
             _blockSize = archive.Header.BlockSize;
+            _compression = archive.Header.Compression;
             _cancellationToken = cancellationToken;
             _storedBuffer = new byte[checked((int)_blockSize)];
             _plainBuffer = new byte[checked((int)_blockSize)];
@@ -294,24 +295,8 @@ public static class PsarcWriter
             int storedSize = marker == 0 ? logicalSize : checked((int)marker);
             PsarcReader.ReadExactly(_source, _storedBuffer.AsSpan(0, storedSize));
 
-            if (marker == 0)
-            {
-                _storedBuffer.AsSpan(0, logicalSize).CopyTo(_plainBuffer);
-            }
-            else
-            {
-                using var input = new MemoryStream(_storedBuffer, 0, storedSize, writable: false, publiclyVisible: true);
-                using var zlib = new ZLibStream(input, CompressionMode.Decompress, leaveOpen: true);
-                int decoded = 0;
-                while (decoded < logicalSize)
-                {
-                    int read = zlib.Read(_plainBuffer, decoded, logicalSize - decoded);
-                    if (read == 0) break;
-                    decoded += read;
-                }
-                if (decoded != logicalSize || zlib.ReadByte() != -1)
-                    throw new InvalidDataException($"A compressed PSARC block for {_entry.Path} has an invalid decompressed size.");
-            }
+            PsarcBlockCodec.Decode(_compression, _storedBuffer, storedSize, _plainBuffer, logicalSize, _blockSize,
+                _entry.Path);
 
             _blockIndex++;
             _remaining -= (uint)logicalSize;

@@ -167,7 +167,7 @@ public static class OperationCatalog
             "PS_Vita → app / patch / addcont…", suggestedRule: OperationEligibilityRule.VitaExportable,
             menu: [Loc(OperationMenu.File, 1, 40, "PlatformExport")], recommendation: PackageRecommendedAction.ExportVita),
         Def(OperationId.BrowsePsarc, "Browse / rebuild PSARC archive", "Browse, extract, replace, and rebuild PSARC contents.",
-            "Browse, extract, queue replacements, and rebuild a verified copy of a standard zlib PSARC archive.",
+            "Browse, extract, queue replacements, and rebuild a verified copy of a standard zlib or LZMA PSARC archive.",
             "Browse / rebuild _PSARC archive…", menu: [Loc(OperationMenu.File, 1, 10, "ExtractRepack")]),
         Def(OperationId.ExtractAll, "Extract package files", "Rebuild the package directory tree on disk without modifying its contents.",
             "Extract the currently opened package and recreate its directory tree on disk.", "Extract _all files…",

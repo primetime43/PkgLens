@@ -61,9 +61,9 @@ PS3 overlay package containing only added/modified target files plus a patch-cat
 
 Open **File → Extract and repack → Browse / rebuild PSARC archive…**, or drop a `.psarc` onto the
 window, to search, preview, extract, replace, and rebuild files inside common PS3 archives. Rebuilds
-stream one block at a time, preserve the archive's version/path mode/block size, and are fully
-decompressed again before success is reported. Standard v1.3/v1.4 zlib PSARCs are supported;
-LZMA, encrypted, and PSARC-MSELF hybrid variants are detected and rejected without writing output.
+stream one block at a time, preserve the archive's version/path mode/block size/compression, and are
+fully decompressed again before success is reported. Standard v1.3/v1.4 zlib and LZMA PSARCs are
+supported; encrypted and PSARC-MSELF hybrid variants are detected and rejected without writing output.
 
 ## What it does
 
@@ -137,9 +137,9 @@ LZMA, encrypted, and PSARC-MSELF hybrid variants are detected and rejected witho
   target's added and modified files plus a generated `CATEGORY=GP` `PARAM.SFO`; removed files are
   reported but cannot be represented by a normal overlay PKG. Every generated payload is hashed back
   against the target package before success is reported, and mismatched title IDs disable creation.
-- Browse and filter standard PSARC v1.3/v1.4 zlib archives, preview or safely extract entries, queue
-  file replacements, and stream a separately verified rebuilt archive. Unsafe manifest traversal,
-  encrypted archives, LZMA archives, and PSARC-MSELF hybrids are rejected explicitly.
+- Browse and filter standard PSARC v1.3/v1.4 zlib or LZMA archives, preview or safely extract entries,
+  queue file replacements, and stream a separately verified rebuilt archive while preserving its
+  compression. Unsafe manifest traversal, encrypted archives, and PSARC-MSELF hybrids are rejected.
 - Build a `.pkg` from a content folder (`pack`). *Fast Pack* infers the ids from `PARAM.SFO`; pass
   options for *Custom Pack*. The default is retail-encrypted (for CFW); `--debug` builds a
   non-finalized package for RPCS3 or dev consoles.

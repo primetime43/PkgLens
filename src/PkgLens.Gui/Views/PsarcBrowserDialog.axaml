@@ -26,7 +26,7 @@
 
       <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
         <Button Grid.Column="0" Content="Open another…" Click="OnOpenAnother"
-                ToolTip.Tip="Choose a different standard zlib PSARC archive to browse." />
+                ToolTip.Tip="Choose a different standard zlib or LZMA PSARC archive to browse." />
         <TextBox x:Name="FilterText" Grid.Column="1" Watermark="Filter files by name or path…"
                  TextChanged="OnFilterChanged"
                  ToolTip.Tip="Filter the visible file list without changing the archive." />
@@ -50,7 +50,7 @@
           <Button x:Name="ReplaceButton" Content="Replace…" Click="OnReplace" IsEnabled="False" Classes="primary"
                   ToolTip.Tip="Queue a local file as the selected entry's replacement. Nothing is written until Rebuild archive copy is clicked." />
           <Button x:Name="RebuildButton" Content="Rebuild archive copy…" Click="OnRebuild" Classes="primary"
-                  ToolTip.Tip="Stream all entries into a separate standard zlib PSARC, apply queued replacements, then decompress every output entry to verify it." />
+                  ToolTip.Tip="Stream all entries into a separate PSARC using the source archive's zlib or LZMA compression, apply queued replacements, then decompress every output entry to verify it." />
           <Button x:Name="CancelButton" Content="Cancel" Click="OnCancel" IsVisible="False"
                   ToolTip.Tip="Stop at the next safe block boundary and remove unfinished output." />
           <Button x:Name="CloseButton" Content="Close" Click="OnClose"
