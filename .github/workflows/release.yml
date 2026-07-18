@@ -54,7 +54,7 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
-      - name: Publish CLI (pkglens)
+      - name: Publish CLI
         run: >
           dotnet publish src/PkgLens.Cli/PkgLens.Cli.csproj
           -c Release -r ${{ matrix.rid }}
@@ -94,8 +94,8 @@ jobs:
           $version = '${{ needs.prepare.outputs.version }}'
           $extension = if ($IsWindows) { '.exe' } else { '' }
           $renames = @(
-            @{ Source = "publish/cli/pkglens$extension"; Destination = "publish/cli/pkglens-$version$extension" },
-            @{ Source = "publish/gui/PkgLens.Gui$extension"; Destination = "publish/gui/PkgLens-$version$extension" }
+            @{ Source = "publish/cli/pkglens$extension"; Destination = "publish/cli/PkgLens-CLI-$version$extension" },
+            @{ Source = "publish/gui/PkgLens.Gui$extension"; Destination = "publish/gui/PkgLens-GUI-$version$extension" }
           )
           foreach ($rename in $renames) {
             if (-not (Test-Path -LiteralPath $rename.Source -PathType Leaf)) {
@@ -104,21 +104,28 @@ jobs:
             Move-Item -LiteralPath $rename.Source -Destination $rename.Destination
           }
 
+      - name: Create combined bundle
+        shell: pwsh
+        run: |
+          $version = '${{ needs.prepare.outputs.version }}'
+          $extension = if ($IsWindows) { '.exe' } else { '' }
+          New-Item -ItemType Directory -Force bundle | Out-Null
+          Copy-Item -LiteralPath "publish/gui/PkgLens-GUI-$version$extension" -Destination bundle
+          Copy-Item -LiteralPath "publish/cli/PkgLens-CLI-$version$extension" -Destination bundle
+
       - name: Package (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force artifacts | Out-Null
-          Compress-Archive -Path publish/cli/* -DestinationPath "artifacts/pkglens-cli-${{ needs.prepare.outputs.version }}-${{ matrix.rid }}.zip"
-          Compress-Archive -Path publish/gui/* -DestinationPath "artifacts/pkglens-gui-${{ needs.prepare.outputs.version }}-${{ matrix.rid }}.zip"
+          Compress-Archive -Path bundle/* -DestinationPath "artifacts/PkgLens-${{ needs.prepare.outputs.version }}-${{ matrix.rid }}.zip"
 
       - name: Package (Unix)
         if: runner.os != 'Windows'
         shell: bash
         run: |
           mkdir -p artifacts
-          tar -C publish/cli -czf "artifacts/pkglens-cli-${{ needs.prepare.outputs.version }}-${{ matrix.rid }}.tar.gz" .
-          tar -C publish/gui -czf "artifacts/pkglens-gui-${{ needs.prepare.outputs.version }}-${{ matrix.rid }}.tar.gz" .
+          tar -C bundle -czf "artifacts/PkgLens-${{ needs.prepare.outputs.version }}-${{ matrix.rid }}.tar.gz" .
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
