@@ -9,17 +9,6 @@ executables, disc exports, and PSARC archives.
 
 See the complete [`PkgLens feature list`](docs/features.md).
 
-## Quick start
-
-```
-dotnet run --project src/PkgLens.Gui
-dotnet run --project src/PkgLens.Cli -- info <pkg>
-```
-
-On Windows, `run-gui.cmd` builds and launches the app. `publish-gui.cmd` creates
-`dist\pkglens.gui.exe` and a Desktop shortcut. Open or drag in a `.pkg` or `.psarc`; the **Suggested**
-page shows the operations that apply to that file.
-
 ## Highlights
 
 - Inspect package metadata, files, `PARAM.SFO`, SELF/EBOOT/SPRX headers, content IDs, and firmware
@@ -37,6 +26,17 @@ page shows the operations that apply to that file.
 
 The GUI exposes these workflows through **Suggested**, **File**, and **Tools**. Eligibility checks hide
 or disable operations that do not apply to the selected package.
+
+## Quick start
+
+```
+dotnet run --project src/PkgLens.Gui
+dotnet run --project src/PkgLens.Cli -- info <pkg>
+```
+
+On Windows, `run-gui.cmd` builds and launches the app. `publish-gui.cmd` creates
+`dist\pkglens.gui.exe` and a Desktop shortcut. Open or drag in a `.pkg` or `.psarc`; the **Suggested**
+page shows the operations that apply to that file.
 
 ## CLI
 
