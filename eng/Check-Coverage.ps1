@@ -1,5 +1,7 @@
 [CmdletBinding()]
 param(
+    [string] $Name = 'Overall',
+
     [Parameter(Mandatory = $true)]
     [string] $ResultsDirectory,
 
@@ -53,8 +55,8 @@ $linePassed = $linePercent -ge $MinimumLinePercent
 $branchPassed = $branchPercent -ge $MinimumBranchPercent
 $status = if ($linePassed -and $branchPassed) { 'PASS' } else { 'FAIL' }
 
-Write-Host ("Coverage {0}: lines {1:N2}% ({2:N0}/{3:N0}, minimum {4:N2}%); branches {5:N2}% ({6:N0}/{7:N0}, minimum {8:N2}%)." -f
-    $status, $linePercent, $linesCovered, $linesValid, $MinimumLinePercent,
+Write-Host ("{0} coverage {1}: lines {2:N2}% ({3:N0}/{4:N0}, minimum {5:N2}%); branches {6:N2}% ({7:N0}/{8:N0}, minimum {9:N2}%)." -f
+    $Name, $status, $linePercent, $linesCovered, $linesValid, $MinimumLinePercent,
     $branchPercent, $branchesCovered, $branchesValid, $MinimumBranchPercent)
 
 if ($SummaryPath) {
@@ -64,7 +66,7 @@ if ($SummaryPath) {
     }
 
     @"
-## Coverage gate
+## $Name coverage gate
 
 | Metric | Actual | Minimum | Result |
 |---|---:|---:|:---:|

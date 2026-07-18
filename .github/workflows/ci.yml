@@ -14,6 +14,8 @@ jobs:
       DOTNET_CLI_TELEMETRY_OPTOUT: true
       COVERAGE_LINE_THRESHOLD: 70
       COVERAGE_BRANCH_THRESHOLD: 52
+      GUI_COVERAGE_LINE_THRESHOLD: 22
+      GUI_COVERAGE_BRANCH_THRESHOLD: 3
     steps:
       - uses: actions/checkout@v4
 
@@ -40,23 +42,48 @@ jobs:
       - name: Build
         run: dotnet build --no-restore -c Release
 
-      - name: Test with coverage
+      - name: Test with Core and CLI coverage
         run: >-
           dotnet test --no-build -c Release
           --verbosity normal
           --logger trx
-          --results-directory TestResults
+          --results-directory TestResults/Core
           --collect:"XPlat Code Coverage"
           --
           DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura
+          DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Exclude=[PkgLens.Gui]*
 
-      - name: Enforce coverage thresholds
+      - name: Test headless GUI with coverage
+        run: >-
+          dotnet test tests/PkgLens.Core.Tests/PkgLens.Core.Tests.csproj
+          --no-build -c Release
+          --verbosity normal
+          --filter FullyQualifiedName~PkgLens.Core.Tests.Gui
+          --logger trx
+          --results-directory TestResults/Gui
+          --collect:"XPlat Code Coverage"
+          --
+          DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura
+          DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Include=[PkgLens.Gui]*
+
+      - name: Enforce Core and CLI coverage thresholds
         shell: pwsh
         run: >-
           ./eng/Check-Coverage.ps1
-          -ResultsDirectory TestResults
+          -Name "Core / CLI"
+          -ResultsDirectory TestResults/Core
           -MinimumLinePercent $env:COVERAGE_LINE_THRESHOLD
           -MinimumBranchPercent $env:COVERAGE_BRANCH_THRESHOLD
+          -SummaryPath $env:GITHUB_STEP_SUMMARY
+
+      - name: Enforce GUI coverage thresholds
+        shell: pwsh
+        run: >-
+          ./eng/Check-Coverage.ps1
+          -Name GUI
+          -ResultsDirectory TestResults/Gui
+          -MinimumLinePercent $env:GUI_COVERAGE_LINE_THRESHOLD
+          -MinimumBranchPercent $env:GUI_COVERAGE_BRANCH_THRESHOLD
           -SummaryPath $env:GITHUB_STEP_SUMMARY
 
       - name: Publish quality reports

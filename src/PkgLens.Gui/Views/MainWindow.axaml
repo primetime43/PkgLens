@@ -147,21 +147,21 @@
       <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto">
         <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding Status}" FontSize="12" TextTrimming="CharacterEllipsis" />
         <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding KeyStatus}" FontSize="12" Opacity="0.7" Margin="12,0,0,0" />
-        <Grid Grid.Row="1" Grid.ColumnSpan="2" ColumnDefinitions="*,Auto" Margin="0,5,0,1"
+        <Grid x:Name="OperationProgressPanel" Grid.Row="1" Grid.ColumnSpan="2" ColumnDefinitions="*,Auto" Margin="0,5,0,1"
               IsVisible="{Binding IsBusy}">
           <StackPanel Grid.Column="0" Spacing="3">
             <TextBlock Text="{Binding BusyMessage}" FontSize="11" TextTrimming="CharacterEllipsis" />
             <ProgressBar Minimum="0" Maximum="100" Value="{Binding ProgressValue}"
                          IsIndeterminate="{Binding IsProgressIndeterminate}" Height="4" />
           </StackPanel>
-          <Button Grid.Column="1" Content="Cancel" Click="OnCancelOperation" Margin="10,0,0,0"
-                  Padding="10,2" IsEnabled="{Binding CanCancel}" VerticalAlignment="Center" />
+          <Button x:Name="OperationCancelButton" Grid.Column="1" Content="Cancel" Click="OnCancelOperation" Margin="10,0,0,0"
+                   Padding="10,2" IsEnabled="{Binding CanCancel}" VerticalAlignment="Center" />
         </Grid>
       </Grid>
     </Border>
 
     <!-- Rail + content -->
-    <Grid ColumnDefinitions="148,*" IsEnabled="{Binding IsNotBusy}">
+    <Grid x:Name="ToolContentShell" ColumnDefinitions="148,*" IsEnabled="{Binding IsNotBusy}">
 
       <!-- Left tool rail -->
       <DockPanel Grid.Column="0"
@@ -185,7 +185,7 @@
       <Grid Grid.Column="1">
 
         <!-- ===== Home page (main menu of tasks) ===== -->
-        <ScrollViewer IsVisible="{Binding IsHomeTool}">
+        <ScrollViewer x:Name="HomePage" IsVisible="{Binding IsHomeTool}">
           <StackPanel Margin="24,20" Spacing="18" MaxWidth="900" HorizontalAlignment="Left">
             <StackPanel Spacing="3">
               <TextBlock Classes="pagetitle" Text="PkgLens" />
@@ -519,7 +519,7 @@
         </ScrollViewer>
 
         <!-- ===== Suggested page (package-aware next actions) ===== -->
-        <Grid IsVisible="{Binding IsSuggestedTool}">
+        <Grid x:Name="SuggestedPage" IsVisible="{Binding IsSuggestedTool}">
           <TextBlock IsVisible="{Binding !HasPackage}"
                      Text="Open a .pkg file to see suggested actions."
                      TextAlignment="Center" TextWrapping="Wrap" MaxWidth="420"
@@ -583,7 +583,7 @@
         </Grid>
 
         <!-- ===== Package page (inspector) ===== -->
-        <Grid IsVisible="{Binding IsPackageTool}">
+        <Grid x:Name="PackagePage" IsVisible="{Binding IsPackageTool}">
           <TextBlock IsVisible="{Binding !HasPackage}"
                      Text="Open a .pkg file (File → Open), or drag one onto the window."
                      TextAlignment="Center" TextWrapping="Wrap" MaxWidth="420"
@@ -720,7 +720,7 @@
         </Grid>
 
         <!-- ===== Pack page ===== -->
-        <ScrollViewer IsVisible="{Binding IsPackTool}">
+        <ScrollViewer x:Name="PackPage" IsVisible="{Binding IsPackTool}">
           <StackPanel Margin="24,20" Spacing="16" MaxWidth="720" HorizontalAlignment="Left">
             <StackPanel Spacing="3">
               <TextBlock Classes="pagetitle" Text="Pack folder → .pkg" />
@@ -821,7 +821,7 @@
         </ScrollViewer>
 
         <!-- ===== Resign page ===== -->
-        <ScrollViewer IsVisible="{Binding IsResignTool}">
+        <ScrollViewer x:Name="ResignPage" IsVisible="{Binding IsResignTool}">
           <StackPanel Margin="24,20" Spacing="16" MaxWidth="820" HorizontalAlignment="Left">
             <TextBlock Classes="pagetitle" Text="SELF / EBOOT Resigner" />
 
@@ -1069,7 +1069,7 @@
         </ScrollViewer>
 
         <!-- ===== Decrypt page ===== -->
-        <ScrollViewer IsVisible="{Binding IsDecryptTool}">
+        <ScrollViewer x:Name="DecryptPage" IsVisible="{Binding IsDecryptTool}">
           <StackPanel Margin="24,20" Spacing="16" MaxWidth="720" HorizontalAlignment="Left">
             <StackPanel Spacing="3">
               <TextBlock Classes="pagetitle" Text="Decrypt EDAT / SDAT" />
@@ -1124,7 +1124,7 @@
         </ScrollViewer>
 
         <!-- ===== Keys page ===== -->
-        <ScrollViewer IsVisible="{Binding IsKeysTool}">
+        <ScrollViewer x:Name="KeysPage" IsVisible="{Binding IsKeysTool}">
           <StackPanel Margin="24,20" Spacing="16" MaxWidth="720" HorizontalAlignment="Left">
             <StackPanel Spacing="3">
               <TextBlock Classes="pagetitle" Text="Keys" />

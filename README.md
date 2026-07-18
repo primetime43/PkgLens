@@ -340,12 +340,14 @@ dotnet test    # xUnit tests
 ```
 
 CI also audits direct and transitive NuGet dependencies, publishes TRX/Cobertura reports, and
-enforces the current Core/CLI coverage floors of 70% lines and 52% branches. To run the same
-coverage gate locally:
+enforces separate coverage floors for Core/CLI (70% lines, 52% branches) and the headless GUI
+regression suite (22% lines, 3% branches). To run the same gates locally:
 
 ```powershell
-dotnet test -c Release --collect:"XPlat Code Coverage" --results-directory TestResults -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura
-./eng/Check-Coverage.ps1 -ResultsDirectory TestResults -MinimumLinePercent 70 -MinimumBranchPercent 52
+dotnet test -c Release --collect:"XPlat Code Coverage" --results-directory TestResults/Core -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Exclude=[PkgLens.Gui]*
+dotnet test tests/PkgLens.Core.Tests/PkgLens.Core.Tests.csproj -c Release --no-build --filter "FullyQualifiedName~PkgLens.Core.Tests.Gui" --collect:"XPlat Code Coverage" --results-directory TestResults/Gui -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Include=[PkgLens.Gui]*
+./eng/Check-Coverage.ps1 -Name "Core / CLI" -ResultsDirectory TestResults/Core -MinimumLinePercent 70 -MinimumBranchPercent 52
+./eng/Check-Coverage.ps1 -Name GUI -ResultsDirectory TestResults/Gui -MinimumLinePercent 22 -MinimumBranchPercent 3
 ```
 
 ## License

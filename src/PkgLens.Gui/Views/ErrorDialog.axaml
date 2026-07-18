@@ -10,7 +10,7 @@
       <TextBlock x:Name="MessageText" TextWrapping="Wrap" />
     </StackPanel>
 
-    <Expander Grid.Row="1" Header="Technical details">
+    <Expander x:Name="DetailsExpander" Grid.Row="1" Header="Technical details">
       <TextBox x:Name="DetailsText" Margin="0,8,0,0" Height="180" Padding="8"
                IsReadOnly="True" AcceptsReturn="True"
                FontFamily="Consolas, Menlo, monospace" FontSize="11"
@@ -19,7 +19,7 @@
                ScrollViewer.VerticalScrollBarVisibility="Auto" />
     </Expander>
 
-    <Button Grid.Row="2" Content="OK" Click="OnClose" HorizontalAlignment="Right"
+    <Button x:Name="OkButton" Grid.Row="2" Content="OK" Click="OnClose" HorizontalAlignment="Right"
             IsDefault="True" Classes="accent" MinWidth="88" Padding="18,6"
             HorizontalContentAlignment="Center" VerticalContentAlignment="Center" />
   </Grid>
