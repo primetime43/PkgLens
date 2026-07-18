@@ -108,6 +108,22 @@ jobs:
           $expected = 'pkglens ${{ needs.prepare.outputs.version }}'
           if ($actual -ne $expected) { throw "Expected '$expected', got '$actual'." }
 
+      - name: Add version to executable names
+        shell: pwsh
+        run: |
+          $version = '${{ needs.prepare.outputs.version }}'
+          $extension = if ($IsWindows) { '.exe' } else { '' }
+          $renames = @(
+            @{ Source = "publish/cli/pkglens$extension"; Destination = "publish/cli/pkglens-$version$extension" },
+            @{ Source = "publish/gui/PkgLens.Gui$extension"; Destination = "publish/gui/PkgLens-$version$extension" }
+          )
+          foreach ($rename in $renames) {
+            if (-not (Test-Path -LiteralPath $rename.Source -PathType Leaf)) {
+              throw "Published executable was not found: $($rename.Source)"
+            }
+            Move-Item -LiteralPath $rename.Source -Destination $rename.Destination
+          }
+
       - name: Package (Windows)
         if: runner.os == 'Windows'
         shell: pwsh

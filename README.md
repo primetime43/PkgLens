@@ -74,4 +74,4 @@ CI performs tests, vulnerability auditing, and coverage enforcement.
 
 The release version is stored in `Directory.Build.props`. Bumping it on `main` creates a GitHub
 release with self-contained GUI and CLI archives for Windows x64, Linux x64, macOS Intel, and macOS
-Apple Silicon.
+Apple Silicon. Archive and executable names include the version, such as `PkgLens-1.0.0.exe`.
