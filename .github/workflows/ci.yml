@@ -9,19 +9,61 @@ on:
 jobs:
   build-test:
     runs-on: ubuntu-latest
+    env:
+      DOTNET_NOLOGO: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+      COVERAGE_LINE_THRESHOLD: 70
+      COVERAGE_BRANCH_THRESHOLD: 52
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up .NET 8
+      - name: Set up .NET 8 and 10
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 8.0.x
+          dotnet-version: |
+            8.0.x
+            10.0.x
 
       - name: Restore
-        run: dotnet restore
+        run: >-
+          dotnet restore
+          -p:NuGetAudit=true
+          -p:NuGetAuditMode=all
+          -p:NuGetAuditLevel=low
+          -p:WarningsAsErrors=NU1901%3BNU1902%3BNU1903%3BNU1904
+
+      - name: Audit dependencies
+        run: |
+          mkdir -p TestResults
+          dotnet list PkgLens.slnx package --vulnerable --include-transitive | tee TestResults/dependency-audit.txt
 
       - name: Build
         run: dotnet build --no-restore -c Release
 
-      - name: Test
-        run: dotnet test --no-build -c Release --verbosity normal
+      - name: Test with coverage
+        run: >-
+          dotnet test --no-build -c Release
+          --verbosity normal
+          --logger trx
+          --results-directory TestResults
+          --collect:"XPlat Code Coverage"
+          --
+          DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura
+
+      - name: Enforce coverage thresholds
+        shell: pwsh
+        run: >-
+          ./eng/Check-Coverage.ps1
+          -ResultsDirectory TestResults
+          -MinimumLinePercent $env:COVERAGE_LINE_THRESHOLD
+          -MinimumBranchPercent $env:COVERAGE_BRANCH_THRESHOLD
+          -SummaryPath $env:GITHUB_STEP_SUMMARY
+
+      - name: Publish quality reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quality-reports
+          path: TestResults
+          if-no-files-found: warn
+          retention-days: 14

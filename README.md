@@ -339,6 +339,15 @@ dotnet build   # whole solution
 dotnet test    # xUnit tests
 ```
 
+CI also audits direct and transitive NuGet dependencies, publishes TRX/Cobertura reports, and
+enforces the current Core/CLI coverage floors of 70% lines and 52% branches. To run the same
+coverage gate locally:
+
+```powershell
+dotnet test -c Release --collect:"XPlat Code Coverage" --results-directory TestResults -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura
+./eng/Check-Coverage.ps1 -ResultsDirectory TestResults -MinimumLinePercent 70 -MinimumBranchPercent 52
+```
+
 ## License
 
 Permissive — ISC or MIT (the original PkgView is ISC).

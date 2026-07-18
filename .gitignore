@@ -4,6 +4,7 @@ obj/
 [Dd]ebug/
 [Rr]elease/
 dist/
+TestResults/
 *.user
 
 # Never commit user-supplied key material (runtime override keys). Anchored to the repo root so it
