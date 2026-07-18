@@ -1,0 +1,81 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="PkgLens.Gui.Views.BatchCenterDialog"
+        x:CompileBindings="False"
+        Width="1240" Height="720" MinWidth="900" MinHeight="520"
+        WindowStartupLocation="CenterOwner"
+        DragDrop.AllowDrop="True"
+        Title="Batch processing center">
+
+  <DockPanel Margin="12">
+    <StackPanel x:Name="SetupPanel" DockPanel.Dock="Top" Spacing="9" Margin="0,0,0,10">
+      <Grid ColumnDefinitions="Auto,*,Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="7">
+        <Button Grid.Row="0" Grid.Column="0" Content="Source folder…" Click="OnChooseSource" />
+        <TextBlock x:Name="SourceText" Grid.Row="0" Grid.Column="1" VerticalAlignment="Center"
+                   Text="Drop or choose a folder containing packages" TextTrimming="CharacterEllipsis" Opacity="0.8" />
+        <Button Grid.Row="0" Grid.Column="2" Content="Output folder…" Click="OnChooseOutput" />
+        <TextBlock x:Name="OutputText" Grid.Row="0" Grid.Column="3" VerticalAlignment="Center"
+                   Text="(not selected)" TextTrimming="CharacterEllipsis" Opacity="0.8" />
+
+        <TextBlock Grid.Row="1" Grid.Column="0" Text="Operation" VerticalAlignment="Center" />
+        <ComboBox x:Name="OperationBox" Grid.Row="1" Grid.Column="1" SelectionChanged="OnOperationChanged"
+                  DisplayMemberBinding="{Binding Label}" MinWidth="240" HorizontalAlignment="Left" />
+        <CheckBox x:Name="RecursiveCheck" Grid.Row="1" Grid.Column="2" Content="Recursive"
+                  IsChecked="True" VerticalAlignment="Center" />
+        <StackPanel Grid.Row="1" Grid.Column="3" Orientation="Horizontal" Spacing="8">
+          <Button x:Name="PrepareButton" Content="Prepare jobs" Click="OnPrepare" IsEnabled="False" />
+          <Button Content="Load / resume manifest…" Click="OnLoadManifest" />
+        </StackPanel>
+      </Grid>
+
+      <Border Classes="panel" Padding="10,8">
+        <Grid ColumnDefinitions="Auto,*">
+          <TextBlock Grid.Column="0" Text="ⓘ" FontSize="17" Margin="0,0,8,0" VerticalAlignment="Top" />
+          <StackPanel Grid.Column="1" Spacing="2">
+            <TextBlock x:Name="OperationDescription" TextWrapping="Wrap" />
+            <TextBlock Text="Progress is saved after every package. Reopening the manifest skips completed jobs and resumes unfinished ones."
+                       FontSize="11" Opacity="0.65" TextWrapping="Wrap" />
+          </StackPanel>
+        </Grid>
+      </Border>
+    </StackPanel>
+
+    <Grid DockPanel.Dock="Bottom" RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto" Margin="0,9,0,0">
+      <TextBlock x:Name="StatusText" Grid.Row="0" Grid.Column="0" VerticalAlignment="Center"
+                 Text="Choose a source folder or drop one into this window." TextTrimming="CharacterEllipsis" Opacity="0.8" />
+      <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="12,0,0,0">
+        <Button x:Name="RetryButton" Content="Retry failed" Click="OnRetryFailed" IsEnabled="False" />
+        <Button x:Name="RunButton" Content="Start / resume" Click="OnRun" IsEnabled="False" Classes="primary" />
+        <Button x:Name="CancelButton" Content="Pause" Click="OnCancel" IsVisible="False" />
+        <Button x:Name="OpenOutputButton" Content="Open output" Click="OnOpenOutput" IsEnabled="False" />
+        <Button Content="Close" Click="OnClose" />
+      </StackPanel>
+      <ProgressBar x:Name="BatchProgress" Grid.Row="1" Grid.ColumnSpan="2" Height="5" Margin="0,8,0,0"
+                   Minimum="0" Maximum="100" IsVisible="False" />
+    </Grid>
+
+    <Grid>
+      <DataGrid x:Name="JobsGrid" AutoGenerateColumns="False" IsReadOnly="True" x:CompileBindings="False"
+                GridLinesVisibility="Horizontal" CanUserResizeColumns="True" CanUserSortColumns="True">
+        <DataGrid.Columns>
+          <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="90" />
+          <DataGridTextColumn Header="Package" Binding="{Binding Package}" Width="2*" />
+          <DataGridTextColumn Header="Title" Binding="{Binding Title}" Width="2*" />
+          <DataGridTextColumn Header="Platform" Binding="{Binding Platform}" Width="90" />
+          <DataGridTextColumn Header="Role" Binding="{Binding Role}" Width="85" />
+          <DataGridTextColumn Header="Attempts" Binding="{Binding Attempts}" Width="75" />
+          <DataGridTextColumn Header="Result / error" Binding="{Binding Message}" Width="3*" />
+          <DataGridTextColumn Header="Output" Binding="{Binding Output}" Width="2*" />
+        </DataGrid.Columns>
+      </DataGrid>
+
+      <Border x:Name="DropOverlay" IsVisible="False" Background="#D9222222" BorderBrush="#2D8CFF"
+              BorderThickness="2" CornerRadius="8" Margin="18" IsHitTestVisible="False">
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
+          <TextBlock Text="Drop package folder here" FontSize="24" FontWeight="SemiBold" />
+          <TextBlock Text="PkgLens will scan every .pkg and prepare resumable jobs." Opacity="0.75" />
+        </StackPanel>
+      </Border>
+    </Grid>
+  </DockPanel>
+</Window>

@@ -47,6 +47,7 @@
         <MenuItem Header="Analyze firmware _folder…" Click="OnFirmwareFolderAnalysisClick" />
         <MenuItem Header="_Folder info…" Click="OnFolderInfoClick" />
         <MenuItem Header="Scan package _library…" Click="OnScanFolderClick" />
+        <MenuItem Header="_Batch processing center…" Click="OnBatchCenterClick" />
         <MenuItem Header="Key / _license audit…" Click="OnKeyLicenseAuditClick" />
         <Separator />
         <MenuItem Header="Import _override key…" Click="OnSetKeyClick" />
@@ -224,6 +225,19 @@
                       <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                         <Border Classes="chip"><TextBlock Text="PKG" /></Border>
                         <Border Classes="chip"><TextBlock Text="READ-ONLY" /></Border>
+                      </StackPanel>
+                    </Grid>
+                  </Button>
+                  <Button Classes="row" Click="OnHomeBatch">
+                    <Grid ColumnDefinitions="34,*,Auto">
+                      <materialIcons:MaterialIcon Grid.Column="0" Kind="PlaylistPlay" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="1,0,0,0" />
+                      <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
+                        <TextBlock Classes="rowtitle" Text="Batch processing center…" />
+                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="Audit, classify, verify, extract, export, or CFW-convert a package folder with resumable jobs." />
+                      </StackPanel>
+                      <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Border Classes="chip"><TextBlock Text="FOLDER" /></Border>
+                        <Border Classes="chip"><TextBlock Text="RESUMABLE" /></Border>
                       </StackPanel>
                     </Grid>
                   </Button>
@@ -1086,7 +1100,7 @@
         <!-- Drag-and-drop overlay (global) -->
         <Border x:Name="DropOverlay" IsVisible="False" IsHitTestVisible="False" Background="#99000000">
           <Border Margin="24" BorderBrush="White" BorderThickness="2" CornerRadius="4">
-            <TextBlock Text="Drop a .pkg file to open it" FontSize="18" Foreground="White"
+            <TextBlock Text="Drop a .pkg to open it · Drop a folder for batch processing" FontSize="18" Foreground="White"
                        HorizontalAlignment="Center" VerticalAlignment="Center" />
           </Border>
         </Border>

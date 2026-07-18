@@ -108,6 +108,12 @@ public partial class MainWindow : Window
 
         foreach (var item in files)
         {
+            if (item is IStorageFolder folder && folder.TryGetLocalPath() is { } directory)
+            {
+                OpenBatchCenter(directory);
+                return;
+            }
+
             if (item is IStorageFile file &&
                 file.Name.EndsWith(".pkg", StringComparison.OrdinalIgnoreCase) &&
                 file.TryGetLocalPath() is { } path)
@@ -117,7 +123,7 @@ public partial class MainWindow : Window
             }
         }
 
-        Vm.Status = "Drop a .pkg file to open it.";
+        Vm.Status = "Drop a .pkg file to open it, or a folder for batch processing.";
     }
 
     private void ShowDropOverlay(bool show)

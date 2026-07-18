@@ -48,6 +48,8 @@ header, metadata, and `PARAM.SFO`. **File → Convert package → CFW…** perfo
   conversion and streaming rebuild workflow in one operation. **File → Export PSP package…** turns a
   PSP package directly into `EBOOT.PBP`, a decrypted ISO, or a compressed CSO. **Tools → Key /
   license audit…** scans a package, protected-content file, or folder and can save the report as JSON.
+  **Tools → Batch processing center…** accepts a package folder and runs resumable audit,
+  classification, verification, extraction, PSP export, or CFW-conversion jobs.
 
 ## What it does
 
@@ -65,6 +67,9 @@ header, metadata, and `PARAM.SFO`. **File → Convert package → CFW…** perfo
   SELF revision, content IDs, license types, installed/missing RAPs, and unsupported encryption.
 - Match a package library by title ID, region, content ID, version, and SFO category; base games,
   updates, and DLC are grouped together with missing-base and likely region-mismatch warnings.
+- Drop a folder into the batch processing center to audit, classify, verify, extract, PSP-export, or
+  CFW-convert multiple packages. A manifest is saved after every package, completed jobs are skipped
+  on resume, failed jobs can be retried, and mixed libraries automatically skip incompatible formats.
 - Automatically classify each opened package and show only relevant next actions, such as PSP/Vita
   export, PS3 CFW conversion, update/game-data extraction, license audit, or integrity verification.
 - Run a blocking operation preflight before PSP/Vita export, CFW conversion, EDAT/SDAT decrypt, or
@@ -114,6 +119,8 @@ header, metadata, and `PARAM.SFO`. **File → Convert package → CFW…** perfo
 - Verify package integrity: structural bounds, the header SHA-1 digest, the header AES-CMAC, and a
   read-only ECDSA check against Sony's public NPDRM key. A genuine retail package passes; a repacked,
   altered, or truncated one is flagged.
+- Automatically reopen and verify generated files before reporting success: rebuilt package item
+  tables, EDAT plaintext hashes, ISO9660 images, every CSO block, and fake-signed SELF-to-ELF round trips.
 - Catalog a folder of packages, one row each (`scan`, with `--json` / `--csv`).
 - Report on an extracted content folder (`folderinfo`).
 - Produce a key/license readiness report (`audit`, or **Tools → Key / license audit…** in the GUI).
