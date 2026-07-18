@@ -7,6 +7,7 @@
 
   <StackPanel Margin="18" Spacing="8">
     <TextBlock Text="PkgLens" FontSize="18" FontWeight="SemiBold" />
+    <TextBlock x:Name="VersionText" Text="Version" FontSize="12" Opacity="0.7" />
     <TextBlock Text="PS3 .pkg inspector, extractor, and (re)packer." Opacity="0.8" />
 
     <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.7"

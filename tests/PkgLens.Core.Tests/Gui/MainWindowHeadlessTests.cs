@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using PkgLens.Core.Shared;
+using PkgLens.Gui.Services;
 using PkgLens.Gui.ViewModels;
 using PkgLens.Gui.Views;
 using PkgLens.Gui.Views.Pages;
@@ -9,6 +10,23 @@ namespace PkgLens.Core.Tests.Gui;
 
 public sealed class MainWindowHeadlessTests
 {
+    [AvaloniaFact]
+    public void Version_IsVisibleInWindowTitleAndHelp()
+    {
+        var window = new MainWindow { DataContext = new MainWindowViewModel() };
+        window.Show();
+
+        Assert.Contains(GuiVersion.Value, window.Title, StringComparison.Ordinal);
+        Assert.Equal("_About PkgLens", window.FindControl<MenuItem>("AboutMenuItem")!.Header?.ToString());
+
+        var about = new AboutDialog();
+        Assert.Contains(GuiVersion.Value, about.Title, StringComparison.Ordinal);
+        Assert.Equal($"Version {GuiVersion.Value}", about.FindControl<TextBlock>("VersionText")!.Text);
+
+        about.Close();
+        window.Close();
+    }
+
     [AvaloniaFact]
     public void OperationMenus_AreBuiltFromCatalogWithEligibilityBindings()
     {

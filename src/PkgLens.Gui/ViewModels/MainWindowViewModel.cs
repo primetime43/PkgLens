@@ -46,7 +46,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private bool _canCancel;
 
     [ObservableProperty]
-    private string _windowTitle = "PkgLens";
+    private string _windowTitle = GuiVersion.ProductName;
 
     [ObservableProperty]
     private ToolPage _activeTool = ToolPage.Home;
@@ -129,8 +129,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
         oldValue?.Dispose();
         OnPropertyChanged(nameof(HasPackage));
         WindowTitle = newValue is null
-            ? "PkgLens"
-            : $"PkgLens — {newValue.Title}" + (string.IsNullOrEmpty(newValue.TitleId) ? "" : $" ({newValue.TitleId})");
+            ? GuiVersion.ProductName
+            : $"{GuiVersion.ProductName} — {newValue.Title}" +
+              (string.IsNullOrEmpty(newValue.TitleId) ? "" : $" ({newValue.TitleId})");
     }
 
     partial void OnKeysDirectoryChanged(string? value)

@@ -1,23 +1,62 @@
 name: Release
 
-# Push a version tag to cut a release, e.g.:
-#   git tag v1.0.0 && git push origin v1.0.0
-# Or run it manually from the Actions tab with a version input.
+# Bumping <Version> in Directory.Build.props on main publishes a release automatically.
+# Matching v* tags and manual runs remain supported.
 on:
   push:
+    branches: [ main ]
+    paths: [ Directory.Build.props ]
     tags: [ 'v*' ]
   workflow_dispatch:
-    inputs:
-      version:
-        description: 'Version tag to release (e.g. v1.0.0)'
-        required: true
 
 permissions:
   contents: write
 
 jobs:
+  prepare:
+    name: Resolve release version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+      should_release: ${{ steps.existing.outputs.should_release }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read central version
+        id: version
+        shell: pwsh
+        run: |
+          [xml] $props = Get-Content -LiteralPath Directory.Build.props
+          $version = [string] $props.Project.PropertyGroup.Version
+          if ($version -notmatch '^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$') {
+            throw "Directory.Build.props contains an invalid release version: '$version'."
+          }
+          $tag = "v$version"
+          if ($env:GITHUB_REF_TYPE -eq 'tag' -and $env:GITHUB_REF_NAME -ne $tag) {
+            throw "Tag '$env:GITHUB_REF_NAME' does not match Directory.Build.props version '$version'."
+          }
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+
+      - name: Skip an existing release
+        id: existing
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "Release $RELEASE_TAG already exists; nothing to publish."
+            echo "should_release=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+          fi
+
   build:
     name: Build ${{ matrix.rid }}
+    needs: prepare
+    if: needs.prepare.outputs.should_release == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -35,22 +74,14 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
-      - name: Resolve version
-        id: ver
-        shell: bash
-        env:
-          RAW_VERSION: ${{ github.event.inputs.version || github.ref_name }}
-        run: |
-          echo "version=${RAW_VERSION#v}" >> "$GITHUB_OUTPUT"
-
       - name: Publish CLI (pkglens)
         run: >
           dotnet publish src/PkgLens.Cli/PkgLens.Cli.csproj
           -c Release -r ${{ matrix.rid }}
           --self-contained true
           -p:PublishSingleFile=true
-          -p:Version=${{ steps.ver.outputs.version }}
-          -p:InformationalVersion=${{ steps.ver.outputs.version }}
+          -p:Version=${{ needs.prepare.outputs.version }}
+          -p:InformationalVersion=${{ needs.prepare.outputs.version }}
           -p:IncludeSourceRevisionInInformationalVersion=false
           -p:DebugType=none -p:DebugSymbols=false
           -o publish/cli
@@ -62,8 +93,8 @@ jobs:
           --self-contained true
           -p:PublishSingleFile=true
           -p:IncludeNativeLibrariesForSelfExtract=true
-          -p:Version=${{ steps.ver.outputs.version }}
-          -p:InformationalVersion=${{ steps.ver.outputs.version }}
+          -p:Version=${{ needs.prepare.outputs.version }}
+          -p:InformationalVersion=${{ needs.prepare.outputs.version }}
           -p:IncludeSourceRevisionInInformationalVersion=false
           -p:DebugType=none -p:DebugSymbols=false
           -o publish/gui
@@ -74,7 +105,7 @@ jobs:
           $name = if ($IsWindows) { 'pkglens.exe' } else { 'pkglens' }
           $executable = Join-Path 'publish/cli' $name
           $actual = (& $executable --version).Trim()
-          $expected = 'pkglens ${{ steps.ver.outputs.version }}'
+          $expected = 'pkglens ${{ needs.prepare.outputs.version }}'
           if ($actual -ne $expected) { throw "Expected '$expected', got '$actual'." }
 
       - name: Package (Windows)
@@ -82,16 +113,16 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force artifacts | Out-Null
-          Compress-Archive -Path publish/cli/* -DestinationPath "artifacts/pkglens-cli-${{ steps.ver.outputs.version }}-${{ matrix.rid }}.zip"
-          Compress-Archive -Path publish/gui/* -DestinationPath "artifacts/pkglens-gui-${{ steps.ver.outputs.version }}-${{ matrix.rid }}.zip"
+          Compress-Archive -Path publish/cli/* -DestinationPath "artifacts/pkglens-cli-${{ needs.prepare.outputs.version }}-${{ matrix.rid }}.zip"
+          Compress-Archive -Path publish/gui/* -DestinationPath "artifacts/pkglens-gui-${{ needs.prepare.outputs.version }}-${{ matrix.rid }}.zip"
 
       - name: Package (Unix)
         if: runner.os != 'Windows'
         shell: bash
         run: |
           mkdir -p artifacts
-          tar -C publish/cli -czf "artifacts/pkglens-cli-${{ steps.ver.outputs.version }}-${{ matrix.rid }}.tar.gz" .
-          tar -C publish/gui -czf "artifacts/pkglens-gui-${{ steps.ver.outputs.version }}-${{ matrix.rid }}.tar.gz" .
+          tar -C publish/cli -czf "artifacts/pkglens-cli-${{ needs.prepare.outputs.version }}-${{ matrix.rid }}.tar.gz" .
+          tar -C publish/gui -czf "artifacts/pkglens-gui-${{ needs.prepare.outputs.version }}-${{ matrix.rid }}.tar.gz" .
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -102,7 +133,8 @@ jobs:
 
   release:
     name: Publish GitHub Release
-    needs: build
+    needs: [prepare, build]
+    if: needs.prepare.outputs.should_release == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Download all build artifacts
@@ -114,8 +146,9 @@ jobs:
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.event.inputs.version || github.ref_name }}
-          name: PkgLens ${{ github.event.inputs.version || github.ref_name }}
+          tag_name: ${{ needs.prepare.outputs.tag }}
+          name: PkgLens ${{ needs.prepare.outputs.tag }}
+          target_commitish: ${{ github.sha }}
           generate_release_notes: true
-          prerelease: ${{ contains(github.event.inputs.version || github.ref_name, '-') }}
+          prerelease: ${{ contains(needs.prepare.outputs.version, '-') }}
           files: artifacts/**/*

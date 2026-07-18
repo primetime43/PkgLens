@@ -29,7 +29,7 @@
                   Click="OnOperationPreflightChanged" />
       </MenuItem>
       <MenuItem Header="_Help">
-        <MenuItem Header="_About PkgLens" Click="OnAboutClick" />
+        <MenuItem x:Name="AboutMenuItem" Header="_About PkgLens" Click="OnAboutClick" />
       </MenuItem>
     </Menu>
 
