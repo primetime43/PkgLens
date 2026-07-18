@@ -128,7 +128,7 @@ public partial class MainWindow
             var byteProgress = new Progress<long>(bytes =>
                 progress.Report(new GuiOperationProgress($"Extracting {node.Name}…",
                     node.Size == 0 ? 100 : bytes * 100d / node.Size)));
-            await Task.Run(() => package.ExtractSelectedTo(dest, token, byteProgress), token);
+            await Task.Run(() => package.Operations.ExtractEntry(node.Entry!, dest, token, byteProgress), token);
             Vm.Status = $"Extracted {node.Name} → {dest}";
         });
     }
@@ -164,7 +164,7 @@ public partial class MainWindow
         {
             var packageProgress = new Progress<PkgLens.Core.Shared.PkgOperationProgress>(value =>
                 progress.Report(PackagePresentationService.ToGuiProgress(value)));
-            int n = await Task.Run(() => package.ExtractAllTo(dest, token, packageProgress), token);
+            int n = await Task.Run(() => package.Operations.ExtractAll(dest, token, packageProgress), token);
             Vm.Status = $"Extracted {n} file(s) to {dest}";
         });
     }
@@ -200,7 +200,7 @@ public partial class MainWindow
         byte[]? data = null;
         await RunOperationAsync($"Reading {node.Name}…", $"Could not read {node.Name}", async (token, _) =>
         {
-            data = await Task.Run(package.ReadSelectedBytes, token);
+            data = await Task.Run(() => package.Operations.ReadEntryBytes(node.Entry!), token);
         });
         if (data is null)
             return;

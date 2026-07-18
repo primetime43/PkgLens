@@ -10,7 +10,6 @@ using PkgLens.Core;
 using PkgLens.Core.Shared;
 using PkgLens.Core.Shared.Keys;
 using PkgLens.Core.Shared.Models;
-using PkgLens.Core.Psp;
 using PkgLens.Core.Shared.Sfo;
 using PkgLens.Gui.Services;
 
@@ -22,10 +21,10 @@ namespace PkgLens.Gui.ViewModels;
 /// </summary>
 public sealed partial class PackageViewModel : ObservableObject, IDisposable
 {
-    private readonly Stream _stream;
-    private readonly PkgHeader _header;
-    private readonly IKeyProvider _keys;
+    private readonly PackageOperationService _operations;
     private readonly PkgInfo _info;
+
+    public PackageOperationService Operations => _operations;
 
     public string FilePath { get; }
     public string Title { get; }
@@ -54,8 +53,6 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
     public IReadOnlyList<SfoRow> SfoRows { get; }
 
     public bool IsDecrypted => _info.IsDecrypted;
-    public PspExportEligibility PspExportEligibility => PspPackageExporter.CheckEligibility(_info);
-    public bool CanExportPsp => PspExportEligibility.CanExport;
     public bool HasSfo => SfoRows.Count > 0;
     public string? DecryptionNote => _info.DecryptionNote;
     public bool ShowDecryptionWarning => !_info.IsDecrypted;
@@ -243,73 +240,25 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
     public bool CanPreviewSelected =>
         SelectedItem is { IsDirectory: false, Entry: not null } n && n.Size <= MaxPreviewBytes;
 
-    /// <summary>Runs the integrity checks against this package.</summary>
-    public PkgVerificationReport Verify() => PkgVerifier.Verify(_stream, _keys);
-
-    /// <summary>Reads the selected file's decrypted bytes into memory (for the viewer).</summary>
-    public byte[] ReadSelectedBytes()
-    {
-        if (SelectedItem is not { IsDirectory: false, Entry: { } entry })
-            throw new InvalidOperationException("No file is selected.");
-        return PkgReader.ExtractEntryBytes(_stream, _header, entry, _keys);
-    }
-
-    // --- Modify / repack ----------------------------------------------------------------------
-
-    private readonly Dictionary<PkgEntry, byte[]> _replacements = new();
-
-    public bool HasPendingChanges => _replacements.Count > 0;
-    public int PendingChangeCount => _replacements.Count;
+    public bool HasPendingChanges => _operations.HasPendingChanges;
+    public int PendingChangeCount => _operations.PendingChangeCount;
 
     /// <summary>The parsed PARAM.SFO, if present.</summary>
-    public SfoTable? Sfo => _info.Sfo;
+    public SfoTable? Sfo => _operations.Sfo;
+    public bool CanEditSfo => _operations.CanEditSfo;
 
-    private PkgEntry? SfoEntry => _info.Entries.FirstOrDefault(e =>
-        e.IsFile && (e.Name.Equals("PARAM.SFO", StringComparison.OrdinalIgnoreCase) ||
-                     e.Name.EndsWith("/PARAM.SFO", StringComparison.OrdinalIgnoreCase)));
-
-    public bool CanEditSfo => _info.Sfo is not null && SfoEntry is not null;
-
-    /// <summary>Serializes the edited SFO and queues it as the PARAM.SFO replacement for the next save.</summary>
-    public void ApplySfoEdits(IReadOnlyList<SfoEntry> edited)
+    private void OnPendingChangesChanged(object? sender, EventArgs e)
     {
-        if (SfoEntry is not { } entry)
-            throw new InvalidOperationException("This package has no PARAM.SFO to edit.");
-        _replacements[entry] = SfoWriter.Write(edited);
         OnPropertyChanged(nameof(HasPendingChanges));
         OnPropertyChanged(nameof(PendingChangeCount));
     }
-
-    /// <summary>Queues new content to replace the selected file when the package is next saved.</summary>
-    public void ReplaceSelected(byte[] content)
+    private PackageViewModel(PackageOperationService operations)
     {
-        if (SelectedItem is not { IsDirectory: false, Entry: { } entry })
-            throw new InvalidOperationException("Select a file to replace.");
-        _replacements[entry] = content;
-        OnPropertyChanged(nameof(HasPendingChanges));
-        OnPropertyChanged(nameof(PendingChangeCount));
-    }
-
-    /// <summary>
-    /// Writes a repacked copy of the package to <paramref name="destinationPath"/>, applying any
-    /// queued replacements. The signature is not recomputed (retail output is unsigned).
-    /// </summary>
-    public void SaveAs(string destinationPath, CancellationToken cancellationToken = default,
-        IProgress<PkgOperationProgress>? progress = null)
-    {
-        AtomicOutput.EnsureDifferentPath(FilePath, destinationPath);
-        AtomicOutput.Write(destinationPath,
-            dest => PkgWriter.Repack(_stream, _info, _replacements, _keys, dest,
-                cancellationToken, progress));
-    }
-
-    private PackageViewModel(string path, Stream stream, PkgInfo info, IKeyProvider keys)
-    {
-        FilePath = path;
-        _stream = stream;
+        _operations = operations;
+        _operations.PendingChangesChanged += OnPendingChangesChanged;
+        PkgInfo info = operations.Info;
         _info = info;
-        _keys = keys;
-        _header = info.Header;
+        FilePath = operations.FilePath;
 
         ContentIdRaw = info.ContentId.Raw;
         Title = info.Sfo?.Title ?? info.ContentId.Name ?? info.ContentId.Raw;
@@ -364,24 +313,20 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
         SelectedFolder = RootFolder; // show the root's contents initially
     }
 
-    /// <summary>Opens and parses a package, keeping the stream open for on-demand extraction.</summary>
+    /// <summary>Opens a package through the operation service and creates its presentation model.</summary>
     public static PackageViewModel Load(string path, IKeyProvider keys, CancellationToken cancellationToken = default)
     {
-        cancellationToken.ThrowIfCancellationRequested();
-        var stream = File.OpenRead(path);
+        PackageOperationService operations = PackageOperationService.Open(path, keys, cancellationToken);
         try
         {
-            var info = PkgReader.Read(stream, keys);
-            cancellationToken.ThrowIfCancellationRequested();
-            return new PackageViewModel(path, stream, info, keys);
+            return new PackageViewModel(operations);
         }
         catch
         {
-            stream.Dispose();
+            operations.Dispose();
             throw;
         }
     }
-
     /// <summary>Navigates into a folder (from a double-click in the file list).</summary>
     public void OpenFolder(EntryNode folder)
     {
@@ -389,146 +334,21 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
             SelectedFolder = folder;
     }
 
-    /// <summary>Extracts every file to <paramref name="directory"/>, rebuilding the tree. Returns the file count.</summary>
-    public int ExtractAllTo(string directory, CancellationToken cancellationToken = default,
-        IProgress<PkgOperationProgress>? progress = null) =>
-        PkgReader.ExtractAll(_stream, _info, directory, _keys,
-            cancellationToken: cancellationToken, progress: progress);
-
-    /// <summary>Streams the currently selected entry's decrypted data to <paramref name="destinationPath"/>.</summary>
-    public void ExtractSelectedTo(string destinationPath, CancellationToken cancellationToken = default,
-        IProgress<long>? progress = null)
-    {
-        if (SelectedItem?.Entry is not { } entry)
-            throw new InvalidOperationException("No extractable file is selected.");
-
-        AtomicOutput.EnsureDifferentPath(FilePath, destinationPath);
-        AtomicOutput.Write(destinationPath,
-            dest => PkgReader.ExtractEntry(_stream, _header, entry, dest, _keys,
-                cancellationToken, progress));
-    }
-
-    /// <summary>Decrypts the selected DOCUMENT.DAT into its manual pages (each a PNG), using the sibling DOCINFO.EDAT.</summary>
-    public IReadOnlyList<byte[]> DecryptSelectedDocument()
-    {
-        if (SelectedItem is not { IsDirectory: false, Entry: { } entry })
-            throw new InvalidOperationException("Select a DOCUMENT.DAT file.");
-
-        byte[] doc = PkgReader.ExtractEntryBytes(_stream, _header, entry, _keys);
-        byte[]? docInfo = ReadSiblingBytes("DOCINFO.EDAT");
-        return PspDocument.DecryptPages(doc, docInfo);
-    }
-
-    /// <summary>Extracts and splits the selected PBP into its parts under <paramref name="destinationDir"/>.</summary>
-    public IReadOnlyList<string> UnpackSelectedPbpTo(string destinationDir,
-        CancellationToken cancellationToken = default)
-    {
-        if (SelectedItem is not { IsDirectory: false, Name: { } leaf, Entry: { } entry })
-            throw new InvalidOperationException("Select a .PBP file.");
-
-        Directory.CreateDirectory(destinationDir);
-        string temp = Path.Combine(destinationDir, $".pkglens-{Guid.NewGuid():N}.tmp");
-        try
-        {
-            using (var d = File.Create(temp))
-                PkgReader.ExtractEntry(_stream, _header, entry, d, _keys, cancellationToken);
-
-            var written = new List<string>();
-            using (var src = File.OpenRead(temp))
-            {
-                var pbp = PbpArchive.Parse(src);
-                foreach (var e in pbp.Entries)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    AtomicOutput.Write(Path.Combine(destinationDir, e.Name),
-                        dst => PbpArchive.Extract(src, e, dst));
-                    written.Add(e.Name);
-                }
-            }
-            return written;
-        }
-        finally
-        {
-            try { File.Delete(temp); } catch { /* best-effort temp cleanup */ }
-        }
-    }
-
-    /// <summary>
-    /// Extracts the selected EBOOT.PBP, unpacks its DATA.PSAR (an NPUMDIMG), and decrypts it to a PSP
-    /// ISO at <paramref name="isoPath"/> — no RAP/license needed. Throws if there's no NPUMDIMG inside.
-    /// </summary>
-    public void ExtractSelectedPspIsoTo(string isoPath, CancellationToken cancellationToken = default,
-        IProgress<double>? progress = null)
-    {
-        if (SelectedItem is not { IsDirectory: false, Name: { } leaf, Entry: { } entry })
-            throw new InvalidOperationException("Select an EBOOT.PBP file.");
-
-        string dir = Path.GetDirectoryName(isoPath) ?? ".";
-        string pbpTmp = Path.Combine(dir, $".pkglens-pbp-{Guid.NewGuid():N}.tmp");
-        string psarTmp = Path.Combine(dir, $".pkglens-psar-{Guid.NewGuid():N}.tmp");
-        try
-        {
-            using (var d = File.Create(pbpTmp))
-                PkgReader.ExtractEntry(_stream, _header, entry, d, _keys, cancellationToken);
-
-            using (var src = File.OpenRead(pbpTmp))
-            {
-                var pbp = PbpArchive.Parse(src);
-                var psar = pbp.Entries.FirstOrDefault(e => e.Name.Equals("DATA.PSAR", StringComparison.OrdinalIgnoreCase))
-                    ?? throw new InvalidOperationException("This PBP has no DATA.PSAR.");
-                using var dst = File.Create(psarTmp);
-                PbpArchive.Extract(src, psar, dst);
-            }
-
-            using var psarStream = File.OpenRead(psarTmp);
-            var head = new byte[0x100];
-            psarStream.ReadExactly(head, 0, head.Length);
-            if (!NpumdImg.IsNpumdImg(head))
-                throw new InvalidOperationException("DATA.PSAR is not an NPUMDIMG (this game isn't a UMD/minis image).");
-            psarStream.Position = 0;
-
-            AtomicOutput.Write(isoPath, iso => NpumdImg.DecryptToIso(psarStream, iso,
-                cancellationToken, progress));
-        }
-        finally
-        {
-            try { File.Delete(pbpTmp); } catch { /* best-effort */ }
-            try { File.Delete(psarTmp); } catch { /* best-effort */ }
-        }
-    }
-
-    /// <summary>Reads a decrypted sibling entry (same folder as the selection) by leaf name, or null if absent.</summary>
-    private byte[]? ReadSiblingBytes(string leafName)
-    {
-        if (SelectedItem is not { FullPath: { } full })
-            return null;
-        int slash = full.LastIndexOf('/');
-        string siblingPath = slash < 0 ? leafName : full[..(slash + 1)] + leafName;
-        var entry = _info.Entries.FirstOrDefault(e =>
-            e.IsFile && e.Name.Equals(siblingPath, StringComparison.OrdinalIgnoreCase));
-        return entry is null ? null : PkgReader.ExtractEntryBytes(_stream, _header, entry, _keys);
-    }
-
     private Bitmap? TryLoadIcon()
     {
-        var iconEntry = _info.Entries.FirstOrDefault(e =>
-            e.IsFile && e.Name.Equals("ICON0.PNG", StringComparison.OrdinalIgnoreCase));
-        if (iconEntry is null)
+        byte[]? png = _operations.TryReadEntryBytes("ICON0.PNG");
+        if (png is not { Length: > 0 })
             return null;
-
         try
         {
-            byte[] png = PkgReader.ExtractEntryBytes(_stream, _header, iconEntry, _keys);
-            if (png.Length == 0) return null;
-            using var ms = new MemoryStream(png);
-            return new Bitmap(ms);
+            using var stream = new MemoryStream(png);
+            return new Bitmap(stream);
         }
         catch
         {
             return null;
         }
     }
-
     private static List<MetadataRow> BuildMetadataRows(PkgMetadata metadata)
     {
         var rows = new List<MetadataRow>();
@@ -554,5 +374,9 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
 
     private static string Plural(int n, string word) => n == 1 ? word : word + "s";
 
-    public void Dispose() => _stream.Dispose();
+    public void Dispose()
+    {
+        _operations.PendingChangesChanged -= OnPendingChangesChanged;
+        _operations.Dispose();
+    }
 }

@@ -25,7 +25,7 @@ public partial class MainWindow
         PspExportEligibility? eligibility = null;
         if (sourcePath is not null && Vm.Package is { } openPackage)
         {
-            eligibility = openPackage.PspExportEligibility;
+            eligibility = openPackage.Operations.PspExportEligibility;
             if (!eligibility.CanExport)
             {
                 Vm.ReportError("PSP export unavailable", new PkgLens.Core.PkgFormatException(eligibility.Reason));

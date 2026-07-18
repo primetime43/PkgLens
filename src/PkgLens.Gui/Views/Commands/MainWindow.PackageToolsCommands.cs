@@ -62,7 +62,7 @@ public partial class MainWindow
         string name = package.SelectedItem?.Name ?? "DOCUMENT.DAT";
         await RunOperationAsync("Decrypting manual…", "Manual decrypt failed", async (token, _) =>
         {
-            var pages = await Task.Run(package.DecryptSelectedDocument, token);
+            var pages = await Task.Run(() => package.Operations.DecryptDocument(package.SelectedItem!.Entry!), token);
             if (pages.Count == 0)
             {
                 Vm.Status = "No manual pages were found in this DOCUMENT.DAT.";
@@ -91,7 +91,7 @@ public partial class MainWindow
 
         await RunOperationAsync("Unpacking PBP…", "PBP unpack failed", async (token, _) =>
         {
-            var written = await Task.Run(() => package.UnpackSelectedPbpTo(dir, token), token);
+            var written = await Task.Run(() => package.Operations.UnpackPbp(package.SelectedItem!.Entry!, dir, token), token);
             Vm.Status = $"Unpacked {written.Count} section(s) → {dir}";
         });
     }
@@ -121,7 +121,7 @@ public partial class MainWindow
                 progress.Report(new GuiOperationProgress("Decrypting PSP ISO…", percent)));
             await Task.Run(() =>
             {
-                package.ExtractSelectedPspIsoTo(dest, token, isoProgress);
+                package.Operations.ExportPspIso(package.SelectedItem!.Entry!, dest, token, isoProgress);
                 progress.Report(new GuiOperationProgress("Verifying exported ISO…", null));
                 PostOperationVerifier.VerifyIso(dest);
             }, token);
@@ -143,7 +143,7 @@ public partial class MainWindow
 
         try
         {
-            package.ApplySfoEdits(edited);
+            package.Operations.ApplySfoEdits(edited);
             Vm.Status = $"PARAM.SFO edited — {package.PendingChangeCount} pending change(s). Use File → Save As to write a new .pkg.";
         }
         catch (Exception ex)
@@ -158,7 +158,7 @@ public partial class MainWindow
             return;
         await RunOperationAsync("Verifying package…", "Verify failed", async (token, _) =>
         {
-            var report = await Task.Run(package.Verify, token);
+            var report = await Task.Run(package.Operations.Verify, token);
             await new VerifyDialog(report).ShowDialog(this);
         });
     }
@@ -183,7 +183,7 @@ public partial class MainWindow
         await RunOperationAsync($"Reading {Path.GetFileName(path)}…", "Replace failed", async (token, _) =>
         {
             byte[] content = await File.ReadAllBytesAsync(path, token);
-            package.ReplaceSelected(content);
+            package.Operations.ReplaceEntry(node.Entry!, content);
             Vm.Status = $"Replaced {node.Name} ({EntryNode.FormatSize(node.Size)} → " +
                          $"{EntryNode.FormatSize((ulong)content.Length)}). {package.PendingChangeCount} pending change(s) — " +
                          "use File → Save As to write a new .pkg.";
@@ -216,7 +216,7 @@ public partial class MainWindow
             string? keysDirectory = Vm.KeysDirectory;
             await Task.Run(() =>
             {
-                package.SaveAs(dest, token, packageProgress);
+                package.Operations.SaveAs(dest, token, packageProgress);
                 progress.Report(new GuiOperationProgress("Verifying rebuilt package…", null));
                 PostOperationVerifier.VerifyPackage(dest, new FileKeyProvider(keysDirectory));
             }, token);
