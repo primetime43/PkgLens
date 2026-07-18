@@ -26,10 +26,6 @@ jobs:
             8.0.x
             10.0.x
 
-      - name: Verify generated feature catalog
-        shell: pwsh
-        run: ./eng/Generate-FeatureCatalog.ps1 -Check
-
       - name: Restore
         run: >-
           dotnet restore

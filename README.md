@@ -49,13 +49,6 @@ pkglens audit <pkg|file|folder> [--json]
 Run `pkglens <command> --help` for full options. Commands support structured `--json` output where
 applicable. The GUI is the recommended interface and exposes nearly every workflow.
 
-## Feature coverage vs TrueAncestor
-
-<!-- BEGIN GENERATED:README-COVERAGE -->
-How PkgLens maps to the two TrueAncestor tools (PKG Repacker + SELF Resigner). **20 covered · 1 partial · 3 out of scope by design.** The out-of-scope items all need Sony's private signing keys, which PkgLens never uses.
-See the full status and TrueAncestor comparison in [`docs/coverage.html`](docs/coverage.html).
-<!-- END GENERATED:README-COVERAGE -->
-
 ## Keys
 
 Standard PS3, IDU/kiosk, PSP/PSX, and Vita package keys are bundled and selected automatically.
@@ -73,8 +66,6 @@ patched CFW/HEN loaders; they will not pass stock retail, DEX, or OFW signature 
 ```powershell
 dotnet build
 dotnet test
-./eng/Generate-FeatureCatalog.ps1 -Check
 ```
 
-Feature text comes from `docs/feature-manifest.json`; run `./eng/Generate-FeatureCatalog.ps1` after
-editing it. CI performs tests, vulnerability auditing, and coverage enforcement.
+CI performs tests, vulnerability auditing, and coverage enforcement.

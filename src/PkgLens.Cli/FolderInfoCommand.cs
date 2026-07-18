@@ -5,8 +5,8 @@ namespace PkgLens.Cli;
 
 /// <summary>
 /// <c>pkglens folderinfo &lt;folder&gt;</c> — a read-only report on an extracted PS3 content folder
-/// (TrueAncestor's "Show Game Folder Info"): content id / title from PARAM.SFO, file counts and size,
-/// the EBOOT's sign state, and any NPDRM data files with their license state. Writes nothing.
+/// including content id / title from PARAM.SFO, file counts and size, the EBOOT's sign state, and any
+/// NPDRM data files with their license state. Writes nothing.
 /// </summary>
 internal static class FolderInfoCommand
 {

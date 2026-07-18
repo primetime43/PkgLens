@@ -30,7 +30,7 @@ public sealed record EbootReport(
 /// <summary>An NPDRM data file (EDAT/SDAT) found in the folder.</summary>
 public sealed record EdatReport(string RelativePath, bool IsSdat, string License, string ContentId, bool NeedsRap, long Size);
 
-/// <summary>A read-only summary of an extracted PS3 content folder (TrueAncestor's "Show Game Folder Info").</summary>
+/// <summary>A read-only summary of an extracted PS3 content folder.</summary>
 public sealed record GameFolderReport(
     string Folder,
     string? ContentId,
