@@ -36,6 +36,8 @@ page shows the operations that apply to that file.
 The GUI exposes these workflows through **Suggested**, **File**, and **Tools**. Eligibility checks hide
 or disable operations that do not apply to the selected package.
 
+See [`docs/features.md`](docs/features.md) for the complete feature list.
+
 ## CLI
 
 ```
