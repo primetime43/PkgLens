@@ -16,6 +16,7 @@ public sealed record CfwLicenseResolution(byte[]? Klicensee, string? Source);
 public sealed class CfwConversionOptions
 {
     public CfwFirmwareTarget? FirmwareTarget { get; set; }
+    public TargetCompatibilityProfile TargetProfile { get; set; } = TargetCompatibilityProfile.CexCfw;
     public Func<string, CfwLicenseResolution>? KlicenseeResolver { get; set; }
     public string? SourceName { get; set; }
     public string? OutputName { get; set; }
@@ -42,13 +43,14 @@ public sealed class CfwConversionReport
     public required long OutputSize { get; init; }
     public required int PackageEntryCount { get; init; }
     public required CfwFirmwareTarget? FirmwareTarget { get; init; }
+    public required TargetCompatibilityProfile TargetProfile { get; init; }
     public required IReadOnlyList<CfwExecutableTransformation> Executables { get; init; }
     public required IReadOnlyList<string> Warnings { get; init; }
 
     public string ToText()
     {
         var text = new StringBuilder();
-        text.AppendLine("PkgLens CFW conversion report");
+        text.AppendLine("PkgLens target conversion report");
         text.AppendLine("=============================");
         text.AppendLine($"Source package : {SourceName}");
         text.AppendLine($"Output package : {OutputName}");
@@ -58,6 +60,7 @@ public sealed class CfwConversionReport
         text.AppendLine($"Output size    : {OutputSize:n0} bytes");
         text.AppendLine($"Package entries: {PackageEntryCount:n0}");
         text.AppendLine($"Firmware patch : {(FirmwareTarget is null ? "disabled" : FirmwareTarget.ToString())}");
+        text.AppendLine($"Target profile : {TargetCompatibilityAnalyzer.Describe(TargetProfile).Name}");
         text.AppendLine($"Executables    : {Executables.Count:n0}");
 
         foreach (CfwExecutableTransformation executable in Executables)
@@ -107,7 +110,7 @@ public static class CfwPackageConverter
         ValidateFirmwareTarget(options.FirmwareTarget);
         cancellationToken.ThrowIfCancellationRequested();
         if (!source.CanSeek)
-            throw new PkgFormatException("A seekable package source is required for CFW conversion.");
+            throw new PkgFormatException("A seekable package source is required for package conversion.");
 
         progress?.Report(new CfwConversionProgress("Reading package…", 0));
         PkgHeader rawHeader = ReadHeader(source);
@@ -116,6 +119,7 @@ public static class CfwPackageConverter
         PkgInfo info = PkgReader.Read(source, packageKeys);
         if (!info.IsDecrypted)
             throw new PkgKeyException("The package contents could not be decrypted with the available package keys.");
+        TargetCompatibilityAnalyzer.ValidateConversionProfile(info, options.TargetProfile);
 
         List<PkgEntry> executables = info.Entries
             .Where(entry => entry.IsFile && IsExecutable(entry.Name))
@@ -125,10 +129,7 @@ public static class CfwPackageConverter
 
         var replacements = new Dictionary<PkgEntry, byte[]>();
         var transformations = new List<CfwExecutableTransformation>();
-        var warnings = new List<string>
-        {
-            "The rebuilt package is unsigned and is intended only for CFW/HEN or compatible emulators, not stock OFW.",
-        };
+        var warnings = new List<string> { TargetCompatibilityAnalyzer.Describe(options.TargetProfile).OutputDescription };
 
         for (int index = 0; index < executables.Count; index++)
         {
@@ -151,7 +152,8 @@ public static class CfwPackageConverter
                 20 + value.Percent * 0.8)));
         PkgWriter.Repack(source, info, replacements, packageKeys, destination,
             cancellationToken, repackProgress);
-        progress?.Report(new CfwConversionProgress("CFW conversion complete.", 100));
+        progress?.Report(new CfwConversionProgress(
+            $"Conversion for {TargetCompatibilityAnalyzer.Describe(options.TargetProfile).Name} complete.", 100));
 
         return new CfwConversionReport
         {
@@ -163,6 +165,7 @@ public static class CfwPackageConverter
             OutputSize = destination.CanSeek ? destination.Length : 0,
             PackageEntryCount = info.Entries.Count,
             FirmwareTarget = options.FirmwareTarget,
+            TargetProfile = options.TargetProfile,
             Executables = transformations,
             Warnings = warnings,
         };

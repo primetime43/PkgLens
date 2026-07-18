@@ -31,6 +31,7 @@ public class CfwPackageConverterTests
             new CfwConversionOptions
             {
                 FirmwareTarget = new CfwFirmwareTarget(4, 0),
+                TargetProfile = TargetCompatibilityProfile.Rpcs3,
                 SourceName = "source.pkg",
                 OutputName = "source-cfw.pkg",
             });
@@ -38,7 +39,7 @@ public class CfwPackageConverterTests
         Assert.Equal(3, report.Executables.Count);
         Assert.All(report.Executables, item => Assert.Contains("firmware patched", item.Action));
         Assert.Contains("4.46 → 4.00", report.Executables[0].FirmwareChange);
-        Assert.Contains("CFW/HEN", report.ToText());
+        Assert.Contains("RPCS3 emulator", report.ToText());
 
         destination.Position = 0;
         var convertedInfo = PkgReader.Read(destination, keys);
@@ -66,7 +67,8 @@ public class CfwPackageConverterTests
         using var source = new MemoryStream(package);
         using var destination = new MemoryStream();
 
-        CfwConversionReport report = CfwPackageConverter.Convert(source, destination, keys);
+        CfwConversionReport report = CfwPackageConverter.Convert(source, destination, keys,
+            new CfwConversionOptions { TargetProfile = TargetCompatibilityProfile.Rpcs3 });
 
         Assert.Equal("already fake-signed; unchanged", Assert.Single(report.Executables).Action);
         destination.Position = 0;
@@ -86,7 +88,11 @@ public class CfwPackageConverterTests
         var keys = new InMemoryKeyProvider();
 
         CfwConversionReport report = CfwPackageConverter.Convert(source, destination, keys,
-            new CfwConversionOptions { FirmwareTarget = new CfwFirmwareTarget(4, 0) });
+            new CfwConversionOptions
+            {
+                FirmwareTarget = new CfwFirmwareTarget(4, 0),
+                TargetProfile = TargetCompatibilityProfile.Rpcs3,
+            });
 
         Assert.Contains("3.40 already at or below 4.00; unchanged", Assert.Single(report.Executables).FirmwareChange);
         destination.Position = 0;
@@ -104,7 +110,8 @@ public class CfwPackageConverterTests
         using var destination = new MemoryStream();
 
         var exception = Assert.Throws<PkgFormatException>(() =>
-            CfwPackageConverter.Convert(source, destination, new InMemoryKeyProvider()));
+            CfwPackageConverter.Convert(source, destination, new InMemoryKeyProvider(),
+                new CfwConversionOptions { TargetProfile = TargetCompatibilityProfile.Rpcs3 }));
 
         Assert.Contains("no EBOOT.BIN", exception.Message);
         Assert.Equal(0, destination.Length);

@@ -44,8 +44,9 @@ On Windows you can skip the command line: double-click `run-gui.cmd` to build an
 In the GUI, open a package with **File → Open** or drag a `.pkg` onto the window. Retail and debug
 packages both open with no setup — the standard decryption key is built in. The left pane is a
 folder tree; the right pane lists the selected folder's files. **Tools → Package info…** shows the
-header, metadata, and `PARAM.SFO`. **File → Convert package → CFW…** performs the complete EBOOT
-  conversion and streaming rebuild workflow in one operation. **File → Export PSP package…** turns a
+  header, metadata, and `PARAM.SFO`. **File → Build and convert → Convert PS3 package for a target…**
+  checks RPCS3, CEX CFW, DEX, or HEN compatibility, then performs the complete executable conversion
+  and streaming rebuild workflow. **File → Export PSP package…** turns a
   PSP package directly into `EBOOT.PBP`, a decrypted ISO, or a compressed CSO. **Tools → Key /
   license audit…** scans a package, protected-content file, or folder and can save the report as JSON.
   **Tools → Batch processing center…** accepts a package folder and runs resumable audit,
@@ -93,6 +94,10 @@ LZMA, encrypted, and PSARC-MSELF hybrid variants are detected and rejected witho
 - Run a blocking operation preflight before PSP/Vita export, CFW conversion, EDAT/SDAT decrypt, or
   SELF decrypt: package/file type, keys, RAP/license readiness, encryption support, output safety,
   expected size, and available disk space are checked before anything is written.
+- Select an RPCS3, CEX CFW, DEX, or PS3HEN target before one-click PS3 conversion. A mandatory
+  compatibility report explains package-layout, executable-signing, RAP, encryption, firmware, and
+  content-scope failures before conversion starts. DEX conversion is blocked because PkgLens cannot
+  create genuine debug-signed SELF output; HEN is limited to retail game/update content.
 
 ### Extract & decrypt
 
@@ -141,10 +146,11 @@ LZMA, encrypted, and PSARC-MSELF hybrid variants are detected and rejected witho
 - Fake-sign a plaintext ELF into a SELF that boots on CFW (`resign`), with optional custom sign
   fields.
 - Fake-sign a folder's `EBOOT.BIN` while packing (`pack --resign`).
-- Convert a PS3 package for CFW in one GUI workflow: find every `EBOOT.BIN`, SELF, and SPRX, resolve
+- Convert a PS3 package for RPCS3, CEX CFW, or HEN in one GUI workflow: select the target, find every
+  `EBOOT.BIN`, SELF, and SPRX, resolve
   licensed executables from the RAP library, decrypt and fake-sign them, optionally lower only newer
   verified SDK requirements,
-  stream the rebuilt `.pkg`, and write a per-executable transformation report beside it.
+  stream the rebuilt `.pkg`, and write a target-aware per-executable transformation report beside it.
 
 ### Patch & verify
 

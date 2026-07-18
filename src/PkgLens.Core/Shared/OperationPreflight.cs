@@ -187,37 +187,25 @@ public static class OperationPreflight
     }
 
     public static OperationPreflightReport CfwConversion(string inputPath, string outputPath,
-        IKeyProvider keys, string? rapDirectory)
+        IKeyProvider keys, string? rapDirectory,
+        TargetCompatibilityProfile profile = TargetCompatibilityProfile.CexCfw,
+        CfwFirmwareTarget? firmwareTarget = null)
     {
-        using var package = File.OpenRead(inputPath);
-        PkgInfo info = PkgReader.Read(package, keys);
-        int eboots = info.Entries.Count(entry => entry.IsFile &&
-            Path.GetFileName(entry.Name).Equals("EBOOT.BIN", StringComparison.OrdinalIgnoreCase));
-        var checks = new List<PreflightCheck>
-        {
-            Check("Package type", info.Header.IsPs3 && info.Header.IsRetail,
-                info.Header.IsPs3 && info.Header.IsRetail
-                    ? "Retail PS3 package detected."
-                    : $"CFW conversion expects a retail PS3 package; this is {info.Header.PlatformDisplay} / {info.Header.Finalization}."),
-            Check("Package key", info.IsDecrypted,
-                info.IsDecrypted ? "Package contents decrypted successfully."
-                    : info.DecryptionNote ?? "The package key could not be resolved."),
-            Check("Convertible EBOOTs", eboots > 0,
-                eboots > 0 ? $"Found {eboots} EBOOT.BIN file(s)." : "No EBOOT.BIN files were found."),
-        };
-
-        KeyLicenseAuditReport audit = KeyLicenseAudit.Inspect(inputPath, keys,
-            new KeyLicenseAuditOptions { RapDirectory = rapDirectory });
-        checks.Add(audit.UnsupportedCount == 0
-            ? Pass("Encryption support", "All detected package and SELF encryption revisions are supported.")
-            : Error("Encryption support", $"{audit.UnsupportedCount} unsupported encryption item(s) detected."));
-        checks.Add(audit.MissingRapCount == 0
-            ? Pass("RAP licenses", "Every detected licensed PS3 executable has an available RAP, or no RAP is required.")
-            : Warning("RAP licenses", $"{audit.MissingRapCount} required RAP(s) are missing; affected EBOOTs will not be converted."));
+        TargetCompatibilityReport compatibility = TargetCompatibilityAnalyzer.AnalyzeCfwConversion(
+            inputPath, keys, rapDirectory, profile, firmwareTarget);
+        var checks = compatibility.Checks.Select(check => new PreflightCheck(
+            check.Name,
+            check.Status switch
+            {
+                TargetCompatibilityStatus.Pass => PreflightCheckStatus.Pass,
+                TargetCompatibilityStatus.Warning => PreflightCheckStatus.Warning,
+                _ => PreflightCheckStatus.Error,
+            },
+            check.Details)).ToList();
 
         long expected = new FileInfo(inputPath).Length;
         checks.Add(Warning("Expected output", $"Estimated rebuilt package size: {FormatBytes(expected)}; replacements may change it slightly."));
-        return Complete("Convert package for CFW", inputPath, outputPath, expected,
+        return Complete($"Convert package for {compatibility.Target.Name}", inputPath, outputPath, expected,
             outputIsDirectory: false, checks);
     }
 

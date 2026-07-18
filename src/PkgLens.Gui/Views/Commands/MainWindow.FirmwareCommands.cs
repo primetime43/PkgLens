@@ -72,6 +72,7 @@ public partial class MainWindow
         FirmwarePatchRequest? request = await new FirmwareAnalysisDialog(report, canPatchPackage)
             .ShowDialog<FirmwarePatchRequest?>(this);
         if (request is not null)
-            await StartCfwConversionAsync(sourcePath, new CfwConversionDialogResult(request.Target));
+            await StartCfwConversionAsync(sourcePath,
+                new CfwConversionDialogResult(request.Target, TargetCompatibilityProfile.CexCfw));
     }
 }

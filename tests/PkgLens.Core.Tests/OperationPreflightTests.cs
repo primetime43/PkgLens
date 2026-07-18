@@ -105,7 +105,7 @@ public sealed class OperationPreflightTests
     }
 
     [Fact]
-    public void CfwConversion_MissingRapWarnsAndReportsEboot()
+    public void CfwConversion_MissingRapBlocksAndReportsExecutable()
     {
         using var directory = new TempDirectory();
         using var raps = new TempDirectory();
@@ -126,11 +126,11 @@ public sealed class OperationPreflightTests
         OperationPreflightReport report = OperationPreflight.CfwConversion(input,
             Path.Combine(directory.Path, "game-cfw.pkg"), new FileKeyProvider(), raps.Path);
 
-        Assert.True(report.CanProceed);
-        Assert.Contains(report.Checks, check => check.Name == "Convertible EBOOTs" &&
+        Assert.False(report.CanProceed);
+        Assert.Contains(report.Checks, check => check.Name == "Convertible executables" &&
             check.Status == PreflightCheckStatus.Pass);
-        Assert.Contains(report.Checks, check => check.Name == "RAP licenses" &&
-            check.Status == PreflightCheckStatus.Warning);
+        Assert.Contains(report.Checks, check => check.Name == "RAP / licenses" &&
+            check.Status == PreflightCheckStatus.Error);
     }
 
     [Fact]

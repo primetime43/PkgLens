@@ -1,13 +1,13 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="PkgLens.Gui.Views.CfwConversionDialog"
-        Width="520" Height="310" CanResize="False"
+        Width="620" Height="455" CanResize="False"
         WindowStartupLocation="CenterOwner"
-        Title="Convert package for CFW">
-  <Grid Margin="18" RowDefinitions="Auto,Auto,Auto,*,Auto" RowSpacing="14">
+        Title="Convert PS3 package">
+  <Grid Margin="18" RowDefinitions="Auto,Auto,Auto,Auto,*,Auto" RowSpacing="14">
     <StackPanel Grid.Row="0" Spacing="4">
-      <TextBlock Text="One-click CFW conversion" FontSize="20" FontWeight="SemiBold" />
-      <TextBlock Text="Processes every EBOOT.BIN, SELF, and SPRX, resolves RAPs, fake-signs them, and rebuilds the package." TextWrapping="Wrap" Opacity="0.75" />
+      <TextBlock Text="One-click target conversion" FontSize="20" FontWeight="SemiBold" />
+      <TextBlock Text="Choose RPCS3, CEX CFW, DEX, or HEN. PkgLens checks compatibility before it processes executables and rebuilds the package." TextWrapping="Wrap" Opacity="0.75" />
     </StackPanel>
 
     <Border Grid.Row="1" Padding="10" CornerRadius="5"
@@ -15,7 +15,19 @@
       <TextBlock x:Name="SourceText" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" />
     </Border>
 
-    <Grid Grid.Row="2" ColumnDefinitions="Auto,Auto,*" ColumnSpacing="8">
+    <Border Grid.Row="2" Classes="panel" Padding="11,9">
+      <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="105,*" ColumnSpacing="10" RowSpacing="5">
+        <TextBlock Grid.Row="0" Grid.Column="0" Text="Target" FontWeight="SemiBold" VerticalAlignment="Center" />
+        <ComboBox x:Name="TargetBox" Grid.Row="0" Grid.Column="1" SelectionChanged="OnTargetChanged"
+                  ToolTip.Tip="Select where the converted package must run. PkgLens checks target-specific package, signing, license, and content rules before conversion." />
+        <TextBlock x:Name="TargetDescriptionText" Grid.Row="1" Grid.ColumnSpan="2"
+                   TextWrapping="Wrap" FontSize="12" Opacity="0.8" />
+        <TextBlock x:Name="TargetOutputText" Grid.Row="2" Grid.ColumnSpan="2"
+                   TextWrapping="Wrap" FontSize="11" Opacity="0.65" />
+      </Grid>
+    </Border>
+
+    <Grid Grid.Row="3" ColumnDefinitions="Auto,Auto,*" ColumnSpacing="8">
       <CheckBox x:Name="FirmwareCheck" Grid.Column="0" Content="Patch required firmware to" VerticalAlignment="Center"
                 IsCheckedChanged="OnFirmwareChanged" />
       <TextBox x:Name="FirmwareBox" Grid.Column="1" Width="76" Text="4.00" IsEnabled="False"
@@ -24,15 +36,16 @@
                  VerticalAlignment="Center" TextWrapping="Wrap" FontSize="11" Opacity="0.65" />
     </Grid>
 
-    <StackPanel Grid.Row="3" Spacing="8">
+    <StackPanel Grid.Row="4" Spacing="8">
       <TextBlock x:Name="ErrorText" Foreground="IndianRed" IsVisible="False" TextWrapping="Wrap" />
-      <TextBlock Text="Licensed executables must have a matching RAP in Keys → RAP Library. Output is unsigned and runs only on CFW/HEN or compatible emulators."
+      <TextBlock Text="After choosing an output path, PkgLens always shows a target-specific compatibility report. Blocking failures must be fixed before conversion can start."
                  TextWrapping="Wrap" FontSize="11" Opacity="0.7" />
     </StackPanel>
 
-    <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+    <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
       <Button Content="Cancel" Click="OnCancel" />
-      <Button Content="Convert…" Click="OnConvert" Classes="accent" />
+      <Button Content="Check compatibility…" Click="OnConvert" Classes="primary"
+              ToolTip.Tip="Continue to output selection, then run the mandatory compatibility and operation preflight before writing anything." />
     </StackPanel>
   </Grid>
 </Window>

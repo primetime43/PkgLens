@@ -7,7 +7,8 @@ namespace PkgLens.Gui.Views;
 
 public partial class MainWindow
 {
-    private async Task<bool> ConfirmPreflightAsync(string message, Func<OperationPreflightReport> inspect)
+    private async Task<bool> ConfirmPreflightAsync(string message, Func<OperationPreflightReport> inspect,
+        bool forceShow = false)
     {
         OperationPreflightReport? report = null;
         await RunOperationAsync(message, "Preflight failed", async (token, _) =>
@@ -21,7 +22,7 @@ public partial class MainWindow
         if (report is null)
             return false;
 
-        if (_showOperationPreflight)
+        if (forceShow || _showOperationPreflight)
             return await new OperationPreflightDialog(report).ShowDialog<bool>(this);
 
         if (report.CanProceed)

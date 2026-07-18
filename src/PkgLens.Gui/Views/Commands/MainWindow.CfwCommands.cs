@@ -42,10 +42,18 @@ public partial class MainWindow
             await new CfwConversionDialog(sourcePath).ShowDialog<CfwConversionDialogResult?>(this);
         if (settings is null) return;
 
-        string suggested = Path.GetFileNameWithoutExtension(sourcePath) + "-cfw.pkg";
+        string targetSuffix = settings.TargetProfile switch
+        {
+            TargetCompatibilityProfile.Rpcs3 => "rpcs3",
+            TargetCompatibilityProfile.CexCfw => "cex-cfw",
+            TargetCompatibilityProfile.Dex => "dex",
+            TargetCompatibilityProfile.Hen => "hen",
+            _ => "converted",
+        };
+        string suggested = Path.GetFileNameWithoutExtension(sourcePath) + $"-{targetSuffix}.pkg";
         var output = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
-            Title = "Save the CFW-ready package as…",
+            Title = $"Save the {TargetCompatibilityAnalyzer.Describe(settings.TargetProfile).Name} package as…",
             SuggestedFileName = suggested,
             DefaultExtension = "pkg",
             FileTypeChoices = new[]
@@ -62,14 +70,16 @@ public partial class MainWindow
         string? rapDirectory = Vm.RapDirectory;
         string? keysDirectory = Vm.KeysDirectory;
         await OfferNearbyRapsForPathAsync(inputPath);
-        if (!await ConfirmPreflightAsync("Checking CFW conversion readiness…", () =>
+        if (!await ConfirmPreflightAsync("Checking target compatibility…", () =>
                 OperationPreflight.CfwConversion(inputPath, destinationPath,
-                    new FileKeyProvider(keysDirectory), rapDirectory)))
+                    new FileKeyProvider(keysDirectory), rapDirectory,
+                    settings.TargetProfile, settings.FirmwareTarget), forceShow: true))
             return;
 
         CfwConversionReport? report = null;
 
-        await RunOperationAsync("Converting package for CFW…", "CFW conversion failed", async (token, guiProgress) =>
+        string targetName = TargetCompatibilityAnalyzer.Describe(settings.TargetProfile).Name;
+        await RunOperationAsync($"Converting package for {targetName}…", "Package conversion failed", async (token, guiProgress) =>
         {
             var conversionProgress = new Progress<CfwConversionProgress>(value =>
                 guiProgress.Report(new ViewModels.GuiOperationProgress(value.Stage, value.Percent)));
@@ -80,6 +90,7 @@ public partial class MainWindow
                 var options = new CfwConversionOptions
                 {
                     FirmwareTarget = settings.FirmwareTarget,
+                    TargetProfile = settings.TargetProfile,
                     SourceName = inputPath,
                     OutputName = destinationPath,
                     KlicenseeResolver = contentId =>
@@ -104,7 +115,8 @@ public partial class MainWindow
             string reportText = report!.ToText();
             await AtomicOutput.WriteAllTextAsync(reportPath, reportText, token);
             Vm.RefreshRapStatus();
-            Vm.Status = $"Converted and verified {Path.GetFileName(destinationPath)} — {report.Executables.Count} executable(s); report: {Path.GetFileName(reportPath)}";
+            Vm.Status = $"Converted and verified for {TargetCompatibilityAnalyzer.Describe(report.TargetProfile).Name}: " +
+                        $"{Path.GetFileName(destinationPath)} — {report.Executables.Count} executable(s); report: {Path.GetFileName(reportPath)}";
             await new FileViewerDialog(Path.GetFileName(reportPath), Encoding.UTF8.GetBytes(reportText)).ShowDialog(this);
         });
     }

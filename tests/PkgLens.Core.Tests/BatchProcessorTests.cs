@@ -102,7 +102,11 @@ public class BatchProcessorTests
         string output = root.CreateDirectory("output");
         byte[] fakeSelf = SelfBuilder.MakeFakeSelf(MinimalElf.Build());
         File.WriteAllBytes(Path.Combine(source, "ps3.pkg"),
-            new SyntheticPkgBuilder().AddFile("USRDIR/EBOOT.BIN", fakeSelf).Build());
+            new SyntheticPkgBuilder
+            {
+                Finalization = PkgLens.Core.Shared.Models.PkgFinalization.Retail,
+                RetailAesKey = BundledKeys.Ps3GpkgAesKey,
+            }.AddFile("USRDIR/EBOOT.BIN", fakeSelf).Build());
         File.WriteAllBytes(Path.Combine(source, "psp.pkg"),
             new SyntheticPkgBuilder { Psp = true, Finalization = PkgLens.Core.Shared.Models.PkgFinalization.Retail }
                 .AddFile("USRDIR/EBOOT.PBP", new byte[64], pspTypeHigh: 0x90).Build());
