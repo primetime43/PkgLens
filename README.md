@@ -78,7 +78,3 @@ dotnet test
 
 Feature text comes from `docs/feature-manifest.json`; run `./eng/Generate-FeatureCatalog.ps1` after
 editing it. CI performs tests, vulnerability auditing, and coverage enforcement.
-
-## License
-
-Permissive — ISC or MIT (the original PkgView is ISC).
