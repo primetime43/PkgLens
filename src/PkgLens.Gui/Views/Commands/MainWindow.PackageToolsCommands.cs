@@ -11,6 +11,7 @@ using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Platform.Storage;
 using Avalonia.Styling;
+using PkgLens.Core.Shared;
 using PkgLens.Core.Shared.Keys;
 using PkgLens.Core.Shared.Models;
 using PkgLens.Gui.Services;
@@ -118,8 +119,13 @@ public partial class MainWindow
         {
             var isoProgress = new Progress<double>(percent =>
                 progress.Report(new GuiOperationProgress("Decrypting PSP ISO…", percent)));
-            await Task.Run(() => package.ExtractSelectedPspIsoTo(dest, token, isoProgress), token);
-            Vm.Status = $"Saved PSP ISO → {Path.GetFileName(dest)} — ready to run in a PSP emulator " +
+            await Task.Run(() =>
+            {
+                package.ExtractSelectedPspIsoTo(dest, token, isoProgress);
+                progress.Report(new GuiOperationProgress("Verifying exported ISO…", null));
+                PostOperationVerifier.VerifyIso(dest);
+            }, token);
+            Vm.Status = $"Saved and verified PSP ISO → {Path.GetFileName(dest)} — ready to run in a PSP emulator " +
                         "(the EBOOT/.prx executables inside stay encrypted until the emulator loads them).";
         });
     }
@@ -207,10 +213,16 @@ public partial class MainWindow
         {
             var packageProgress = new Progress<PkgLens.Core.Shared.PkgOperationProgress>(value =>
                 progress.Report(PackagePresentationService.ToGuiProgress(value)));
-            await Task.Run(() => package.SaveAs(dest, token, packageProgress), token);
+            string? keysDirectory = Vm.KeysDirectory;
+            await Task.Run(() =>
+            {
+                package.SaveAs(dest, token, packageProgress);
+                progress.Report(new GuiOperationProgress("Verifying rebuilt package…", null));
+                PostOperationVerifier.VerifyPackage(dest, new FileKeyProvider(keysDirectory));
+            }, token);
             Vm.Status = package.IsRetail
-                ? $"Saved {System.IO.Path.GetFileName(dest)} — UNSIGNED (retail: invalid CMAC/signature; won't install on a real console)."
-                : $"Saved {System.IO.Path.GetFileName(dest)}.";
+                ? $"Saved and verified {System.IO.Path.GetFileName(dest)} — UNSIGNED (retail: invalid CMAC/signature; won't install on a real console)."
+                : $"Saved and verified {System.IO.Path.GetFileName(dest)}.";
         });
     }
 
@@ -218,4 +230,3 @@ public partial class MainWindow
 
     private void OnExitClick(object? sender, RoutedEventArgs e) => Close();
 }
-

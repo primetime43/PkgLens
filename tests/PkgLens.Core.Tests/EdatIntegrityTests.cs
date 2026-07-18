@@ -2,6 +2,7 @@ using System.Buffers.Binary;
 using System.Security.Cryptography;
 using System.Text;
 using PkgLens.Core.Ps3.Npd;
+using PkgLens.Core.Shared;
 using PkgLens.Core.Shared.Crypto;
 
 namespace PkgLens.Core.Tests;
@@ -63,6 +64,34 @@ public class EdatIntegrityTests
 
         Assert.Contains("metadata", ex.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("corrupted", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void PostOperationVerifier_ReDecryptsAndHashesSavedPlaintext()
+    {
+        var fixture = BuildLicensedEdat(0x10);
+        string directory = Path.Combine(Path.GetTempPath(), "pkglens-edat-verify-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        string sourcePath = Path.Combine(directory, "input.edat");
+        string outputPath = Path.Combine(directory, "output.bin");
+        try
+        {
+            File.WriteAllBytes(sourcePath, fixture.Data);
+            File.WriteAllBytes(outputPath, Plaintext);
+
+            Assert.True(PostOperationVerifier.VerifyDecryptedData(
+                sourcePath, outputPath, fixture.Klicensee).Passed);
+
+            byte[] corrupted = Plaintext.ToArray();
+            corrupted[^1] ^= 0x80;
+            File.WriteAllBytes(outputPath, corrupted);
+            Assert.Throws<PkgFormatException>(() => PostOperationVerifier.VerifyDecryptedData(
+                sourcePath, outputPath, fixture.Klicensee));
+        }
+        finally
+        {
+            try { Directory.Delete(directory, recursive: true); } catch { }
+        }
     }
 
     private static EdatFixture BuildLicensedEdat(uint flags)

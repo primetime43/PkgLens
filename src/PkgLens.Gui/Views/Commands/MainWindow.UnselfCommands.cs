@@ -11,6 +11,7 @@ using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Platform.Storage;
 using Avalonia.Styling;
+using PkgLens.Core.Shared;
 using PkgLens.Core.Shared.Keys;
 using PkgLens.Core.Shared.Models;
 using PkgLens.Gui.Services;
@@ -93,11 +94,12 @@ public partial class MainWindow
                     byte[] fself = PkgLens.Core.Ps3.Self.SelfBuilder.MakeFakeSelf(result.Elf, npdrm: result.WasNpdrm);
                     AtomicOutput.EnsureDifferentPath(input, dest);
                     AtomicOutput.WriteAllBytes(dest, fself);
+                    PostOperationVerifier.VerifyFakeSelf(dest, result.Elf);
                     // Drop the intermediate ELF beside the fSELF for reference.
                     string elfBeside = Path.Combine(Path.GetDirectoryName(dest) ?? "", baseName + ".ELF");
                     AtomicOutput.EnsureDifferentPath(input, elfBeside);
                     AtomicOutput.WriteAllBytes(elfBeside, result.Elf);
-                    return $"Decrypted ({lic}{source}) → fake-signed fSELF {Path.GetFileName(dest)} ({fself.Length:n0} bytes); ELF beside it.";
+                    return $"Decrypted ({lic}{source}) → verified fake-signed fSELF {Path.GetFileName(dest)} ({fself.Length:n0} bytes); ELF beside it.";
                 }
 
                 AtomicOutput.EnsureDifferentPath(input, dest);

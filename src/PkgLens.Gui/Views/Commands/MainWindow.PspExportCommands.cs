@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using PkgLens.Core.Psp;
+using PkgLens.Core.Shared;
 using PkgLens.Core.Shared.Keys;
 using PkgLens.Gui.Services;
 using PkgLens.Gui.ViewModels;
@@ -113,10 +114,12 @@ public partial class MainWindow
                     result = PspPackageExporter.Export(package, destination, keys, format.Value,
                         cancellationToken: token, progress: exportProgress);
                 });
+                guiProgress.Report(new GuiOperationProgress("Verifying exported image…", null));
+                PostOperationVerifier.VerifyPspExport(destinationPath, result!, token);
             }, token);
 
             string detail = result!.DiscId is { Length: > 0 } discId ? $" · disc {discId}" : string.Empty;
-            Vm.Status = $"Exported {Path.GetFileName(destinationPath)} ({result.OutputSize:n0} bytes){detail}.";
+            Vm.Status = $"Exported and verified {Path.GetFileName(destinationPath)} ({result.OutputSize:n0} bytes){detail}.";
         });
     }
 }

@@ -11,6 +11,7 @@ using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Platform.Storage;
 using Avalonia.Styling;
+using PkgLens.Core.Shared;
 using PkgLens.Core.Shared.Keys;
 using PkgLens.Core.Shared.Models;
 using PkgLens.Gui.Services;
@@ -171,13 +172,15 @@ public partial class MainWindow
                 var p = PkgLens.Core.Shared.FolderPackage.Plan(folder, options, dest);
                 IKeyProvider keys = new FileKeyProvider(keysDirectory);
                 AtomicOutput.Write(dest, dst => p.Builder.Build(dst, keys, token, packageProgress));
+                progress.Report(new GuiOperationProgress("Verifying rebuilt package…", null));
+                PostOperationVerifier.VerifyPackage(dest, keys);
                 return p;
             }, token);
 
             Vm.RefreshRapStatus();
             Vm.Status = retail
-                ? $"Packed {plan.FileCount} file(s) → {Path.GetFileName(dest)} — retail-encrypted (installs on CFW)."
-                : $"Packed {plan.FileCount} file(s) → {Path.GetFileName(dest)} — non-finalized (debug; RPCS3 / dev).";
+                ? $"Packed and verified {plan.FileCount} file(s) → {Path.GetFileName(dest)} — retail-encrypted (installs on CFW)."
+                : $"Packed and verified {plan.FileCount} file(s) → {Path.GetFileName(dest)} — non-finalized (debug; RPCS3 / dev).";
             ShowPackNotes($"Wrote {new FileInfo(dest).Length:n0} bytes to {dest}");
         });
     }

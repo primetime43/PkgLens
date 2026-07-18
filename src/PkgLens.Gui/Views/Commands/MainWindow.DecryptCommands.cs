@@ -11,6 +11,7 @@ using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Platform.Storage;
 using Avalonia.Styling;
+using PkgLens.Core.Shared;
 using PkgLens.Core.Shared.Keys;
 using PkgLens.Core.Shared.Models;
 using PkgLens.Gui.Services;
@@ -96,7 +97,7 @@ public partial class MainWindow
                     _decryptRap, rapDirectory)))
             return;
 
-        await RunOperationAsync("Decrypting data file…", "Decrypt failed", async (token, _) =>
+        await RunOperationAsync("Decrypting data file…", "Decrypt failed", async (token, guiProgress) =>
         {
             string summary = await Task.Run(() =>
             {
@@ -107,7 +108,10 @@ public partial class MainWindow
                     AtomicOutput.EnsureDifferentPath(sourcePath, destinationPath);
                     AtomicOutput.Write(destinationPath,
                         output => PkgLens.Core.Psp.PspEdatFile.Decrypt(input, output));
-                    return $"Decrypted PSP EDAT — wrote {new FileInfo(destinationPath).Length:n0} bytes.";
+                    guiProgress.Report(new GuiOperationProgress("Verifying decrypted output…", null));
+                    PostOperationVerifier.VerifyDecryptedData(sourcePath, destinationPath,
+                        cancellationToken: token);
+                    return $"Decrypted and verified PSP EDAT — wrote {new FileInfo(destinationPath).Length:n0} bytes.";
                 }
 
                 var npd = PkgLens.Core.Ps3.Npd.EdatFile.ParseHeader(input);
@@ -124,7 +128,9 @@ public partial class MainWindow
                 AtomicOutput.EnsureDifferentPath(sourcePath, destinationPath);
                 AtomicOutput.Write(destinationPath,
                     output => PkgLens.Core.Ps3.Npd.EdatFile.Decrypt(input, output, klicensee));
-                return $"Decrypted {npd.ContentId} — wrote {new FileInfo(destinationPath).Length:n0} bytes.";
+                guiProgress.Report(new GuiOperationProgress("Verifying decrypted output…", null));
+                PostOperationVerifier.VerifyDecryptedData(sourcePath, destinationPath, klicensee, token);
+                return $"Decrypted and verified {npd.ContentId} — wrote {new FileInfo(destinationPath).Length:n0} bytes.";
             }, token);
 
             Vm.RefreshRapStatus();

@@ -11,6 +11,7 @@ using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Platform.Storage;
 using Avalonia.Styling;
+using PkgLens.Core.Shared;
 using PkgLens.Core.Shared.Keys;
 using PkgLens.Core.Shared.Models;
 using PkgLens.Gui.Services;
@@ -147,9 +148,10 @@ public partial class MainWindow
                 byte[] fself = PkgLens.Core.Ps3.Self.SelfBuilder.MakeFakeSelf(elf, opts);
                 AtomicOutput.EnsureDifferentPath(input, dest);
                 AtomicOutput.WriteAllBytes(dest, fself);
+                PostOperationVerifier.VerifyFakeSelf(dest, elf);
                 return (long)fself.Length;
             }, token);
-            Vm.Status = $"Fake-signed → {Path.GetFileName(dest)} ({size:n0} bytes).";
+            Vm.Status = $"Fake-signed and verified → {Path.GetFileName(dest)} ({size:n0} bytes).";
             ShowFselfNotes($"Wrote a {(npdrm ? "NPDRM" : "NON-DRM")} fSELF (key rev 0x8000). Runs on CFW; not on stock retail.");
         });
     }
@@ -239,4 +241,3 @@ public partial class MainWindow
         return false;
     }
 }
-

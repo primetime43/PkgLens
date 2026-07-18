@@ -11,6 +11,7 @@ using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Platform.Storage;
 using Avalonia.Styling;
+using PkgLens.Core.Shared;
 using PkgLens.Core.Shared.Keys;
 using PkgLens.Core.Shared.Models;
 using PkgLens.Gui.Services;
@@ -94,7 +95,8 @@ public partial class MainWindow
                 byte[] fself = PkgLens.Core.Ps3.Self.SelfBuilder.MakeFakeSelf(elf, npdrm);
                 AtomicOutput.EnsureDifferentPath(input, dest);
                 AtomicOutput.WriteAllBytes(dest, fself);
-                return $"Magic-patched → {Path.GetFileName(dest)} ({fself.Length:n0} bytes); {fwNote}.";
+                PostOperationVerifier.VerifyFakeSelf(dest, elf);
+                return $"Magic-patched and verified → {Path.GetFileName(dest)} ({fself.Length:n0} bytes); {fwNote}.";
             }, token);
             Vm.RefreshRapStatus();
             Vm.Status = summary;
@@ -217,9 +219,12 @@ public partial class MainWindow
                 byte[] output = emitSelf ? PkgLens.Core.Ps3.Self.SelfBuilder.MakeFakeSelf(elf, npdrm) : elf;
                 AtomicOutput.EnsureDifferentPath(input, dest);
                 AtomicOutput.WriteAllBytes(dest, output);
+                if (emitSelf)
+                    PostOperationVerifier.VerifyFakeSelf(dest, elf);
 
                 string kind = emitSelf ? $"fake-signed {(npdrm ? "NPDRM" : "NON-DRM")} SELF" : "ELF";
-                return $"Patched → {Path.GetFileName(dest)} ({output.Length:n0} bytes) [{kind}]; {string.Join("; ", steps)}.";
+                string verified = emitSelf ? " and verified" : string.Empty;
+                return $"Patched{verified} → {Path.GetFileName(dest)} ({output.Length:n0} bytes) [{kind}]; {string.Join("; ", steps)}.";
             }, token);
             Vm.RefreshRapStatus();
             Vm.Status = summary;

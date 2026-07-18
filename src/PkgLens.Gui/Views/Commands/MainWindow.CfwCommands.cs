@@ -96,12 +96,15 @@ public partial class MainWindow
                     report = CfwPackageConverter.Convert(source, destination, keys, options,
                         token, conversionProgress);
                 });
+                guiProgress.Report(new ViewModels.GuiOperationProgress("Verifying rebuilt package…", null));
+                PostOperationVerifier.VerifyPackage(destinationPath, keys,
+                    report!.Executables.Select(executable => executable.Path));
             }, token);
 
             string reportText = report!.ToText();
             await AtomicOutput.WriteAllTextAsync(reportPath, reportText, token);
             Vm.RefreshRapStatus();
-            Vm.Status = $"Converted {Path.GetFileName(destinationPath)} — {report.Executables.Count} executable(s); report: {Path.GetFileName(reportPath)}";
+            Vm.Status = $"Converted and verified {Path.GetFileName(destinationPath)} — {report.Executables.Count} executable(s); report: {Path.GetFileName(reportPath)}";
             await new FileViewerDialog(Path.GetFileName(reportPath), Encoding.UTF8.GetBytes(reportText)).ShowDialog(this);
         });
     }
