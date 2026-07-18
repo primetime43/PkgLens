@@ -72,6 +72,7 @@ dotnet test
 
 CI performs tests, vulnerability auditing, and coverage enforcement.
 
-The release version is stored in `Directory.Build.props`. Bumping it on `main` creates a GitHub
-release with self-contained GUI and CLI archives for Windows x64, Linux x64, macOS Intel, and macOS
-Apple Silicon. Archive and executable names include the version, such as `PkgLens-1.0.0.exe`.
+The release version is stored in `Directory.Build.props`. After updating and committing it, push a
+matching tag such as `v1.0.0` to create a GitHub release with self-contained GUI and CLI archives for
+Windows x64, Linux x64, macOS Intel, and macOS Apple Silicon. Archive and executable names include
+the version, such as `PkgLens-1.0.0.exe`.

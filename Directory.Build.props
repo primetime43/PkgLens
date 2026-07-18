@@ -1,6 +1,6 @@
 <Project>
   <PropertyGroup>
-    <!-- Bump this value on main to publish a new cross-platform GitHub release. -->
+    <!-- Update this value before creating the matching v* release tag. -->
     <Version>1.0.0</Version>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>

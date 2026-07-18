@@ -1,13 +1,9 @@
 name: Release
 
-# Bumping <Version> in Directory.Build.props on main publishes a release automatically.
-# Matching v* tags and manual runs remain supported.
+# Push a v* tag matching <Version> in Directory.Build.props to publish a release.
 on:
   push:
-    branches: [ main ]
-    paths: [ Directory.Build.props ]
     tags: [ 'v*' ]
-  workflow_dispatch:
 
 permissions:
   contents: write
@@ -63,8 +59,8 @@ jobs:
         include:
           - { os: windows-latest, rid: win-x64 }
           - { os: ubuntu-latest,  rid: linux-x64 }
-          - { os: macos-13,       rid: osx-x64 }
-          - { os: macos-latest,   rid: osx-arm64 }
+          - { os: macos-15-intel, rid: osx-x64 }
+          - { os: macos-15,       rid: osx-arm64 }
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
