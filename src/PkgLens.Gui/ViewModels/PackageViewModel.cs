@@ -33,6 +33,10 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
     public string VersionText { get; }
     public string ContentIdRaw { get; }
     public string PlatformText { get; }
+    public string RoleText { get; }
+    public string RegionText { get; }
+    public string CategoryText { get; }
+    public string ContentTypeText { get; }
     public string FinalizationText { get; }
     public bool IsRetail { get; }
 
@@ -46,6 +50,7 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
     public EntryNode RootFolder { get; }
 
     public IReadOnlyList<MetadataRow> MetadataRows { get; }
+    public IReadOnlyList<MetadataRow> ClassificationRows { get; }
     public IReadOnlyList<SfoRow> SfoRows { get; }
 
     public bool IsDecrypted => _info.IsDecrypted;
@@ -66,6 +71,14 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
     /// <summary>"Ps3 · Retail · 01.40" style one-liner for the info dialog.</summary>
     public string SummaryLine =>
         string.Join(" · ", new[] { PlatformText, FinalizationText, VersionText }.Where(s => !string.IsNullOrEmpty(s)));
+
+    public string ClassificationLine => string.Join(" · ", new[]
+    {
+        $"Platform: {PlatformText}",
+        $"Role: {RoleText}",
+        $"Region: {RegionText}",
+        string.IsNullOrWhiteSpace(CategoryText) ? null : $"Category: {CategoryText}",
+    }.Where(value => !string.IsNullOrEmpty(value)));
 
     /// <summary>Status-bar text mirroring the classic PkgView ("N files and M folders").</summary>
     public string StatusCounts =>
@@ -303,6 +316,11 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
         TitleId = info.Sfo?.TitleId ?? info.ContentId.TitleId ?? "";
         VersionText = info.Sfo?.AppVersion ?? info.Sfo?.Version ?? "";
         PlatformText = info.Header.PlatformDisplay;
+        RoleText = PackageLibraryMatcher.Classify(info.Metadata.ContentType, info.Sfo?.Category).ToString();
+        RegionText = PackageLibraryMatcher.ResolveRegion(info.ContentId.Raw, TitleId);
+        CategoryText = info.Sfo?.Category ?? string.Empty;
+        ContentTypeText = info.Metadata.ContentType?.ToString() ??
+            (info.Metadata.ContentTypeRaw is uint raw ? $"0x{raw:X}" : "Unknown");
         FinalizationText = info.Header.Finalization.ToString();
         IsRetail = info.Header.IsRetail;
         RecommendationSet = PackageRecommendationEngine.Analyze(info);
@@ -320,6 +338,18 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
         FolderRoots = new ObservableCollection<EntryNode> { RootFolder };
 
         MetadataRows = BuildMetadataRows(info.Metadata);
+        ClassificationRows =
+        [
+            new MetadataRow { Label = "Title", Value = Title },
+            new MetadataRow { Label = "Title ID", Value = string.IsNullOrEmpty(TitleId) ? "Unknown" : TitleId },
+            new MetadataRow { Label = "Platform", Value = PlatformText },
+            new MetadataRow { Label = "Role", Value = RoleText },
+            new MetadataRow { Label = "Region", Value = RegionText },
+            new MetadataRow { Label = "Category", Value = string.IsNullOrEmpty(CategoryText) ? "Unknown" : CategoryText },
+            new MetadataRow { Label = "Content type", Value = ContentTypeText },
+            new MetadataRow { Label = "Version", Value = string.IsNullOrEmpty(VersionText) ? "Unknown" : VersionText },
+            new MetadataRow { Label = "Content ID", Value = ContentIdRaw },
+        ];
         SfoRows = info.Sfo is null
             ? Array.Empty<SfoRow>()
             : info.Sfo.Entries.Select(e => new SfoRow
