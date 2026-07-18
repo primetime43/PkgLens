@@ -15,7 +15,6 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
       tag: ${{ steps.version.outputs.tag }}
-      should_release: ${{ steps.existing.outputs.should_release }}
     steps:
       - uses: actions/checkout@v4
 
@@ -35,24 +34,9 @@ jobs:
           "version=$version" >> $env:GITHUB_OUTPUT
           "tag=$tag" >> $env:GITHUB_OUTPUT
 
-      - name: Skip an existing release
-        id: existing
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ steps.version.outputs.tag }}
-        run: |
-          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            echo "Release $RELEASE_TAG already exists; nothing to publish."
-            echo "should_release=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "should_release=true" >> "$GITHUB_OUTPUT"
-          fi
-
   build:
     name: Build ${{ matrix.rid }}
     needs: prepare
-    if: needs.prepare.outputs.should_release == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -146,7 +130,6 @@ jobs:
   release:
     name: Publish GitHub Release
     needs: [prepare, build]
-    if: needs.prepare.outputs.should_release == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Download all build artifacts
@@ -163,4 +146,5 @@ jobs:
           target_commitish: ${{ github.sha }}
           generate_release_notes: true
           prerelease: ${{ contains(needs.prepare.outputs.version, '-') }}
+          fail_on_unmatched_files: true
           files: artifacts/**/*
