@@ -1,361 +1,83 @@
 # PkgLens
 
-PkgLens opens a PS3 `.pkg` and shows what's inside — content id, metadata, the file tree, and
-`PARAM.SFO`. Beyond inspecting, it extracts files, decrypts EDAT/SDAT and SELF/EBOOT data, repacks
-and builds packages, and fake-signs EBOOTs for custom firmware. It reads PSP and PSVita packages
-too, since they share the PS3 container.
+PkgLens is a cross-platform GUI and CLI for inspecting, extracting, decrypting, converting,
+rebuilding, and verifying PS3, PSP, and PS Vita packages. It also handles protected content,
+executables, disc exports, and PSARC archives.
 
-It runs on Windows, Linux, and macOS through a command-line tool (`pkglens`) and an Avalonia desktop
-app, both built on one dependency-free parsing core.
+> **PkgLens never forges Sony signatures.** Rebuilt and fake-signed output targets RPCS3 or patched
+> CFW/HEN loaders, never stock retail. See [Scope](#scope).
 
-> **PkgLens never forges Sony signatures.** Repacked and fake-signed files target jailbroken (CFW)
-> consoles, never stock retail. See [Scope](#scope).
-
-## Contents
-
-- [Install & run](#install--run)
-- [What it does](#what-it-does)
-  - [Inspect](#inspect)
-  - [Extract & decrypt](#extract--decrypt)
-  - [PSP / minis](#psp--minis)
-  - [Pack & repack](#pack--repack)
-  - [Patch & verify](#patch--verify)
-- [CLI](#cli)
-- [Feature coverage vs TrueAncestor](#feature-coverage-vs-trueancestor)
-- [Keys](#keys)
-- [Scope](#scope)
-- [Project layout](#project-layout)
-- [Build & test](#build--test)
-- [License](#license)
-
-## Install & run
-
-Build the solution, then run either front end:
+## Quick start
 
 ```
-dotnet build
-dotnet run --project src/PkgLens.Cli -- info <pkg>   # CLI
-dotnet run --project src/PkgLens.Gui                 # GUI
+dotnet run --project src/PkgLens.Gui
+dotnet run --project src/PkgLens.Cli -- info <pkg>
 ```
 
-On Windows you can skip the command line: double-click `run-gui.cmd` to build and launch, or run
-`publish-gui.cmd` once for a standalone `dist\pkglens.gui.exe` plus a Desktop shortcut.
+On Windows, `run-gui.cmd` builds and launches the app. `publish-gui.cmd` creates
+`dist\pkglens.gui.exe` and a Desktop shortcut. Open or drag in a `.pkg` or `.psarc`; the **Suggested**
+page shows the operations that apply to that file.
 
-In the GUI, open a package with **File → Open** or drag a `.pkg` onto the window. Retail and debug
-packages both open with no setup — the standard decryption key is built in. The left pane is a
-folder tree; the right pane lists the selected folder's files. **Tools → Package info…** shows the
-  header, metadata, and `PARAM.SFO`. **File → Build and convert → Convert PS3 package for a target…**
-  checks RPCS3, CEX CFW, DEX, or HEN compatibility, then performs the complete executable conversion
-  and streaming rebuild workflow. **File → Export PSP package…** turns a
-  PSP package directly into `EBOOT.PBP`, a decrypted ISO, or a compressed CSO. **Tools → Key /
-  license audit…** scans a package, protected-content file, or folder and can save the report as JSON.
-  **Tools → Batch processing center…** accepts a package folder and runs resumable audit,
-  classification, verification, extraction, PSP export, or CFW-conversion jobs. **Tools →
-  Duplicate / package organizer…** hashes a library, identifies duplicates and superseded updates,
-  and previews a PS3 / PSP / Vita folder layout before copying or moving anything.
+## Highlights
 
-Use **File → Build and convert → Compare packages / create update…** to select a base/older package
-and a newer or modified target. PkgLens decrypts and SHA-256 hashes every file, shows file and
-`PARAM.SFO` changes, warns about reversed versions or title/region mismatches, and can build a compact
-PS3 overlay package containing only added/modified target files plus a patch-category `PARAM.SFO`.
+- Inspect package metadata, files, `PARAM.SFO`, SELF/EBOOT/SPRX headers, content IDs, and firmware
+  requirements.
+- Extract, replace, compare, build, repack, verify, and target-convert PS3 packages for RPCS3, CEX CFW,
+  or HEN.
+- Decrypt EDAT/SDAT and SELF/EBOOT content, resolve RAPs automatically, fake-sign executables, and apply
+  supported firmware patches.
+- Export PS1 Classics, PS2 Classics, PSP packages (`EBOOT.PBP`, ISO, or CSO), and structured Vita content.
+- Browse and rebuild zlib or LZMA PSARC archives while preserving their compression.
+- Audit keys/licenses, match base/update/DLC packages, find duplicates, organize libraries, and run
+  resumable batch jobs.
+- Preflight risky operations and verify rebuilt PKGs, EDATs, ISOs/CSOs, PSARCs, and fake-signed SELFs
+  before reporting success.
 
-Open **File → Extract and repack → Browse / rebuild PSARC archive…**, or drop a `.psarc` onto the
-window, to search, preview, extract, replace, and rebuild files inside common PS3 archives. Rebuilds
-stream one block at a time, preserve the archive's version/path mode/block size/compression, and are
-fully decompressed again before success is reported. Standard v1.3/v1.4 zlib and LZMA PSARCs are
-supported; encrypted and PSARC-MSELF hybrid variants are detected and rejected without writing output.
-
-## What it does
-
-### Inspect
-
-- Parse the header, content id (region / title id / variant / name), and metadata block.
-- List the item table with names, sizes, and flags.
-- Read `PARAM.SFO`, edit its values, then Save As to repack with the changes.
-- View files inline: images (ICON0/PIC1), text, or a hex dump.
-- Read a SELF / EBOOT.BIN / SPRX header — program type, key revision, segments, control blocks,
-  firmware version, NPDRM content id. No keys needed.
-- Scan every EBOOT, SELF, and SPRX in a package or extracted folder, report the highest header/SDK
-  firmware requirement, and identify which executables have a verified `sys_process_param` patch.
-- Audit a package, individual protected-content file, or folder for the required package/SELF key,
-  SELF revision, content IDs, license types, installed/missing RAPs, and unsupported encryption.
-- Match a package library by title ID, region, content ID, version, and SFO category; base games,
-  updates, and DLC are grouped together with missing-base and likely region-mismatch warnings.
-- Compare two packages by decrypted SHA-256 content, path, size, version, role, and every `PARAM.SFO`
-  value. Identical files can be hidden while added, removed, and modified paths remain visible.
-- Drop a folder into the batch processing center to audit, classify, verify, extract, PSP-export, or
-  CFW-convert multiple packages. A manifest is saved after every package, completed jobs are skipped
-  on resume, failed jobs can be retried, and mixed libraries automatically skip incompatible formats.
-- Detect exact SHA-256 duplicates, same-content-ID variants, and superseded update versions, then
-  organize packages into `PS3|PSP|Vita / title / Base|Updates|DLC` folders. Exact duplicates are
-  never deleted automatically; Move mode copies and verifies the hash before removing each source.
-- Automatically classify each opened package and show only relevant next actions, such as PS1/PSP/Vita
-  export, PS3 CFW conversion, update/game-data extraction, license audit, or integrity verification.
-- Run a blocking operation preflight before PSP/Vita export, CFW conversion, EDAT/SDAT decrypt, or
-  SELF decrypt: package/file type, keys, RAP/license readiness, encryption support, output safety,
-  expected size, and available disk space are checked before anything is written.
-- Select an RPCS3, CEX CFW, DEX, or PS3HEN target before one-click PS3 conversion. A mandatory
-  compatibility report explains package-layout, executable-signing, RAP, encryption, firmware, and
-  content-scope failures before conversion starts. DEX conversion is blocked because PkgLens cannot
-  create genuine debug-signed SELF output; HEN is limited to retail game/update content.
-
-### Extract & decrypt
-
-- Extract one file, a selection, or everything to a folder (the tree is rebuilt on disk).
-- Decrypt EDAT/SDAT data files. SDAT needs no key; a licensed EDAT resolves its RAP automatically
-  from the local library. Compressed EDATs are supported.
-- Discover missing content-ID-named RAPs beside an input or in user-selected search folders, validate
-  their size, and offer to import valid matches into the GUI RAP library automatically.
-- Decrypt an encrypted EBOOT.BIN / `.self` back to a plaintext ELF (`unself`). Fake-signed and debug
-  SELFs need no key; a licensed one resolves its RAP automatically when installed.
-
-### PS1 / PS2 / PSP / Vita
-
-- Decrypt PSP EDAT and bare PGD files (fixed-key content only; fuse-bound content is out of scope).
-- Decrypt a PSP/minis manual (`DOCUMENT.DAT`) into its PNG pages (`undoc`).
-- Split a PSP `EBOOT.PBP` into its parts (`unpbp`): `PARAM.SFO`, icons, `DATA.PSP`, `DATA.PSAR`.
-- Decrypt a minis `DATA.PSAR` (NPUMDIMG) to a mountable `.iso` (`psar decrypt`) — keyless, no RAP.
-- Export a PSP package directly to `EBOOT.PBP`, decrypted `.iso`, or PSP-compatible compressed `.cso`
-  (`pspexport`), without manually extracting the package and PBP first.
-- Identify PS1 Classic packages before showing export options, resolve a matching RAP automatically when
-  the image is stored as `ISO.BIN.EDAT`, and export `EBOOT.PBP`, PBP metadata/artwork, `DOCUMENT.DAT`, and
-  a JSON manifest. The GUI can reconstruct single- or multi-disc 2352-byte BIN/CUE images through the
-  maintained [psxtract](https://github.com/has207/psxtract-2) engine, preserving mixed-mode audio,
-  pregaps, compression, and CD ECC/EDC instead of silently exporting data-track-only images.
-- Detect PS2 Classic packages, resolve built-in placeholder/reactPSN keys or a matching RAP automatically,
-  authenticate every `ISO.BIN.ENC` segment, and export the original PS2 `.iso` from the GUI. The guided
-  workflow can also convert `ISO.BIN.ENC` plus `ISO.BIN.EDAT` to the standard placeholder license and
-  stream a separate CFW/HEN-only package copy with a transformation report.
-- Identify Vita app, update, DLC, and theme packages, validate key revisions 2–4, report Vita SFO
-  metadata, and export to `app/`, `patch/`, or `addcont/` layout (`vitaexport`). A matching 512-byte
-  `work.bin`/RIF can be included; package keys do not replace licenses for inner Vita content.
-
-### Pack & repack
-
-- Replace a file and save a new `.pkg`.
-- Create a compact PS3 CFW/HEN or RPCS3 overlay package from a comparison. The output contains the
-  target's added and modified files plus a generated `CATEGORY=GP` `PARAM.SFO`; removed files are
-  reported but cannot be represented by a normal overlay PKG. Every generated payload is hashed back
-  against the target package before success is reported, and mismatched title IDs disable creation.
-- Browse and filter standard PSARC v1.3/v1.4 zlib or LZMA archives, preview or safely extract entries,
-  queue file replacements, and stream a separately verified rebuilt archive while preserving its
-  compression. Unsafe manifest traversal, encrypted archives, and PSARC-MSELF hybrids are rejected.
-- Build a `.pkg` from a content folder (`pack`). *Fast Pack* infers the ids from `PARAM.SFO`; pass
-  options for *Custom Pack*. The default is retail-encrypted (for CFW); `--debug` builds a
-  non-finalized package for RPCS3 or dev consoles.
-- Fake-sign a plaintext ELF into a SELF that boots on CFW (`resign`), with optional custom sign
-  fields. Program segments are independently zlib-compressed when that reduces the complete fSELF;
-  incompressible segments and ELFs with uncovered data automatically retain the byte-exact plain layout.
-- Fake-sign a folder's `EBOOT.BIN` while packing (`pack --resign`).
-- Convert a PS3 package for RPCS3, CEX CFW, or HEN in one GUI workflow: select the target, find every
-  `EBOOT.BIN`, SELF, and SPRX, resolve
-  licensed executables from the RAP library, decrypt and fake-sign them, optionally lower only newer
-  verified SDK requirements,
-  stream the rebuilt `.pkg`, and write a target-aware per-executable transformation report beside it.
-
-### Patch & verify
-
-- Magic-patch an EBOOT so a game boots on lower firmware — lower the required SDK version, or apply
-  raw find/replace and at-offset edits (`patch`).
-- Verify package integrity: structural bounds, the header SHA-1 digest, the header AES-CMAC, and a
-  read-only ECDSA check against Sony's public NPDRM key. A genuine retail package passes; a repacked,
-  altered, or truncated one is flagged.
-- Automatically reopen and verify generated files before reporting success: rebuilt package item
-  tables, EDAT plaintext hashes, ISO9660 images, every CSO block, and fake-signed SELF-to-ELF round trips.
-- Catalog a folder of packages, one row each (`scan`, with `--json` / `--csv`).
-- Report on an extracted content folder (`folderinfo`).
-- Produce a key/license readiness report (`audit`, or **Tools → Key / license audit…** in the GUI).
-
-Every format is covered by synthetic in-test fixtures, and several are additionally checked
-byte-for-byte against real retail dumps.
+The GUI exposes these workflows through **Suggested**, **File**, and **Tools**. Eligibility checks hide
+or disable operations that do not apply to the selected package.
 
 ## CLI
 
 ```
-pkglens --version                                         # print the embedded release version
-pkglens info   <pkg> [--keys DIR] [--json]              # header + content-id + SFO summary
-pkglens list   <pkg> [--keys DIR] [--json]              # entry table
-pkglens sfo    <pkg> [--keys DIR] [--json]              # dump PARAM.SFO key/values
-pkglens extract <pkg> [--out DIR] [--filter GLOB] [--json]   # extract entries
-pkglens verify <pkg> [--json]                           # integrity check (SHA-1 + CMAC + ECDSA)
-pkglens decrypt <edat> [--rap FILE] [--json]            # decrypt; stored RAPs resolve automatically
-pkglens self   <eboot> [--json]                         # inspect a SELF/EBOOT.BIN header (no keys)
-pkglens unself <eboot> [--rap FILE | --klic HEX] [--out FILE]   # decrypt a SELF → plaintext ELF
-pkglens resign <elf> [--out FILE] [--npdrm]             # ELF → fake-signed SELF (fSELF) for CFW
-pkglens patch  <eboot> [--sdk-version 4.00] [--find HEX --replace HEX] [--at OFF=HEX]
-pkglens pack   <folder> [--out FILE] [--debug] [--resign [--rap FILE]]   # build a .pkg
-pkglens folderinfo <folder> [--json]                    # report on an extracted content folder
-pkglens scan   <dir> [--recursive] [--json | --csv]     # catalog a folder of .pkg files
-pkglens audit  <pkg|file|folder> [--keys DIR] [--rap-dir DIR] [--json]   # key/license readiness
-pkglens unpbp  <EBOOT.PBP> [--out DIR] [--list]         # split a PSP PBP into its parts
-pkglens undoc  <DOCUMENT.DAT> [--docinfo FILE] [--out DIR]   # decrypt a PSP manual to PNG pages
-pkglens psar   decrypt <DATA.PSAR> [--out FILE]         # decrypt a PSP NPUMDIMG to .iso (keyless)
-pkglens pspexport <pkg> [--format pbp|iso|cso] [--out FILE] [--json]   # one-step PSP export
-pkglens vitaexport <pkg> [--out DIR] [--work-bin FILE] [--json]   # structured Vita export
-pkglens keys   import|status|where                      # manage an optional override key
-pkglens raps   import|list|status|remove                # manage the local RAP library
+pkglens --help
+pkglens info <pkg> [--json]
+pkglens extract <pkg> [--out DIR]
+pkglens verify <pkg> [--json]
+pkglens audit <pkg|file|folder> [--json]
 ```
 
-Licensed EDATs and EBOOTs are matched to stored RAPs by content ID. Explicit `--klic` and `--rap`
-options override the library. Use `--rap-dir DIR` or `PKGLENS_RAPS` for a non-default library.
-
-```
-pkglens raps import MY-CONTENT-ID.rap                    # content ID inferred from the filename
-pkglens raps import license.rap --content-id CONTENT-ID # specify it explicitly
-pkglens raps list
-pkglens raps status [CONTENT-ID]
-pkglens raps remove CONTENT-ID
-```
-
-The GUI exposes the same library from **Tools → RAP library** and the **Keys** page. It supports
-import, list/status, folder selection, replacement, and removal. EDAT viewing/decryption, Unself,
-Patch, and Pack-with-resign all resolve stored RAPs automatically; choosing a RAP override caches it
-under the detected content ID for later operations. Additional nearby-license search folders can be
-selected on the **Keys** page; licensed operations also search beside their input before prompting.
-
-Use **Tools → Scan package library…** to catalog a folder of packages and view base/update/DLC
-relationships. The grouped report and its warnings can be saved as CSV or JSON; the CLI `scan`
-command emits the same relationship data.
-
-Every command accepts `--json`. Successful JSON mode writes exactly one JSON value to stdout;
-diagnostics remain on stderr and exit codes remain unchanged.
-
-Exit codes: `0` ok · `1` usage · `2` parse error · `3` key/decryption error · `4` integrity failure.
-
-### Pack examples
-
-```
-pkglens pack ./MyGameFolder                              # Fast Pack, retail-encrypted (for CFW)
-pkglens pack ./MyGameFolder --content-id UP0001-NPUB30910_00-EXAMPLE000000001 \
-        --install-dir NPUB30910 --content-type GameExec  # Custom Pack (explicit ids)
-pkglens pack ./MyGameFolder --debug                      # non-finalized (RPCS3 / dev)
-```
-
-A retail-encrypted package carries a valid CMAC but no ECDSA signature. That's fine for a jailbroken
-(CFW) console, where the kernel patches skip the install-time signature check, but a stock retail
-console will reject it. Use `--debug` for a self-contained non-finalized package that needs no key.
-
-> **Running a repacked game:** the package installs on CFW, but a retail NPDRM `EBOOT.BIN` still
-> needs its license (`act.dat` / `.rif`) to boot — or the EBOOT fake-signed to an fSELF, which
-> `pack --resign` does for you.
+Run `pkglens <command> --help` for full options. Commands support structured `--json` output where
+applicable. The GUI is the recommended interface and exposes nearly every workflow.
 
 ## Feature coverage vs TrueAncestor
 
 <!-- BEGIN GENERATED:README-COVERAGE -->
 How PkgLens maps to the two TrueAncestor tools (PKG Repacker + SELF Resigner). **20 covered · 1 partial · 3 out of scope by design.** The out-of-scope items all need Sony's private signing keys, which PkgLens never uses.
-A themed version of this table is in [`docs/coverage.html`](docs/coverage.html).
-
-Legend: ✅ covered · 🟡 partial · ⛔ out of scope (needs signing keys) · ⬜ not yet built
-
-### PKG Repacker
-
-| # | Feature | Status | In PkgLens |
-|---|---------|:------:|-----------|
-| 1 | Fast Pack Pkg | ✅ | `pkglens pack <folder>` — infers IDs from PARAM.SFO |
-| 2 | Custom Pack Pkg | ✅ | `pack` with `--content-id`, `--install-dir`, … |
-| 3 | Unpack Pkg | ✅ | `pkglens extract` · right-click · extract-all |
-| 4 | Repack Pkg | ✅ | Replace a file → Save As (unsigned rebuild) |
-| 5 | Finalize Pkg | ⛔ | Forges the retail ECDSA signature |
-| 6 | Show Game Folder Info | ✅ | `pkglens folderinfo` · Pack page button |
-| 7 | Edit PARAM.SFO | ✅ | SFO editor → Save As |
-| 8 | Show Pkg Info | ✅ | `pkglens info` · Package info dialog |
-| P | Patch PARAM.SFO *(switch)* | ✅ | Same SFO editor path |
-| R | Resign EBOOT.BIN *(switch)* | ✅ | `pack --resign` — fake-signs while packing |
-
-### SELF Resigner
-
-| # | Feature | Status | In PkgLens |
-|---|---------|:------:|-----------|
-| 1 | Decrypt EBOOT.BIN Only | ✅ | `pkglens unself` — retail SELF → ELF, byte-exact |
-| 2 | Resign to NON-DRM EBOOT | ✅ | `unself` → `resign` (GUI chains it) |
-| 3 | Resign to NPDRM EBOOT | ✅ | `resign --npdrm` |
-| 4 | Decrypt SELF / SPRX Only | ✅ | `unself` — same SCE format |
-| 5 | Fast Resign NON-DRM SELF/SPRX | ✅ | Decrypt → fake-sign chain |
-| 6 | Fast Resign NPDRM SELF/SPRX | ✅ | Same, `--npdrm` |
-| 7 | Custom Sign → NON-DRM | ✅ | `--auth-id --vendor-id --app-version --type` |
-| 8 | Custom Sign → NPDRM | ✅ | Custom fields + `--content-id` |
-| 9 | Magic Patch EBOOT/SELF/SPRX | ✅ | `pkglens patch --sdk-version` + find/replace/offset |
-| 10 | Decrypt DEX EBOOT (fSELF) | ✅ | `unself` handles fake-signed / debug SELFs |
-| 11 | Resign to NON-DRM EBOOT — DEX/OFW | ⛔ | OFW signature check needs debug signing keys |
-| 12 | Resign to NPDRM EBOOT — DEX/OFW | ⛔ | Same — signing keys, out of scope |
-| O | Output Method *(switch)* | 🟡 | fSELF output supports settable firmware and control flags plus RPCS3, CEX CFW, DEX compatibility analysis, and HEN target profiles; signed capability flags remain unavailable |
-| D | Compress Data *(switch)* | ✅ | Beneficial fSELF segments are zlib-compressed automatically; incompressible or unsafe layouts stay plain |
-
-Beyond TrueAncestor, PkgLens adds a full inspector GUI, integrity verification, EDAT/SDAT decryption, platform exports, library automation, target-aware conversion, structured JSON output, and cross-platform support.
+See the full status and TrueAncestor comparison in [`docs/coverage.html`](docs/coverage.html).
 <!-- END GENERATED:README-COVERAGE -->
 
 ## Keys
 
-The standard and IDU/kiosk PS3 keys plus PSP/PSX and Vita package keys are bundled and selected
-automatically, so supported retail and debug packages open with no setup. The only thing you supply
-yourself is a **RAP** for licensed EDAT/EBOOT content (`--rap FILE`) — it's tied to your purchase,
-so it can't be bundled.
-
-You rarely need to add a custom package key. When installed, it joins the automatic candidate ring
-without masking the bundled keys:
-
-```
-pkglens keys status                # show the bundled key + any override
-pkglens keys import <32-hex-key>   # install an override key
-```
-
-See [`docs/keys.md`](docs/keys.md) for the full list of bundled keys and where overrides are read
-from.
+Standard PS3, IDU/kiosk, PSP/PSX, and Vita package keys are bundled and selected automatically.
+Licensed EDAT/EBOOT content still requires your RAP; Vita content may require `work.bin`/RIF material.
+The GUI RAP library discovers and matches licenses by content ID. See [`docs/keys.md`](docs/keys.md).
 
 ## Scope
 
-PkgLens parses and inspects package structure and extracts content you own. It bundles only public
-**decryption** keys — the NPDRM PKG AES key, appldr/NPDRM SELF keysets, and EDAT/SDAT keys, all
-public for over a decade and embedded by every PS3 package tool. It bundles no private/signing keys
-and no per-console (IDPS/EID) secrets, and `.gitignore` blocks `*.key`, `keys/`, and `*.pkg` so no
-user-specific material or copyrighted package is committed.
+Use PkgLens only with content you own. It contains public decryption keys, but no Sony private signing
+keys or per-console IDPS/EID secrets. Rebuilt packages and fake-signed executables target RPCS3 or
+patched CFW/HEN loaders; they will not pass stock retail, DEX, or OFW signature checks.
 
-Permanently out of scope:
-
-- **Signature forgery.** PkgLens never recomputes the header CMAC or forges the ECDSA signature. A
-  repacked retail package is unsigned and won't install on a stock console.
-- **Finalize-for-retail and DEX/OFW resigning.** Making a package or SELF pass a stock,
-  non-jailbroken console's signature check needs Sony's private keys.
-- **Any private-key or per-console (IDPS/EID) operation.**
-
-Fake-signed EBOOTs and repacked packages target patched loaders (CFW) only.
-
-## Project layout
-
-```
-src/PkgLens.Core          # pure parsing + models + crypto (net8.0, no dependencies)
-src/PkgLens.Cli           # thin CLI → builds the `pkglens` executable
-src/PkgLens.Gui           # Avalonia MVVM desktop inspector
-tests/PkgLens.Core.Tests  # synthetic fixtures + xUnit tests (no copyrighted data, no keys)
-docs/keys.md              # which keys are bundled, and what you supply (RAP)
-docs/coverage.html        # feature coverage vs TrueAncestor (open in a browser)
-```
-
-## Build & test
-
-Feature coverage and shared GUI/CLI descriptions come from `docs/feature-manifest.json`. After
-editing it, regenerate the checked-in README, HTML, and C# outputs:
+## Development
 
 ```powershell
-./eng/Generate-FeatureCatalog.ps1
+dotnet build
+dotnet test
 ./eng/Generate-FeatureCatalog.ps1 -Check
 ```
 
-```
-dotnet build   # whole solution
-dotnet test    # xUnit tests
-```
-
-CI also audits direct and transitive NuGet dependencies, publishes TRX/Cobertura reports, and
-enforces separate coverage floors for Core/CLI (70% lines, 52% branches) and the headless GUI
-regression suite (22% lines, 3% branches). To run the same gates locally:
-
-```powershell
-dotnet test -c Release --collect:"XPlat Code Coverage" --results-directory TestResults/Core -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Exclude=[PkgLens.Gui]*
-dotnet test tests/PkgLens.Core.Tests/PkgLens.Core.Tests.csproj -c Release --no-build --filter "FullyQualifiedName~PkgLens.Core.Tests.Gui" --collect:"XPlat Code Coverage" --results-directory TestResults/Gui -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Include=[PkgLens.Gui]*
-./eng/Check-Coverage.ps1 -Name "Core / CLI" -ResultsDirectory TestResults/Core -MinimumLinePercent 70 -MinimumBranchPercent 52
-./eng/Check-Coverage.ps1 -Name GUI -ResultsDirectory TestResults/Gui -MinimumLinePercent 22 -MinimumBranchPercent 3
-```
+Feature text comes from `docs/feature-manifest.json`; run `./eng/Generate-FeatureCatalog.ps1` after
+editing it. CI performs tests, vulnerability auditing, and coverage enforcement.
 
 ## License
 

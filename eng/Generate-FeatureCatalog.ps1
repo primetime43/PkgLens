@@ -72,22 +72,7 @@ function BuildReadmeCoverage {
     $scope = CountStatus 'outOfScope'
     $lines = [System.Collections.Generic.List[string]]::new()
     $lines.Add("$($manifest.comparison.summary) **$covered covered · $partial partial · $scope out of scope by design.** $($manifest.comparison.outOfScopeNote)")
-    $lines.Add('A themed version of this table is in [`docs/coverage.html`](docs/coverage.html).')
-    $lines.Add('')
-    $lines.Add('Legend: ✅ covered · 🟡 partial · ⛔ out of scope (needs signing keys) · ⬜ not yet built')
-    foreach ($section in $manifest.comparison.sections) {
-        $lines.Add('')
-        $lines.Add("### $($section.title)")
-        $lines.Add('')
-        $lines.Add('| # | Feature | Status | In PkgLens |')
-        $lines.Add('|---|---------|:------:|-----------|')
-        foreach ($feature in $section.features) {
-            $status = $statusInfo[[string] $feature.status]
-            $lines.Add("| $(EscapeMarkdownTable ([string] $feature.code)) | $(FeatureNameMarkdown $feature) | $($status.Markdown) | $(EscapeMarkdownTable ([string] $feature.description)) |")
-        }
-    }
-    $lines.Add('')
-    $lines.Add([string] $manifest.beyondSummary)
+    $lines.Add('See the full status and TrueAncestor comparison in [`docs/coverage.html`](docs/coverage.html).')
     $lines -join "`n"
 }
 
