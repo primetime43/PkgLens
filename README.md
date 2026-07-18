@@ -7,6 +7,8 @@ executables, disc exports, and PSARC archives.
 > **PkgLens never forges Sony signatures.** Rebuilt and fake-signed output targets RPCS3 or patched
 > CFW/HEN loaders, never stock retail. See [Scope](#scope).
 
+See the complete [`PkgLens feature list`](docs/features.md).
+
 ## Quick start
 
 ```
@@ -35,8 +37,6 @@ page shows the operations that apply to that file.
 
 The GUI exposes these workflows through **Suggested**, **File**, and **Tools**. Eligibility checks hide
 or disable operations that do not apply to the selected package.
-
-See [`docs/features.md`](docs/features.md) for the complete feature list.
 
 ## CLI
 

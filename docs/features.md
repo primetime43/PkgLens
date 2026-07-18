@@ -3,6 +3,15 @@
 PkgLens provides the following workflows through the desktop app and, where applicable, the CLI.
 The GUI's **Suggested** page automatically shows the actions that match the opened package.
 
+| Area | Main capabilities |
+|---|---|
+| Packages | Inspect, search, edit, extract, replace, build, compare, convert, and verify |
+| Protected content | EDAT/SDAT and SELF/EBOOT inspection, decryption, integrity checks, and fake-signing |
+| Platforms | PS1, PS2, PSP, and PS Vita classification and export workflows |
+| Archives | Browse, extract, replace, rebuild, and verify zlib or LZMA PSARC files |
+| Libraries | RAP management, audits, matching, duplicate detection, organization, and batch jobs |
+| Safety | Eligibility rules, preflight checks, progress, cancellation, reports, and output verification |
+
 ## Package inspection and editing
 
 - Open retail or debug PS3, PSP, and PS Vita packages with automatic package-key detection.
