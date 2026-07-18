@@ -53,6 +53,12 @@ header, metadata, and `PARAM.SFO`. **File → Convert package → CFW…** perfo
   Duplicate / package organizer…** hashes a library, identifies duplicates and superseded updates,
   and previews a PS3 / PSP / Vita folder layout before copying or moving anything.
 
+Open **File → Extract and repack → Browse / rebuild PSARC archive…**, or drop a `.psarc` onto the
+window, to search, preview, extract, replace, and rebuild files inside common PS3 archives. Rebuilds
+stream one block at a time, preserve the archive's version/path mode/block size, and are fully
+decompressed again before success is reported. Standard v1.3/v1.4 zlib PSARCs are supported;
+LZMA, encrypted, and PSARC-MSELF hybrid variants are detected and rejected without writing output.
+
 ## What it does
 
 ### Inspect
@@ -115,6 +121,9 @@ header, metadata, and `PARAM.SFO`. **File → Convert package → CFW…** perfo
 ### Pack & repack
 
 - Replace a file and save a new `.pkg`.
+- Browse and filter standard PSARC v1.3/v1.4 zlib archives, preview or safely extract entries, queue
+  file replacements, and stream a separately verified rebuilt archive. Unsafe manifest traversal,
+  encrypted archives, LZMA archives, and PSARC-MSELF hybrids are rejected explicitly.
 - Build a `.pkg` from a content folder (`pack`). *Fast Pack* infers the ids from `PARAM.SFO`; pass
   options for *Custom Pack*. The default is retail-encrypted (for CFW); `--debug` builds a
   non-finalized package for RPCS3 or dev consoles.

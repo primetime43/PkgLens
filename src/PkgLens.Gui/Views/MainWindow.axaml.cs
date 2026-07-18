@@ -115,15 +115,23 @@ public partial class MainWindow : Window
             }
 
             if (item is IStorageFile file &&
-                file.Name.EndsWith(".pkg", StringComparison.OrdinalIgnoreCase) &&
-                file.TryGetLocalPath() is { } path)
+                file.Name.EndsWith(".psarc", StringComparison.OrdinalIgnoreCase) &&
+                file.TryGetLocalPath() is { } psarcPath)
+            {
+                await ShowPsarcBrowser(psarcPath);
+                return;
+            }
+
+            if (item is IStorageFile packageFile &&
+                packageFile.Name.EndsWith(".pkg", StringComparison.OrdinalIgnoreCase) &&
+                packageFile.TryGetLocalPath() is { } path)
             {
                 await Vm.LoadAsync(path);
                 return;
             }
         }
 
-        Vm.Status = "Drop a .pkg file to open it, or a folder for batch processing.";
+        Vm.Status = "Drop a .pkg or .psarc file to open it, or a folder for batch processing.";
     }
 
     private void ShowDropOverlay(bool show)

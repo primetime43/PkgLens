@@ -1,0 +1,76 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="PkgLens.Gui.Views.PsarcBrowserDialog"
+        x:CompileBindings="False"
+        Width="1120" Height="720" MinWidth="820" MinHeight="500"
+        WindowStartupLocation="CenterOwner" DragDrop.AllowDrop="True"
+        Title="PSARC browser and repacker">
+
+  <DockPanel Margin="12">
+    <StackPanel DockPanel.Dock="Top" Spacing="8" Margin="0,0,0,10">
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+        <StackPanel Grid.Column="0" Spacing="2">
+          <TextBlock x:Name="ArchiveNameText" FontSize="20" FontWeight="SemiBold"
+                     Text="PSARC archive" TextTrimming="CharacterEllipsis" />
+          <TextBlock x:Name="ArchivePathText" FontSize="11" Opacity="0.68"
+                     TextTrimming="CharacterEllipsis" />
+        </StackPanel>
+        <TextBlock x:Name="SummaryText" Grid.Column="1" VerticalAlignment="Center"
+                   TextAlignment="Right" />
+      </Grid>
+
+      <Border Classes="panel" Padding="10,8">
+        <TextBlock TextWrapping="Wrap"
+                   Text="Browse and extract files directly. Replace queues a source file; Rebuild archive copy writes a separate PSARC and verifies every rebuilt entry. The original archive is never modified." />
+      </Border>
+
+      <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+        <Button Grid.Column="0" Content="Open another…" Click="OnOpenAnother"
+                ToolTip.Tip="Choose a different standard zlib PSARC archive to browse." />
+        <TextBox x:Name="FilterText" Grid.Column="1" Watermark="Filter files by name or path…"
+                 TextChanged="OnFilterChanged"
+                 ToolTip.Tip="Filter the visible file list without changing the archive." />
+        <Button x:Name="ClearReplacementButton" Grid.Column="2" Content="Undo replacement" Click="OnClearReplacement"
+                IsEnabled="False"
+                ToolTip.Tip="Remove the queued replacement for the selected entry. No archive file is changed." />
+      </Grid>
+    </StackPanel>
+
+    <Grid DockPanel.Dock="Bottom" RowDefinitions="Auto,Auto" Margin="0,10,0,0">
+      <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="12">
+        <TextBlock x:Name="StatusText" Grid.Column="0" VerticalAlignment="Center"
+                   Text="Select an entry to view, extract, or replace it." TextTrimming="CharacterEllipsis" />
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+          <Button x:Name="ViewButton" Content="View" Click="OnView" IsEnabled="False"
+                  ToolTip.Tip="Decompress and preview the selected entry. Files above 64 MiB must be extracted instead." />
+          <Button x:Name="ExtractButton" Content="Extract…" Click="OnExtract" IsEnabled="False"
+                  ToolTip.Tip="Decompress the selected entry to a file. Existing output is replaced only after extraction succeeds." />
+          <Button x:Name="ExtractAllButton" Content="Extract all…" Click="OnExtractAll"
+                  ToolTip.Tip="Safely recreate the entire archive directory tree in a selected folder." />
+          <Button x:Name="ReplaceButton" Content="Replace…" Click="OnReplace" IsEnabled="False" Classes="primary"
+                  ToolTip.Tip="Queue a local file as the selected entry's replacement. Nothing is written until Rebuild archive copy is clicked." />
+          <Button x:Name="RebuildButton" Content="Rebuild archive copy…" Click="OnRebuild" Classes="primary"
+                  ToolTip.Tip="Stream all entries into a separate standard zlib PSARC, apply queued replacements, then decompress every output entry to verify it." />
+          <Button x:Name="CancelButton" Content="Cancel" Click="OnCancel" IsVisible="False"
+                  ToolTip.Tip="Stop at the next safe block boundary and remove unfinished output." />
+          <Button x:Name="CloseButton" Content="Close" Click="OnClose"
+                  ToolTip.Tip="Close the browser. Queued replacements that were not rebuilt are discarded." />
+        </StackPanel>
+      </Grid>
+      <ProgressBar x:Name="Progress" Grid.Row="1" Height="5" Margin="0,8,0,0"
+                   Minimum="0" Maximum="100" IsVisible="False" />
+    </Grid>
+
+    <DataGrid x:Name="EntriesGrid" AutoGenerateColumns="False" IsReadOnly="True"
+              SelectionChanged="OnSelectionChanged" GridLinesVisibility="Horizontal"
+              CanUserResizeColumns="True" CanUserSortColumns="True">
+      <DataGrid.Columns>
+        <DataGridTextColumn Header="Path" Binding="{Binding Path}" Width="3*" />
+        <DataGridTextColumn Header="Original size" Binding="{Binding Size}" Width="125" />
+        <DataGridTextColumn Header="Stored size" Binding="{Binding StoredSize}" Width="125" />
+        <DataGridTextColumn Header="Storage" Binding="{Binding Storage}" Width="105" />
+        <DataGridTextColumn Header="Rebuild state" Binding="{Binding State}" Width="140" />
+      </DataGrid.Columns>
+    </DataGrid>
+  </DockPanel>
+</Window>

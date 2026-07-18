@@ -37,6 +37,9 @@
                     ToolTip.Tip="Export a Vita package into the correct app, patch, or addcont directory layout." />
         </MenuItem>
         <MenuItem Header="_Extract and repack">
+          <MenuItem Header="Browse / rebuild _PSARC archive…" Click="OnBrowsePsarcClick"
+                    ToolTip.Tip="Browse, extract, queue replacements, and rebuild a verified copy of a standard zlib PSARC archive." />
+          <Separator />
           <MenuItem Header="Extract _all files…" Click="OnExtractAllClick"
                     IsEnabled="{Binding Package.IsDecrypted, FallbackValue=False}"
                     ToolTip.Tip="Extract the currently opened package and recreate its directory tree on disk." />
