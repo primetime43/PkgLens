@@ -222,4 +222,58 @@ public class SelfBuilderTests
         byte[] viaOptions = SelfBuilder.MakeFakeSelf(elf, new SelfBuilder.FakeSelfOptions());
         Assert.Equal(viaBool, viaOptions);
     }
+
+    [Fact]
+    public void MakeFakeSelf_CompressesBeneficialSegments_AndDecryptsExactly()
+    {
+        byte[] elf = BuildElf(new (uint, byte[])[]
+        {
+            (1u, Enumerable.Repeat((byte)0x41, 64 * 1024).ToArray()),
+            (7u, Enumerable.Repeat((byte)0x5A, 8 * 1024).ToArray()),
+        });
+
+        byte[] compressed = SelfBuilder.MakeFakeSelf(elf);
+        byte[] legacy = SelfBuilder.MakeFakeSelf(elf,
+            new SelfBuilder.FakeSelfOptions { CompressSegments = false });
+        SelfInfo info = SelfReader.ParseInfo(new MemoryStream(compressed));
+
+        Assert.True(compressed.Length < legacy.Length);
+        Assert.All(info.Segments, segment => Assert.True(segment.Compressed));
+        Assert.Equal(elf, SelfDecryptor.Decrypt(compressed).Elf);
+    }
+
+    [Fact]
+    public void MakeFakeSelf_CompressionKeepsIncompressibleSegmentsPlain()
+    {
+        byte[] random = new byte[16 * 1024];
+        new Random(12345).NextBytes(random);
+        byte[] elf = BuildElf(new (uint, byte[])[]
+        {
+            (1u, new byte[32 * 1024]),
+            (1u, random),
+        });
+
+        byte[] fself = SelfBuilder.MakeFakeSelf(elf);
+        SelfInfo info = SelfReader.ParseInfo(new MemoryStream(fself));
+
+        Assert.True(info.Segments[0].Compressed);
+        Assert.False(info.Segments[1].Compressed);
+        Assert.Equal(elf, SelfDecryptor.Decrypt(fself).Elf);
+    }
+
+    [Fact]
+    public void MakeFakeSelf_CompressionFallsBackWhenElfHasUncoveredData()
+    {
+        byte[] elf = BuildElf(new[] { (1u, new byte[32 * 1024]) });
+        Array.Resize(ref elf, elf.Length + 1);
+        elf[^1] = 0xA5;
+
+        byte[] fself = SelfBuilder.MakeFakeSelf(elf);
+        SelfInfo info = SelfReader.ParseInfo(new MemoryStream(fself));
+
+        Assert.All(info.Segments, segment => Assert.False(segment.Compressed));
+        Assert.Equal(0x7F454C46u,
+            BinaryPrimitives.ReadUInt32BigEndian(fself.AsSpan((int)info.HeaderLength)));
+        Assert.Equal(elf, SelfDecryptor.Decrypt(fself).Elf);
+    }
 }

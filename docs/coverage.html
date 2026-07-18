@@ -133,10 +133,10 @@
   </header>
 
   <div class="tiles">
-    <div class="tile done"><div class="n">19</div><div class="l">Covered</div></div>
+    <div class="tile done"><div class="n">20</div><div class="l">Covered</div></div>
     <div class="tile partial"><div class="n">1</div><div class="l">Partial</div></div>
     <div class="tile scope"><div class="n">3</div><div class="l">Out of scope <em>by design</em></div></div>
-    <div class="tile miss"><div class="n">1</div><div class="l">Not yet built</div></div>
+    <div class="tile miss"><div class="n">0</div><div class="l">Not yet built</div></div>
   </div>
 
   <div class="legend">
@@ -196,7 +196,7 @@
         <tr><td class="num">11</td><td class="feat">Resign to NON-DRM EBOOT — DEX/OFW</td><td><span class="pill scope"><i class="dot scope"></i>By design</span></td><td class="how">OFW signature check needs debug signing keys</td></tr>
         <tr><td class="num">12</td><td class="feat">Resign to NPDRM EBOOT — DEX/OFW</td><td><span class="pill scope"><i class="dot scope"></i>By design</span></td><td class="how">Same — signing keys, out of scope</td></tr>
         <tr><td class="num">O</td><td class="feat">Output Method <span style="color:var(--ink-3);font-size:.82em">(switch)</span></td><td><span class="pill partial"><i class="dot partial"></i>Partial</span></td><td class="how">One fSELF profile produced; no firmware-target selector</td></tr>
-        <tr><td class="num">D</td><td class="feat">Compress Data <span style="color:var(--ink-3);font-size:.82em">(switch)</span></td><td><span class="pill miss"><i class="dot miss"></i>Not built</span></td><td class="how">fSELF segments are stored uncompressed</td></tr>
+        <tr><td class="num">D</td><td class="feat">Compress Data <span style="color:var(--ink-3);font-size:.82em">(switch)</span></td><td><span class="pill done"><i class="dot done"></i>Covered</span></td><td class="how">Beneficial program segments use zlib automatically; incompressible or non-round-trippable layouts stay plain</td></tr>
       </tbody>
     </table></div></div>
   </section>

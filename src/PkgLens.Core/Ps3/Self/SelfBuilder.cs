@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using System.IO.Compression;
 
 namespace PkgLens.Core.Ps3.Self;
 
@@ -14,6 +15,16 @@ namespace PkgLens.Core.Ps3.Self;
 /// </summary>
 public static class SelfBuilder
 {
+    private sealed class SegmentPayload
+    {
+        public required uint Type { get; init; }
+        public required ulong ElfOffset { get; init; }
+        public required ulong ElfSize { get; init; }
+        public required byte[] StoredData { get; init; }
+        public required bool Compressed { get; init; }
+        public long SelfOffset { get; set; }
+    }
+
     // Fixed struct sizes, matching fself.py's Struct lengths.
     private const int SelfHeaderLen = 0x68;
     private const int AppInfoLen = 0x18;
@@ -97,6 +108,13 @@ public static class SelfBuilder
         /// Null omits the block entirely (the fSELF default — matching fself.py).
         /// </summary>
         public byte[]? ControlFlags { get; set; }
+
+        /// <summary>
+        /// Compress eligible program segments with zlib when doing so makes the complete fSELF smaller.
+        /// Incompressible segments remain plain, and the legacy whole-ELF layout is retained when an
+        /// exact ELF reconstruction cannot be guaranteed.
+        /// </summary>
+        public bool CompressSegments { get; set; } = true;
     }
 
     /// <summary>
@@ -129,11 +147,26 @@ public static class SelfBuilder
         ulong ePhoff = BinaryPrimitives.ReadUInt64BigEndian(elf.AsSpan(0x20));
         ushort ePhentsize = BinaryPrimitives.ReadUInt16BigEndian(elf.AsSpan(0x36));
         ushort ePhnum = BinaryPrimitives.ReadUInt16BigEndian(elf.AsSpan(0x38));
+        ushort eShentsize = BinaryPrimitives.ReadUInt16BigEndian(elf.AsSpan(0x3A));
+        ushort eShnum = BinaryPrimitives.ReadUInt16BigEndian(elf.AsSpan(0x3C));
 
         if (ePhentsize != PhdrLen)
             throw new PkgFormatException($"Unexpected ELF phentsize 0x{ePhentsize:X} (need 0x{PhdrLen:X}).");
         if (ePhoff + (ulong)(ePhnum * PhdrLen) > (ulong)elf.Length)
             throw new PkgFormatException("ELF program headers extend past end of file.");
+
+        long sectionHeaderLength = 0;
+        if (eShnum > 0)
+        {
+            if (eShentsize == 0)
+                throw new PkgFormatException("ELF has section headers but its section-header entry size is zero.");
+            ulong length = (ulong)eShentsize * eShnum;
+            if (eShoff > int.MaxValue || length > int.MaxValue || eShoff + length > (ulong)elf.Length)
+                throw new PkgFormatException("ELF section headers extend past end of file.");
+            sectionHeaderLength = (long)length;
+        }
+
+        List<SegmentPayload> segments = ReadSegments(elf, ePhoff, ePhnum, options.CompressSegments);
 
         // ---- Compute header offsets exactly as fself.py (note the align-adds-a-block quirk) ----
         long appInfoOff = Align(SelfHeaderLen, 0x10);                 // 0x70
@@ -150,11 +183,39 @@ public static class SelfBuilder
             controlInfoSize += SubHeaderLen + 0x70;                  // + NPDRM block (fself.py sizing)
 
         long endOfHeader = controlInfoOff + controlInfoSize;
-        long elfDataOff = Align(endOfHeader, 0x80);                  // where the whole ELF is appended
-        long shdrOff = elfDataOff + (long)eShoff;
-        long metadataOff = endOfHeader - 0x10;
+        long elfDataOff = Align(endOfHeader, 0x80);
+        bool compressedLayout = options.CompressSegments &&
+                                segments.Any(segment => segment.Compressed) &&
+                                CanReconstructExactly(elf, ePhoff, ePhnum, eShoff,
+                                    sectionHeaderLength, segments);
 
-        long total = elfDataOff + elf.Length;
+        long shdrOff = 0;
+        long total = 0;
+        if (compressedLayout)
+        {
+            long cursor = elfDataOff;
+            for (int i = 0; i < segments.Count; i++)
+            {
+                SegmentPayload segment = segments[i];
+                segment.SelfOffset = cursor;
+                cursor += segment.StoredData.LongLength;
+                if (i + 1 < segments.Count || sectionHeaderLength > 0)
+                    cursor = AlignUp(cursor, 0x10);
+            }
+            shdrOff = sectionHeaderLength > 0 ? cursor : 0;
+            total = shdrOff != 0 ? shdrOff + sectionHeaderLength : cursor;
+            if (total - elfDataOff >= elf.Length)
+                compressedLayout = false;
+        }
+
+        if (!compressedLayout)
+        {
+            shdrOff = elfDataOff + (long)eShoff;
+            total = elfDataOff + elf.Length;
+        }
+        long metadataOff = endOfHeader - 0x10;
+        if (total > int.MaxValue)
+            throw new PkgFormatException("The generated fake-signed SELF would exceed the supported 2 GiB size.");
         var outMs = new MemoryStream((int)total);
 
         // ---- SCE header + SELF extended header (0x68) ----
@@ -165,7 +226,7 @@ public static class SelfBuilder
         BinaryPrimitives.WriteUInt16BigEndian(h[0x0A..], 1);                // header type — SELF
         BinaryPrimitives.WriteUInt32BigEndian(h[0x0C..], (uint)metadataOff); // metadata offset
         BinaryPrimitives.WriteUInt64BigEndian(h[0x10..], (ulong)elfDataOff); // header length (= data offset)
-        BinaryPrimitives.WriteUInt64BigEndian(h[0x18..], (ulong)elf.Length); // data length (= elf size)
+        BinaryPrimitives.WriteUInt64BigEndian(h[0x18..], (ulong)(total - elfDataOff));
         BinaryPrimitives.WriteUInt64BigEndian(h[0x20..], 3);                // self header type
         BinaryPrimitives.WriteUInt64BigEndian(h[0x28..], (ulong)appInfoOff);
         BinaryPrimitives.WriteUInt64BigEndian(h[0x30..], (ulong)elfOff);
@@ -196,16 +257,18 @@ public static class SelfBuilder
         Span<byte> si = stackalloc byte[SectionInfoLen];
         for (int i = 0; i < ePhnum; i++)
         {
-            int p = (int)ePhoff + i * PhdrLen;
-            uint pType = BinaryPrimitives.ReadUInt32BigEndian(elf.AsSpan(p + 0x00));
-            ulong pOffset = BinaryPrimitives.ReadUInt64BigEndian(elf.AsSpan(p + 0x08));
-            ulong pFilesz = BinaryPrimitives.ReadUInt64BigEndian(elf.AsSpan(p + 0x20));
+            SegmentPayload segment = segments[i];
 
             si.Clear();
-            BinaryPrimitives.WriteUInt64BigEndian(si[0x00..], pOffset + (ulong)elfDataOff); // into appended ELF
-            BinaryPrimitives.WriteUInt64BigEndian(si[0x08..], pFilesz);
-            BinaryPrimitives.WriteUInt32BigEndian(si[0x10..], 1);                            // uncompressed
-            BinaryPrimitives.WriteUInt32BigEndian(si[0x1C..], pType == PtLoad ? 2u : 0u);   // not encrypted
+            BinaryPrimitives.WriteUInt64BigEndian(si[0x00..], compressedLayout
+                ? (ulong)segment.SelfOffset
+                : segment.ElfOffset + (ulong)elfDataOff);
+            BinaryPrimitives.WriteUInt64BigEndian(si[0x08..], compressedLayout
+                ? (ulong)segment.StoredData.LongLength
+                : segment.ElfSize);
+            BinaryPrimitives.WriteUInt32BigEndian(si[0x10..],
+                compressedLayout && segment.Compressed ? 2u : 1u);
+            BinaryPrimitives.WriteUInt32BigEndian(si[0x1C..], segment.Type == PtLoad ? 2u : 0u);
             outMs.Write(si);
         }
         Pad(outMs, controlInfoRaw, 0x10);
@@ -215,10 +278,97 @@ public static class SelfBuilder
             options.NpLicenseType, options.NpAppType);
         Pad(outMs, endOfHeader, 0x80);
 
-        // ---- the whole ELF, unencrypted ----
-        outMs.Write(elf, 0, elf.Length);
+        if (compressedLayout)
+        {
+            foreach (SegmentPayload segment in segments)
+            {
+                PadTo(outMs, segment.SelfOffset);
+                outMs.Write(segment.StoredData);
+            }
+            if (sectionHeaderLength > 0)
+            {
+                PadTo(outMs, shdrOff);
+                outMs.Write(elf, (int)eShoff, (int)sectionHeaderLength);
+            }
+        }
+        else
+        {
+            outMs.Write(elf, 0, elf.Length);
+        }
 
         return outMs.ToArray();
+    }
+
+    private static List<SegmentPayload> ReadSegments(byte[] elf, ulong ePhoff, ushort ePhnum,
+        bool compress)
+    {
+        var segments = new List<SegmentPayload>(ePhnum);
+        for (int i = 0; i < ePhnum; i++)
+        {
+            int p = checked((int)ePhoff + i * PhdrLen);
+            uint type = BinaryPrimitives.ReadUInt32BigEndian(elf.AsSpan(p + 0x00));
+            ulong offset = BinaryPrimitives.ReadUInt64BigEndian(elf.AsSpan(p + 0x08));
+            ulong size = BinaryPrimitives.ReadUInt64BigEndian(elf.AsSpan(p + 0x20));
+            if (offset > int.MaxValue || size > int.MaxValue || offset + size > (ulong)elf.Length)
+                throw new PkgFormatException($"ELF program segment {i} extends past end of file.");
+
+            byte[] plain = elf.AsSpan((int)offset, (int)size).ToArray();
+            byte[] stored = plain;
+            bool compressed = false;
+            if (compress && plain.Length > 0)
+            {
+                using var output = new MemoryStream();
+                using (var zlib = new ZLibStream(output, CompressionLevel.SmallestSize, leaveOpen: true))
+                    zlib.Write(plain);
+                if (output.Length < plain.Length)
+                {
+                    stored = output.ToArray();
+                    compressed = true;
+                }
+            }
+
+            segments.Add(new SegmentPayload
+            {
+                Type = type,
+                ElfOffset = offset,
+                ElfSize = size,
+                StoredData = stored,
+                Compressed = compressed,
+            });
+        }
+        return segments;
+    }
+
+    private static bool CanReconstructExactly(byte[] elf, ulong ePhoff, ushort ePhnum,
+        ulong eShoff, long sectionHeaderLength, IReadOnlyList<SegmentPayload> segments)
+    {
+        var ranges = new List<(long Start, long End)>
+        {
+            (0, ElfHeaderLen),
+            ((long)ePhoff, (long)ePhoff + (long)ePhnum * PhdrLen),
+        };
+        ranges.AddRange(segments.Select(segment =>
+            ((long)segment.ElfOffset, (long)(segment.ElfOffset + segment.ElfSize))));
+        if (sectionHeaderLength > 0)
+            ranges.Add(((long)eShoff, (long)eShoff + sectionHeaderLength));
+
+        ranges.Sort((left, right) => left.Start.CompareTo(right.Start));
+        long coveredUntil = 0;
+        foreach ((long start, long end) in ranges)
+        {
+            if (start > coveredUntil && HasNonZeroBytes(elf, coveredUntil, start))
+                return false;
+            coveredUntil = Math.Max(coveredUntil, end);
+        }
+        return coveredUntil == elf.LongLength;
+    }
+
+    private static bool HasNonZeroBytes(byte[] data, long start, long end)
+    {
+        for (long i = start; i < end; i++)
+            if (data[i] != 0)
+                return true;
+        return false;
     }
 
     private static void WriteControlInfo(Stream outMs, bool npdrm, string? contentId,
@@ -295,6 +445,17 @@ public static class SelfBuilder
 
     /// <summary>fself.py alignment: always advances by <c>alignment - (addr % alignment)</c> (a full block when aligned).</summary>
     private static long Align(long addr, int alignment) => addr + (alignment - addr % alignment);
+
+    private static long AlignUp(long value, int alignment) =>
+        (value + alignment - 1) / alignment * alignment;
+
+    private static void PadTo(Stream stream, long position)
+    {
+        if (stream.Position > position)
+            throw new InvalidOperationException("The generated SELF layout overlaps a previous region.");
+        while (stream.Position < position)
+            stream.WriteByte(0);
+    }
 
     private static void Pad(Stream s, long addr, int alignment)
     {

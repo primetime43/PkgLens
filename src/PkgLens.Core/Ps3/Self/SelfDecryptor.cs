@@ -60,6 +60,7 @@ public static class SelfDecryptor
         ulong ehdrOffset = ReadU64(self, 0x30);
         ulong phdrOffset = ReadU64(self, 0x38);
         ulong shdrOffset = ReadU64(self, 0x40);
+        ulong sectionInfoOffset = ReadU64(self, 0x48);
         ulong supplOffset = ReadU64(self, 0x58);
         ulong supplSize = ReadU64(self, 0x60);
 
@@ -92,9 +93,22 @@ public static class SelfDecryptor
             if (elfStart >= (ulong)self.Length)
                 throw new PkgFormatException("Debug/fake-signed SELF: the ELF offset is past end of file.");
 
-            byte[] plainElf = self[(int)elfStart..];
-            if (plainElf.Length < 4 || BinaryPrimitives.ReadUInt32BigEndian(plainElf) != 0x7F454C46)
-                throw new PkgFormatException("Debug/fake-signed SELF: no ELF found at the appended offset.");
+            byte[] plainElf;
+            if (keyVersionLe == 0x80 && HasCompressedSegments(
+                    self, sectionInfoOffset, ePhnum))
+            {
+                plainElf = RebuildCompressedFakeSelf(self, ehdrOffset, phdrOffset, shdrOffset,
+                    sectionInfoOffset, ePhnum, eShnum, eShoff);
+            }
+            else if (self.Length - (int)elfStart >= 4 &&
+                     BinaryPrimitives.ReadUInt32BigEndian(self.AsSpan((int)elfStart)) == 0x7F454C46)
+            {
+                plainElf = self[(int)elfStart..];
+            }
+            else
+            {
+                throw new PkgFormatException("Debug/fake-signed SELF: no ELF found at the appended offset and no compressed segment layout was detected.");
+            }
 
             return new SelfDecryptResult
             {
@@ -202,6 +216,124 @@ public static class SelfDecryptor
             License = npd?.License,
             ContentId = npd?.ContentId,
         };
+    }
+
+    private static bool HasCompressedSegments(byte[] self, ulong sectionInfoOffset, int segmentCount)
+    {
+        const int SectionInfoLen = 0x20;
+        if (sectionInfoOffset > int.MaxValue || segmentCount <= 0)
+            return false;
+        long tableLength = (long)segmentCount * SectionInfoLen;
+        if ((long)sectionInfoOffset + tableLength > self.LongLength)
+            return false;
+        for (int i = 0; i < segmentCount; i++)
+        {
+            int entry = (int)sectionInfoOffset + i * SectionInfoLen;
+            if (BinaryPrimitives.ReadUInt32BigEndian(self.AsSpan(entry + 0x10)) == 2)
+                return true;
+        }
+        return false;
+    }
+
+    private static byte[] RebuildCompressedFakeSelf(byte[] self, ulong ehdrOffset,
+        ulong phdrOffset, ulong shdrOffset, ulong sectionInfoOffset, int phnum, int shnum,
+        ulong eShoff)
+    {
+        const int EhdrLen = 0x40, PhdrLen = 0x38, ShdrLen = 0x40, SectionInfoLen = 0x20;
+        RequireWithin((long)ehdrOffset, EhdrLen, self.Length, "embedded ELF header");
+        RequireWithin((long)phdrOffset, (long)phnum * PhdrLen, self.Length,
+            "embedded ELF program headers");
+        RequireWithin((long)sectionInfoOffset, (long)phnum * SectionInfoLen, self.Length,
+            "fake-signed SELF section-info table");
+
+        int ehdr = (int)ehdrOffset;
+        ulong ePhoffValue = BinaryPrimitives.ReadUInt64BigEndian(self.AsSpan(ehdr + 0x20));
+        ushort ePhentsize = BinaryPrimitives.ReadUInt16BigEndian(self.AsSpan(ehdr + 0x36));
+        ushort eShentsize = BinaryPrimitives.ReadUInt16BigEndian(self.AsSpan(ehdr + 0x3A));
+        if (ePhentsize != PhdrLen)
+            throw new PkgFormatException($"Compressed fSELF has ELF program-header size 0x{ePhentsize:X}; expected 0x{PhdrLen:X}.");
+        if (shnum > 0 && eShentsize != ShdrLen)
+            throw new PkgFormatException($"Compressed fSELF has ELF section-header size 0x{eShentsize:X}; expected 0x{ShdrLen:X}.");
+        if (ePhoffValue > (ulong)MaxElfSize || eShoff > (ulong)MaxElfSize)
+            throw new PkgFormatException("Compressed fSELF ELF header offsets exceed the supported size limit.");
+
+        long outputLength = Math.Max(EhdrLen, checked((long)ePhoffValue + (long)phnum * PhdrLen));
+        var placements = new List<(long TargetOffset, int TargetSize, int SourceOffset,
+            int SourceSize, bool Compressed)>(phnum);
+        for (int i = 0; i < phnum; i++)
+        {
+            int program = (int)phdrOffset + i * PhdrLen;
+            ulong targetOffsetValue = BinaryPrimitives.ReadUInt64BigEndian(self.AsSpan(program + 0x08));
+            ulong targetSizeValue = BinaryPrimitives.ReadUInt64BigEndian(self.AsSpan(program + 0x20));
+            int section = (int)sectionInfoOffset + i * SectionInfoLen;
+            ulong sourceOffsetValue = BinaryPrimitives.ReadUInt64BigEndian(self.AsSpan(section + 0x00));
+            ulong sourceSizeValue = BinaryPrimitives.ReadUInt64BigEndian(self.AsSpan(section + 0x08));
+            uint compression = BinaryPrimitives.ReadUInt32BigEndian(self.AsSpan(section + 0x10));
+            if (targetOffsetValue > (ulong)MaxElfSize || targetSizeValue > int.MaxValue ||
+                sourceOffsetValue > int.MaxValue || sourceSizeValue > int.MaxValue)
+                throw new PkgFormatException($"Compressed fSELF segment {i} exceeds the supported size limit.");
+
+            long targetOffset = (long)targetOffsetValue;
+            int targetSize = (int)targetSizeValue;
+            int sourceOffset = (int)sourceOffsetValue;
+            int sourceSize = (int)sourceSizeValue;
+            RequireWithin(targetOffset, targetSize, MaxElfSize, $"compressed fSELF segment {i} placement");
+            RequireWithin(sourceOffset, sourceSize, self.Length, $"compressed fSELF segment {i} data");
+            if (compression is not 1 and not 2)
+                throw new PkgFormatException($"Compressed fSELF segment {i} has unsupported compression flag {compression}.");
+            if (compression == 1 && sourceSize != targetSize)
+                throw new PkgFormatException($"Plain fSELF segment {i} stores {sourceSize:n0} bytes but its ELF size is {targetSize:n0} bytes.");
+
+            placements.Add((targetOffset, targetSize, sourceOffset, sourceSize, compression == 2));
+            outputLength = Math.Max(outputLength, targetOffset + targetSize);
+        }
+
+        long sectionHeadersLength = (long)shnum * ShdrLen;
+        if (sectionHeadersLength > 0)
+        {
+            RequireWithin((long)shdrOffset, sectionHeadersLength, self.Length,
+                "compressed fSELF section headers");
+            RequireWithin((long)eShoff, sectionHeadersLength, MaxElfSize,
+                "compressed fSELF section-header placement");
+            outputLength = Math.Max(outputLength, (long)eShoff + sectionHeadersLength);
+        }
+
+        var elf = new byte[checked((int)outputLength)];
+        self.AsSpan((int)ehdrOffset, EhdrLen).CopyTo(elf);
+        self.AsSpan((int)phdrOffset, phnum * PhdrLen).CopyTo(elf.AsSpan((int)ePhoffValue));
+        for (int i = 0; i < placements.Count; i++)
+        {
+            var placement = placements[i];
+            Span<byte> destination = elf.AsSpan((int)placement.TargetOffset, placement.TargetSize);
+            if (!placement.Compressed)
+            {
+                self.AsSpan(placement.SourceOffset, placement.SourceSize).CopyTo(destination);
+                continue;
+            }
+
+            try
+            {
+                using var input = new MemoryStream(self, placement.SourceOffset,
+                    placement.SourceSize, writable: false);
+                using var zlib = new ZLibStream(input, CompressionMode.Decompress);
+                zlib.ReadExactly(destination);
+                if (zlib.ReadByte() != -1)
+                    throw new PkgFormatException($"Compressed fSELF segment {i} expands beyond its ELF size.");
+            }
+            catch (EndOfStreamException ex)
+            {
+                throw new PkgFormatException($"Compressed fSELF segment {i} ended before its ELF size was restored.", ex);
+            }
+            catch (InvalidDataException ex)
+            {
+                throw new PkgFormatException($"Compressed fSELF segment {i} contains invalid zlib data.", ex);
+            }
+        }
+
+        if (sectionHeadersLength > 0)
+            self.AsSpan((int)shdrOffset, (int)sectionHeadersLength)
+                .CopyTo(elf.AsSpan((int)eShoff));
+        return elf;
     }
 
     private readonly struct MetaSection

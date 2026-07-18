@@ -80,14 +80,15 @@ public class SelfReaderTests
         byte[] elf = MinimalElf.Build(
             (1u, new byte[16]),   // PT_LOAD, 16 bytes
             (1u, new byte[32]));  // PT_LOAD, 32 bytes
-        byte[] fself = SelfBuilder.MakeFakeSelf(elf);
+        byte[] fself = SelfBuilder.MakeFakeSelf(elf,
+            new SelfBuilder.FakeSelfOptions { CompressSegments = false });
 
         var info = SelfReader.ParseInfo(new MemoryStream(fself));
 
         Assert.Equal(2, info.Segments.Count);
         Assert.Equal(16u, (uint)info.Segments[0].Size);
         Assert.Equal(32u, (uint)info.Segments[1].Size);
-        Assert.All(info.Segments, s => Assert.False(s.Compressed));   // fSELF stores segments uncompressed
+        Assert.All(info.Segments, s => Assert.False(s.Compressed));
         // A fake-signed SELF carries the type-2 "file/ELF digest" control block.
         Assert.Contains(info.ControlBlocks, b => b.RawType == 2);
     }

@@ -58,6 +58,25 @@ public class SelfDecryptorTests
     }
 
     [Fact]
+    public void Decrypt_CompressedFakeSignedSelf_RejectsCorruptZlibSegment()
+    {
+        byte[] elf = BuildElf(shdrCount: 1, segments: new[]
+        {
+            (type: 1u, data: new byte[32 * 1024]),
+        });
+        byte[] fself = SelfBuilder.MakeFakeSelf(elf);
+        SelfInfo info = SelfReader.ParseInfo(new MemoryStream(fself));
+        SelfSegment segment = Assert.Single(info.Segments);
+        Assert.True(segment.Compressed);
+        fself[(int)segment.Offset] ^= 0xFF;
+
+        PkgFormatException exception = Assert.Throws<PkgFormatException>(() =>
+            SelfDecryptor.Decrypt(fself));
+
+        Assert.Contains("zlib", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void Decrypt_RejectsNonSelf()
     {
         var notSelf = new byte[0x80];

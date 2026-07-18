@@ -144,7 +144,8 @@ LZMA, encrypted, and PSARC-MSELF hybrid variants are detected and rejected witho
   options for *Custom Pack*. The default is retail-encrypted (for CFW); `--debug` builds a
   non-finalized package for RPCS3 or dev consoles.
 - Fake-sign a plaintext ELF into a SELF that boots on CFW (`resign`), with optional custom sign
-  fields.
+  fields. Program segments are independently zlib-compressed when that reduces the complete fSELF;
+  incompressible segments and ELFs with uncovered data automatically retain the byte-exact plain layout.
 - Fake-sign a folder's `EBOOT.BIN` while packing (`pack --resign`).
 - Convert a PS3 package for RPCS3, CEX CFW, or HEN in one GUI workflow: select the target, find every
   `EBOOT.BIN`, SELF, and SPRX, resolve
@@ -240,8 +241,8 @@ console will reject it. Use `--debug` for a self-contained non-finalized package
 
 ## Feature coverage vs TrueAncestor
 
-How PkgLens maps to the two TrueAncestor tools (PKG Repacker + SELF Resigner): **19 covered ·
-1 partial · 3 out of scope by design · 1 not built.** The out-of-scope items all need Sony's private
+How PkgLens maps to the two TrueAncestor tools (PKG Repacker + SELF Resigner): **20 covered ·
+1 partial · 3 out of scope by design.** The out-of-scope items all need Sony's private
 signing keys, which PkgLens never uses. A themed version of this table is in
 [`docs/coverage.html`](docs/coverage.html).
 
@@ -279,7 +280,7 @@ Legend: ✅ covered · 🟡 partial · ⛔ out of scope (needs signing keys) · 
 | 11 | Resign to NON-DRM EBOOT — DEX/OFW | ⛔ | OFW signature check needs debug signing keys |
 | 12 | Resign to NPDRM EBOOT — DEX/OFW | ⛔ | Same — signing keys, out of scope |
 | O | Output Method *(switch)* | 🟡 | fSELF profile with settable fw-version + control flags; cap flags need signing |
-| D | Compress Data *(switch)* | ⬜ | fSELF segments are stored uncompressed |
+| D | Compress Data *(switch)* | ✅ | Beneficial fSELF segments are zlib-compressed automatically; incompressible or unsafe layouts stay plain |
 
 Beyond TrueAncestor, PkgLens adds a full inspector GUI, integrity `verify`, EDAT/SDAT decryption,
 SELF-header inspect, a batch `scan` catalog, `--json` output, and cross-platform support.
