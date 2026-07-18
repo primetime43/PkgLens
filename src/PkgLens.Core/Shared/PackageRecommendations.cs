@@ -1,4 +1,5 @@
 using PkgLens.Core.Psp;
+using PkgLens.Core.Ps1;
 using PkgLens.Core.Shared.Models;
 using PkgLens.Core.Vita;
 
@@ -7,6 +8,7 @@ namespace PkgLens.Core.Shared;
 public enum PackageRecommendedAction
 {
     ExportPsp,
+    ExportPs1Classic,
     ExportPs2Classic,
     ExportVita,
     ConvertCfw,
@@ -125,6 +127,25 @@ public static class PackageRecommendationEngine
         bool hasExecutables = info.Entries.Any(entry => entry.IsFile && IsPs3Executable(entry.Name));
         bool canConvertForCfw = hasExecutables && info.Header.IsRetail;
         var actions = new List<PackageActionRecommendation>();
+
+        if (info.Metadata.ContentType == PkgContentType.Ps1Emu)
+        {
+            bool hasImage = info.Entries.Any(entry => entry.IsFile &&
+                (Path.GetFileName(entry.Name).Equals("EBOOT.PBP", StringComparison.OrdinalIgnoreCase) ||
+                 Path.GetFileName(entry.Name).Equals("ISO.BIN.EDAT", StringComparison.OrdinalIgnoreCase)));
+            if (hasImage)
+                actions.Add(new(PackageRecommendedAction.ExportPs1Classic, "Export PS1 Classic",
+                    "Resolve the RAP when needed, export metadata and artwork, then reconstruct emulator-ready BIN/CUE disc images.",
+                    "RECOMMENDED", true));
+            actions.Add(new(PackageRecommendedAction.ExtractAll, "Extract package files",
+                "Extract the original PS1 Classic package directory without reconstructing its disc image.", "FOLDER",
+                IsPrimary: !hasImage));
+            AddLicenseAudit(info, actions);
+            actions.Add(Verify());
+            return new(classification,
+                hasImage ? "A PS1 Classic image container was detected; guided metadata and BIN/CUE export are available."
+                    : "No EBOOT.PBP or ISO.BIN.EDAT image container was found; raw extraction is available.", actions);
+        }
 
         if (info.Metadata.ContentType == PkgContentType.Ps2Classic)
         {

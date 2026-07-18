@@ -68,6 +68,21 @@ public sealed class PackageRecommendationTests
     }
 
     [Fact]
+    public void Ps1Classic_RecommendsGuidedDiscExportFirst()
+    {
+        var builder = new SyntheticPkgBuilder();
+        builder.AddMetadataU32((uint)PkgMetadataId.ContentType, (uint)PkgContentType.Ps1Emu);
+        builder.AddFile("USRDIR/CONTENT/EBOOT.PBP", new byte[] { 1 });
+
+        PackageRecommendationSet result = PackageRecommendationEngine.Analyze(Read(builder));
+
+        Assert.Equal("PS1 Classic package", result.Classification);
+        Assert.Equal(PackageRecommendedAction.ExportPs1Classic, result.Actions[0].Action);
+        Assert.True(result.Actions[0].IsPrimary);
+        Assert.DoesNotContain(result.Actions, action => action.Action == PackageRecommendedAction.ConvertCfw);
+    }
+
+    [Fact]
     public void Ps3GameDataWithoutEboot_RecommendsExtractionFirst()
     {
         var builder = new SyntheticPkgBuilder();

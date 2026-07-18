@@ -1,0 +1,43 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="PkgLens.Gui.Views.Ps1ClassicExportDialog"
+        Width="620" SizeToContent="Height" CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        Title="Export PS1 Classic">
+  <StackPanel Margin="18" Spacing="14">
+    <StackPanel Spacing="4">
+      <TextBlock Text="Export PS1 Classic" FontSize="20" FontWeight="SemiBold" />
+      <TextBlock Text="PkgLens extracts the licensed PS1 container, metadata, artwork, and optional software manual."
+                 TextWrapping="Wrap" Opacity="0.75" />
+    </StackPanel>
+
+    <Border Padding="10" CornerRadius="5"
+            Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
+      <StackPanel Spacing="4">
+        <TextBlock x:Name="SourceText" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" />
+        <TextBlock x:Name="DetectionText" FontWeight="SemiBold" TextWrapping="Wrap" />
+        <TextBlock x:Name="LicenseText" FontSize="11" Opacity="0.75" TextWrapping="Wrap" />
+      </StackPanel>
+    </Border>
+
+    <CheckBox x:Name="ReconstructCheck" IsChecked="True"
+              Content="Reconstruct emulator-ready BIN/CUE disc image(s)" />
+    <TextBlock Text="BIN/CUE reconstruction uses the maintained psxtract engine so PS1 mixed-mode audio, pregaps, compression, and CD ECC/EDC are handled correctly. Download and extract a release from github.com/has207/psxtract-2/releases; the first use asks you to select psxtract.exe and remembers that location."
+               TextWrapping="Wrap" FontSize="11" Opacity="0.72" />
+
+    <Border Padding="10" CornerRadius="5"
+            BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="1">
+      <StackPanel Spacing="3">
+        <TextBlock Text="Always exported" FontWeight="SemiBold" />
+        <TextBlock Text="EBOOT.PBP · PARAM.SFO and artwork · PS1 manifest · DOCUMENT.DAT when present · operation report"
+                   TextWrapping="Wrap" FontSize="11" Opacity="0.75" />
+      </StackPanel>
+    </Border>
+
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+      <Button Content="Cancel" Click="OnCancel" ToolTip.Tip="Close without exporting anything." />
+      <Button Content="Choose output…" Click="OnExport" Classes="accent"
+              ToolTip.Tip="Choose a parent folder; PkgLens creates a separate PS1 export folder inside it." />
+    </StackPanel>
+  </StackPanel>
+</Window>

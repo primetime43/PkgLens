@@ -27,6 +27,8 @@
                     ToolTip.Tip="Decrypt and fake-sign supported PS3 executables, optionally lower firmware requirements, and rebuild a CFW/HEN package copy." />
         </MenuItem>
         <MenuItem Header="_Export platform content">
+          <MenuItem Header="PS_1 Classic → BIN / CUE / metadata…" Click="OnExportPs1ClassicClick"
+                    ToolTip.Tip="Identify a PS1 Classic, resolve its RAP, export PBP metadata, and reconstruct emulator-ready BIN/CUE images." />
           <MenuItem Header="PS_2 Classic → ISO / CFW package…" Click="OnExportPs2ClassicClick"
                     ToolTip.Tip="Authenticate and decrypt ISO.BIN.ENC to ISO, with an optional CFW/HEN package rebuild." />
           <MenuItem Header="_PSP → PBP / ISO / CSO…" Click="OnExportPspClick"
@@ -354,6 +356,19 @@
                       </StackPanel>
                       <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                         <Border Classes="chip"><TextBlock Text="PSP PKG" /></Border>
+                        <Border Classes="chip"><TextBlock Text="READ-ONLY" /></Border>
+                      </StackPanel>
+                    </Grid>
+                  </Button>
+                  <Button Classes="row" Click="OnHomeExportPs1">
+                    <Grid ColumnDefinitions="34,*,Auto">
+                      <materialIcons:MaterialIcon Grid.Column="0" Kind="DiscPlayer" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="1,0,0,0" />
+                      <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
+                        <TextBlock Classes="rowtitle" Text="Export PS1 Classic → BIN / CUE…" />
+                        <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="Resolve licenses, preserve metadata, and reconstruct single- or multi-disc images." />
+                      </StackPanel>
+                      <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Border Classes="chip"><TextBlock Text="PS1 PKG" /></Border>
                         <Border Classes="chip"><TextBlock Text="READ-ONLY" /></Border>
                       </StackPanel>
                     </Grid>

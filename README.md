@@ -75,7 +75,7 @@ header, metadata, and `PARAM.SFO`. **File → Convert package → CFW…** perfo
 - Detect exact SHA-256 duplicates, same-content-ID variants, and superseded update versions, then
   organize packages into `PS3|PSP|Vita / title / Base|Updates|DLC` folders. Exact duplicates are
   never deleted automatically; Move mode copies and verifies the hash before removing each source.
-- Automatically classify each opened package and show only relevant next actions, such as PSP/Vita
+- Automatically classify each opened package and show only relevant next actions, such as PS1/PSP/Vita
   export, PS3 CFW conversion, update/game-data extraction, license audit, or integrity verification.
 - Run a blocking operation preflight before PSP/Vita export, CFW conversion, EDAT/SDAT decrypt, or
   SELF decrypt: package/file type, keys, RAP/license readiness, encryption support, output safety,
@@ -91,7 +91,7 @@ header, metadata, and `PARAM.SFO`. **File → Convert package → CFW…** perfo
 - Decrypt an encrypted EBOOT.BIN / `.self` back to a plaintext ELF (`unself`). Fake-signed and debug
   SELFs need no key; a licensed one resolves its RAP automatically when installed.
 
-### PSP / minis
+### PS1 / PS2 / PSP / Vita
 
 - Decrypt PSP EDAT and bare PGD files (fixed-key content only; fuse-bound content is out of scope).
 - Decrypt a PSP/minis manual (`DOCUMENT.DAT`) into its PNG pages (`undoc`).
@@ -99,6 +99,11 @@ header, metadata, and `PARAM.SFO`. **File → Convert package → CFW…** perfo
 - Decrypt a minis `DATA.PSAR` (NPUMDIMG) to a mountable `.iso` (`psar decrypt`) — keyless, no RAP.
 - Export a PSP package directly to `EBOOT.PBP`, decrypted `.iso`, or PSP-compatible compressed `.cso`
   (`pspexport`), without manually extracting the package and PBP first.
+- Identify PS1 Classic packages before showing export options, resolve a matching RAP automatically when
+  the image is stored as `ISO.BIN.EDAT`, and export `EBOOT.PBP`, PBP metadata/artwork, `DOCUMENT.DAT`, and
+  a JSON manifest. The GUI can reconstruct single- or multi-disc 2352-byte BIN/CUE images through the
+  maintained [psxtract](https://github.com/has207/psxtract-2) engine, preserving mixed-mode audio,
+  pregaps, compression, and CD ECC/EDC instead of silently exporting data-track-only images.
 - Detect PS2 Classic packages, resolve built-in placeholder/reactPSN keys or a matching RAP automatically,
   authenticate every `ISO.BIN.ENC` segment, and export the original PS2 `.iso` from the GUI. The guided
   workflow can also convert `ISO.BIN.ENC` plus `ISO.BIN.EDAT` to the standard placeholder license and
