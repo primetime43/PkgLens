@@ -29,6 +29,8 @@
                   Click="OnOperationPreflightChanged" />
       </MenuItem>
       <MenuItem Header="_Help">
+        <MenuItem x:Name="CheckForUpdatesMenuItem" Header="Check for _updates…" Click="OnCheckForUpdatesClick" />
+        <Separator />
         <MenuItem x:Name="AboutMenuItem" Header="_About PkgLens" Click="OnAboutClick" />
       </MenuItem>
     </Menu>

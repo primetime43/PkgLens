@@ -2,6 +2,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Headless.XUnit;
 using PkgLens.Core.Shared;
+using PkgLens.Gui.Services;
 using PkgLens.Gui.ViewModels;
 using PkgLens.Gui.Views;
 
@@ -9,6 +10,21 @@ namespace PkgLens.Core.Tests.Gui;
 
 public sealed class DialogHeadlessTests
 {
+    [AvaloniaFact]
+    public void UpdateDialog_ShowsInstalledAndLatestVersionsWithReleaseLink()
+    {
+        var result = new UpdateCheckResult("1.0.0", "1.1.0",
+            new Uri("https://github.com/primetime43/PkgLens/releases/tag/v1.1.0"), true);
+        var dialog = new UpdateCheckDialog(result);
+
+        Assert.Contains("newer", dialog.FindControl<TextBlock>("HeadingText")!.Text,
+            StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("1.0.0", dialog.FindControl<TextBlock>("CurrentVersionText")!.Text);
+        Assert.Equal("1.1.0", dialog.FindControl<TextBlock>("LatestVersionText")!.Text);
+        Assert.Equal(result.ReleaseUri, dialog.FindControl<HyperlinkButton>("ReleaseLink")!.NavigateUri);
+        dialog.Close();
+    }
+
     [AvaloniaFact]
     public void ErrorDialog_PreservesMessageScrollableDetailsAndUsableOkButton()
     {

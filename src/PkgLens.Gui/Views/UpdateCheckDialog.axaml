@@ -1,0 +1,20 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="PkgLens.Gui.Views.UpdateCheckDialog"
+        Width="480" SizeToContent="Height" CanResize="False"
+        WindowStartupLocation="CenterOwner" Title="Check for updates">
+  <StackPanel Margin="18" Spacing="12">
+    <TextBlock x:Name="HeadingText" FontSize="18" FontWeight="SemiBold" TextWrapping="Wrap" />
+    <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="5">
+      <TextBlock Grid.Row="0" Grid.Column="0" Text="Installed" FontWeight="SemiBold" />
+      <TextBlock x:Name="CurrentVersionText" Grid.Row="0" Grid.Column="1" />
+      <TextBlock Grid.Row="1" Grid.Column="0" Text="Latest" FontWeight="SemiBold" />
+      <TextBlock x:Name="LatestVersionText" Grid.Row="1" Grid.Column="1" />
+    </Grid>
+    <TextBlock x:Name="MessageText" TextWrapping="Wrap" Opacity="0.78" />
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+      <HyperlinkButton x:Name="ReleaseLink" Content="View latest release" />
+      <Button Content="Close" Click="OnClose" IsDefault="True" Classes="accent" MinWidth="88" />
+    </StackPanel>
+  </StackPanel>
+</Window>

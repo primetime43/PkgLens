@@ -71,6 +71,7 @@ The GUI's **Suggested** page automatically shows the actions that match the open
 - Verify exported ISO/CSO structures, rebuilt PSARCs, and fake-signed SELF round trips.
 - Preflight and eligibility rules prevent incompatible workflows from being started accidentally.
 - Cancellable GUI operations provide progress, modal errors, and safe temporary-output cleanup.
+- Check GitHub's latest published release from the Help menu and open its download page.
 
 PkgLens does not create genuine Sony signatures or use per-console secrets. See the
 [README scope section](../README.md#scope) for output compatibility and limitations.

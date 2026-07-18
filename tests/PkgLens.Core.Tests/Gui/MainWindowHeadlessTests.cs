@@ -17,6 +17,8 @@ public sealed class MainWindowHeadlessTests
         window.Show();
 
         Assert.Contains(GuiVersion.Value, window.Title, StringComparison.Ordinal);
+        Assert.Equal("Check for _updates…",
+            window.FindControl<MenuItem>("CheckForUpdatesMenuItem")!.Header?.ToString());
         Assert.Equal("_About PkgLens", window.FindControl<MenuItem>("AboutMenuItem")!.Header?.ToString());
 
         var about = new AboutDialog();
