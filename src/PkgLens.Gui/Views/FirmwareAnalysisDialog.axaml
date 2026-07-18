@@ -60,12 +60,36 @@
                 GridLinesVisibility="Horizontal" CanUserResizeColumns="True" CanUserSortColumns="True"
                 CanUserReorderColumns="True" HorizontalScrollBarVisibility="Auto" x:CompileBindings="False">
         <DataGrid.Columns>
-          <DataGridTextColumn Header="Path" Binding="{Binding Path}" Width="2*" MinWidth="240" />
-          <DataGridTextColumn Header="Type" Binding="{Binding Kind}" Width="Auto" MinWidth="100" />
-          <DataGridTextColumn Header="Header FW" Binding="{Binding HeaderFirmware}" Width="Auto" MinWidth="90" />
-          <DataGridTextColumn Header="SDK FW" Binding="{Binding SdkFirmware}" Width="Auto" MinWidth="80" />
-          <DataGridTextColumn Header="Analysis" Binding="{Binding Analysis}" Width="Auto" MinWidth="130" />
-          <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="3*" MinWidth="360" />
+          <DataGridTextColumn Binding="{Binding Path}" Width="2*" MinWidth="240">
+            <DataGridTextColumn.Header>
+              <TextBlock Text="Path" ToolTip.Tip="Location of the SELF, SPRX, or EBOOT executable inside the package or selected folder." />
+            </DataGridTextColumn.Header>
+          </DataGridTextColumn>
+          <DataGridTextColumn Binding="{Binding Kind}" Width="Auto" MinWidth="100">
+            <DataGridTextColumn.Header>
+              <TextBlock Text="Type" ToolTip.Tip="Executable format and encryption type, such as NPDRM SELF or plain ELF." />
+            </DataGridTextColumn.Header>
+          </DataGridTextColumn>
+          <DataGridTextColumn Binding="{Binding HeaderFirmware}" Width="Auto" MinWidth="125">
+            <DataGridTextColumn.Header>
+              <TextBlock Text="Header firmware" ToolTip.Tip="Minimum PS3 firmware declared by the encrypted SELF/SPRX header. This can be read without decrypting the executable." />
+            </DataGridTextColumn.Header>
+          </DataGridTextColumn>
+          <DataGridTextColumn Binding="{Binding SdkFirmware}" Width="Auto" MinWidth="115">
+            <DataGridTextColumn.Header>
+              <TextBlock Text="SDK firmware" ToolTip.Tip="Firmware requirement stored in the decrypted ELF sys_process_param SDK marker. This is the value the safe firmware patch changes." />
+            </DataGridTextColumn.Header>
+          </DataGridTextColumn>
+          <DataGridTextColumn Binding="{Binding Analysis}" Width="Auto" MinWidth="130">
+            <DataGridTextColumn.Header>
+              <TextBlock Text="Analysis" ToolTip.Tip="How completely PkgLens analyzed the executable and whether it is ready for safe patching." />
+            </DataGridTextColumn.Header>
+          </DataGridTextColumn>
+          <DataGridTextColumn Binding="{Binding Status}" Width="3*" MinWidth="360">
+            <DataGridTextColumn.Header>
+              <TextBlock Text="Details" ToolTip.Tip="Explanation of the result, including why patching is available or what key or license material is missing." />
+            </DataGridTextColumn.Header>
+          </DataGridTextColumn>
         </DataGrid.Columns>
       </DataGrid>
       <TextBlock Grid.Row="1" Margin="0,8,0,0" FontSize="11" Opacity="0.65" TextWrapping="Wrap"

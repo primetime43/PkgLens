@@ -41,19 +41,41 @@
                   IsEnabled="{Binding Package.HasSelectedFile, FallbackValue=False}" />
       </MenuItem>
       <MenuItem Header="_Tools">
-        <MenuItem Header="_Verify integrity…" Click="OnVerifyClick" IsEnabled="{Binding HasPackage}" />
-        <MenuItem Header="Package _info…" Click="OnInfoClick" IsEnabled="{Binding HasPackage}" />
-        <MenuItem Header="Analyze _firmware…" Click="OnFirmwareAnalysisClick" />
-        <MenuItem Header="Analyze firmware _folder…" Click="OnFirmwareFolderAnalysisClick" />
-        <MenuItem Header="_Folder info…" Click="OnFolderInfoClick" />
-        <MenuItem Header="Scan package _library…" Click="OnScanFolderClick" />
-        <MenuItem Header="_Batch processing center…" Click="OnBatchCenterClick" />
-        <MenuItem Header="Duplicate / package _organizer…" Click="OnPackageOrganizerClick" />
-        <MenuItem Header="Key / _license audit…" Click="OnKeyLicenseAuditClick" />
+        <MenuItem Header="Analyze / patch package _firmware…"
+                  Click="OnFirmwareAnalysisClick"
+                  ToolTip.Tip="Scan every SELF/SPRX, report the required firmware, and offer safe package patching when supported." />
         <Separator />
-        <MenuItem Header="Import _override key…" Click="OnSetKeyClick" />
-        <MenuItem Header="Keys _folder…" Click="OnKeysClick" />
-        <MenuItem Header="_RAP library…" Click="OnManageRapsClick" />
+        <MenuItem Header="_Firmware and CFW">
+          <MenuItem Header="Analyze extracted firmware _folder…"
+                    Click="OnFirmwareFolderAnalysisClick"
+                    ToolTip.Tip="Scan SELF and SPRX files in an extracted folder and report their firmware requirements." />
+          <MenuItem Header="_One-click CFW package conversion…"
+                    Click="OnConvertCfwClick"
+                    ToolTip.Tip="Extract, decrypt, fake-sign, optionally lower firmware requirements, and rebuild a package copy." />
+          <Separator />
+          <MenuItem Header="Patch one _SELF / EBOOT firmware…"
+                    Click="OnGoFirmwarePatchClick"
+                    ToolTip.Tip="Open the guided SELF/EBOOT firmware patch and fake-sign tool." />
+          <MenuItem Header="Raw _byte patch SELF / EBOOT…"
+                    Click="OnGoBytePatchClick"
+                    ToolTip.Tip="Open the advanced byte-patch tool for a single SELF or EBOOT file." />
+        </MenuItem>
+        <MenuItem Header="_Inspect and verify">
+          <MenuItem Header="_Verify package integrity…" Click="OnVerifyClick" IsEnabled="{Binding HasPackage}" />
+          <MenuItem Header="Package _info…" Click="OnInfoClick" IsEnabled="{Binding HasPackage}" />
+          <MenuItem Header="_Folder info…" Click="OnFolderInfoClick" />
+          <MenuItem Header="Key / _license audit…" Click="OnKeyLicenseAuditClick" />
+        </MenuItem>
+        <MenuItem Header="_Library and batch">
+          <MenuItem Header="Scan package _library…" Click="OnScanFolderClick" />
+          <MenuItem Header="_Batch processing center…" Click="OnBatchCenterClick" />
+          <MenuItem Header="Duplicate / package _organizer…" Click="OnPackageOrganizerClick" />
+        </MenuItem>
+        <MenuItem Header="_Keys and licenses">
+          <MenuItem Header="Import _override key…" Click="OnSetKeyClick" />
+          <MenuItem Header="Keys _folder…" Click="OnKeysClick" />
+          <MenuItem Header="_RAP library…" Click="OnManageRapsClick" />
+        </MenuItem>
       </MenuItem>
       <MenuItem Header="_View">
         <MenuItem Header="_Theme">
