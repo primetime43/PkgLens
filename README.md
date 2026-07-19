@@ -9,6 +9,8 @@ executables, disc exports, and PSARC archives.
 
 See the complete [`PkgLens feature list`](docs/features.md).
 
+![PkgLens desktop app showing its bundled-key status and package workflows](docs/images/pkglens-home.png)
+
 ## Highlights
 
 - Inspect package metadata, files, `PARAM.SFO`, SELF/EBOOT/SPRX headers, content IDs, and firmware

@@ -12,7 +12,7 @@
       <!-- Menu: a compact list of the tools on this page -->
       <StackPanel x:Name="ResignMenu" Spacing="10">
         <TextBlock Classes="pagesubtitle"
-                   Text="Keyless SELF / EBOOT tools, grouped by target — CEX CFW today; DEX OFW resign isn't built yet." />
+                   Text="SELF / EBOOT tools with bundled public decryption keys, grouped by target — CEX CFW today; DEX OFW resign isn't built yet." />
   
         <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,2,0,0">
           <Border Classes="chip cfw"><TextBlock Text="CEX · CFW" /></Border>

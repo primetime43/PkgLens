@@ -2,7 +2,7 @@ namespace PkgLens.Core.Shared;
 
 public static class FeatureText
 {
-    public const string HomeIntro = "Keyless PS3 / PSP / PSVita package and EBOOT tools. Each tool is tagged with the file it works on and where its output runs.";
+    public const string HomeIntro = "PS3 / PSP / PS Vita package and EBOOT tools with bundled public decryption keys. Each tool is tagged with the file it works on and where its output runs.";
     public const string OpenPackage = "Browse, list, search, view, and extract a package.";
     public const string ScanFolder = "Catalog and classify every .pkg in a directory.";
     public const string BatchCenter = "Audit, classify, verify, extract, export, or CFW-convert a package folder with resumable jobs.";
