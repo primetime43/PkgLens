@@ -7,12 +7,12 @@
              x:DataType="vm:MainWindowViewModel">
   <ScrollViewer>
     <StackPanel Margin="24,20" Spacing="16" MaxWidth="820" HorizontalAlignment="Left">
-      <TextBlock Classes="pagetitle" Text="SELF / EBOOT Resigner" />
+      <TextBlock x:Name="SelfEbootPageTitle" Classes="pagetitle" Text="SELF / EBOOT Tools" />
   
       <!-- Menu: a compact list of the tools on this page -->
       <StackPanel x:Name="ResignMenu" Spacing="10">
         <TextBlock Classes="pagesubtitle"
-                   Text="SELF / EBOOT tools with bundled public decryption keys, grouped by target — CEX CFW today; DEX OFW resign isn't built yet." />
+                   Text="Inspect or decrypt EBOOT.BIN, SELF, and SPRX executables; fake-sign or patch them for CEX CFW." />
   
         <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,2,0,0">
           <Border Classes="chip cfw"><TextBlock Text="CEX · CFW" /></Border>
@@ -103,7 +103,7 @@
   
       <!-- Detail: one focused operation at a time -->
       <StackPanel x:Name="ResignDetail" IsVisible="False" Spacing="10">
-        <Button Classes="back" Content="‹  All resign tools" Click="OnResignBack" />
+        <Button Classes="back" Content="‹  All SELF / EBOOT tools" Click="OnResignBack" />
   
         <!-- Inspect -->
         <StackPanel x:Name="ResignOpInspect" IsVisible="False" Spacing="10">

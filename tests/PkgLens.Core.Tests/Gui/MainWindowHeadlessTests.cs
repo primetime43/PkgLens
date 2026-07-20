@@ -74,6 +74,8 @@ public sealed class MainWindowHeadlessTests
 
         ListBox rail = window.FindControl<ListBox>("ToolRail")!;
         Assert.Equal(7, rail.ItemCount);
+        Assert.Equal("SELF / EBOOT",
+            window.FindControl<ListBoxItem>("SelfEbootToolRailItem")!.Content?.ToString());
         Assert.True(window.FindControl<Control>("HomePage")!.IsVisible);
 
         viewModel.ActiveTool = ToolPage.Keys;
@@ -86,6 +88,14 @@ public sealed class MainWindowHeadlessTests
 
         Assert.Equal(ToolPage.Decrypt, viewModel.ActiveTool);
         Assert.True(window.FindControl<Control>("DecryptPage")!.IsVisible);
+
+        rail.SelectedIndex = (int)ToolPage.Resign;
+
+        Assert.Equal(ToolPage.Resign, viewModel.ActiveTool);
+        ResignPage selfEbootPage = window.FindControl<ResignPage>("ResignPage")!;
+        Assert.True(selfEbootPage.IsVisible);
+        Assert.Equal("SELF / EBOOT Tools",
+            selfEbootPage.FindControl<TextBlock>("SelfEbootPageTitle")!.Text);
         window.Close();
     }
 

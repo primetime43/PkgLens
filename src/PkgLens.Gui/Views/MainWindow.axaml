@@ -95,7 +95,7 @@
           <ListBoxItem Content="Suggested" />
           <ListBoxItem Content="Package" />
           <ListBoxItem Content="Pack" />
-          <ListBoxItem Content="Resign" />
+          <ListBoxItem x:Name="SelfEbootToolRailItem" Content="SELF / EBOOT" />
           <ListBoxItem Content="Decrypt" />
           <ListBoxItem Content="Keys" />
         </ListBox>
