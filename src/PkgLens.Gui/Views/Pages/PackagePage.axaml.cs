@@ -14,6 +14,7 @@ public partial class PackagePage : UserControl
     private void OnClearFileFilter(object? sender, RoutedEventArgs e) => Host?.OnClearFileFilter(sender, e);
     private void OnDecryptManual(object? sender, RoutedEventArgs e) => Host?.OnDecryptManual(sender, e);
     private void OnExtractClick(object? sender, RoutedEventArgs e) => Host?.OnExtractClick(sender, e);
+    private void OnExploreTrophies(object? sender, RoutedEventArgs e) => Host?.OnExploreTrophies(sender, e);
     private void OnExtractPspIso(object? sender, RoutedEventArgs e) => Host?.OnExtractPspIso(sender, e);
     private void OnReplaceClick(object? sender, RoutedEventArgs e) => Host?.OnReplaceClick(sender, e);
     private void OnUnpackPbp(object? sender, RoutedEventArgs e) => Host?.OnUnpackPbp(sender, e);

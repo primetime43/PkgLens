@@ -1,0 +1,72 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:views="using:PkgLens.Gui.Views"
+        x:Class="PkgLens.Gui.Views.TrophyExplorerDialog"
+        Width="940" Height="650" MinWidth="760" MinHeight="500"
+        WindowStartupLocation="CenterOwner"
+        Title="Trophy Explorer">
+
+  <DockPanel Margin="12">
+    <Border DockPanel.Dock="Top" Padding="10" Margin="0,0,0,10"
+            Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+            CornerRadius="4">
+      <Grid ColumnDefinitions="Auto,*,Auto">
+        <Border Width="96" Height="96" Margin="0,0,12,0"
+                Background="{DynamicResource SystemControlBackgroundBaseLowBrush}" CornerRadius="4">
+          <Image x:Name="GameArtwork" Stretch="Uniform" />
+        </Border>
+        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="3">
+          <TextBlock x:Name="SetNameText" FontSize="20" FontWeight="SemiBold"
+                     TextWrapping="Wrap" />
+          <TextBlock x:Name="SetIdText" FontFamily="Consolas,monospace" FontSize="12" Opacity="0.75" />
+          <TextBlock x:Name="SetDescriptionText" TextWrapping="Wrap" Opacity="0.85" MaxWidth="560" />
+        </StackPanel>
+        <StackPanel Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right" Spacing="4">
+          <TextBlock x:Name="CountsText" FontWeight="SemiBold" TextAlignment="Right" />
+          <TextBlock x:Name="ArchiveStatusText" FontSize="11" Opacity="0.7" TextAlignment="Right" />
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <Button x:Name="CloseButton" DockPanel.Dock="Bottom" Content="Close" Click="OnClose"
+            HorizontalAlignment="Right" Margin="0,10,0,0" />
+
+    <Grid ColumnDefinitions="*,300">
+      <DataGrid x:Name="TrophyGrid" Grid.Column="0" Margin="0,0,10,0"
+                x:DataType="views:TrophyDisplayRow"
+                IsReadOnly="True" AutoGenerateColumns="False" SelectionMode="Single"
+                CanUserResizeColumns="True" CanUserSortColumns="True"
+                SelectionChanged="OnSelectionChanged">
+        <DataGrid.Columns>
+          <DataGridTemplateColumn Header="Icon" Width="58" CanUserSort="False">
+            <DataGridTemplateColumn.CellTemplate>
+              <DataTemplate x:DataType="views:TrophyDisplayRow">
+                <Image Source="{Binding Icon}" Width="40" Height="40" Margin="4" Stretch="Uniform" />
+              </DataTemplate>
+            </DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
+          <DataGridTextColumn Header="ID" Binding="{Binding IdText}" SortMemberPath="Id" Width="55" />
+          <DataGridTextColumn Header="Grade" Binding="{Binding GradeText}" SortMemberPath="GradeText" Width="90" />
+          <DataGridTextColumn Header="Name" Binding="{Binding Name}" SortMemberPath="Name" Width="*" MinWidth="180" />
+          <DataGridTextColumn Header="Hidden" Binding="{Binding HiddenText}" SortMemberPath="HiddenText" Width="75" />
+        </DataGrid.Columns>
+      </DataGrid>
+
+      <Border Grid.Column="1" Padding="12"
+              BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="1"
+              CornerRadius="4">
+        <StackPanel Spacing="8">
+          <Image x:Name="SelectedTrophyIcon" Width="160" Height="160"
+                 HorizontalAlignment="Center" Stretch="Uniform" />
+          <TextBlock x:Name="SelectedTrophyName" FontSize="17" FontWeight="SemiBold"
+                     TextAlignment="Center" TextWrapping="Wrap" />
+          <TextBlock x:Name="SelectedTrophyGrade" FontSize="12" TextAlignment="Center" Opacity="0.75" />
+          <Separator Margin="0,4" />
+          <TextBlock Text="Description" FontWeight="SemiBold" />
+          <TextBlock x:Name="SelectedTrophyDescription" TextWrapping="Wrap" />
+          <TextBlock x:Name="SelectedTrophyHidden" FontSize="12" Opacity="0.75" />
+        </StackPanel>
+      </Border>
+    </Grid>
+  </DockPanel>
+</Window>

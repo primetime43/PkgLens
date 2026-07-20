@@ -200,11 +200,15 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(SelectedFileDetail));
         OnPropertyChanged(nameof(SelectedIsPbp));
         OnPropertyChanged(nameof(SelectedIsDocument));
+        OnPropertyChanged(nameof(SelectedIsTrophyTrp));
         OnPropertyChanged(nameof(HasSelectedPspTool));
+        OnPropertyChanged(nameof(HasSelectedSpecialTool));
     }
 
     /// <summary>True when the selected file has a PSP-specific action (manual decrypt or PBP unpack).</summary>
     public bool HasSelectedPspTool => SelectedIsPbp || SelectedIsDocument;
+
+    public bool HasSelectedSpecialTool => HasSelectedPspTool || SelectedIsTrophyTrp;
 
     public bool HasSelectedFile => SelectedItem is { IsDirectory: false, Entry: not null };
 
@@ -215,6 +219,10 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
     /// <summary>True when the selected file is a PSP/minis DOCUMENT.DAT (a decryptable manual).</summary>
     public bool SelectedIsDocument => SelectedItem is { IsDirectory: false, Entry: not null } n
         && n.Name.Equals("DOCUMENT.DAT", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>True when the selected file is a PS3 trophy-set archive.</summary>
+    public bool SelectedIsTrophyTrp => SelectedItem is { IsDirectory: false, Entry: not null } n
+        && n.Name.Equals("TROPHY.TRP", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>One-line detail for the selected file (size, offset, encryption, PSP flag), for the footer.</summary>
     public string SelectedFileDetail

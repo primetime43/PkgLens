@@ -180,6 +180,8 @@ public partial class MainWindow
             EditSfo();   // SFO opens in the editor, not the hex viewer
         else if (Vm.Package.SelectedIsDocument)
             ShowManual();   // DOCUMENT.DAT opens as its decrypted manual pages
+        else if (Vm.Package.SelectedIsTrophyTrp)
+            ShowTrophies(); // TROPHY.TRP opens as its trophy list and artwork
         else
             ViewSelected();
     }

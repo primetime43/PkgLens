@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using PkgLens.Core.Ps3.Trophy;
 using PkgLens.Core.Psp;
 using PkgLens.Core.Shared;
 using PkgLens.Core.Shared.Keys;
@@ -126,6 +127,14 @@ public sealed class PackageOperationService : IDisposable
         byte[] document = ReadEntryBytes(documentEntry);
         byte[]? documentInfo = ReadSiblingBytes(documentEntry, "DOCINFO.EDAT");
         return PspDocument.DecryptPages(document, documentInfo);
+    }
+
+    public TrophySet ReadTrophySet(PkgEntry trophyEntry)
+    {
+        ArgumentNullException.ThrowIfNull(trophyEntry);
+        string? trophySetId = trophyEntry.Name.Split('/', StringSplitOptions.RemoveEmptyEntries)
+            .Reverse().Skip(1).FirstOrDefault();
+        return TrophyArchive.Read(ReadEntryBytes(trophyEntry), trophySetId);
     }
 
     public IReadOnlyList<string> UnpackPbp(PkgEntry pbpEntry, string destinationDirectory,

@@ -1,7 +1,10 @@
 using System.Buffers.Binary;
+using System.Text;
+using PkgLens.Core.Ps3.Trophy;
 using PkgLens.Core.Psp;
 using PkgLens.Core.Shared;
 using PkgLens.Core.Shared.Keys;
+using PkgLens.Core.Shared.Models;
 using PkgLens.Core.Tests.TestData;
 using PkgLens.Gui.Services;
 
@@ -78,6 +81,29 @@ public sealed class PackageOperationServiceTests
         Assert.Throws<InvalidOperationException>(() => service.ExportPspIso(entry, isoPath));
         Assert.Empty(Directory.EnumerateFiles(directory.Path, ".pkglens-*.tmp"));
         Assert.False(File.Exists(isoPath));
+    }
+
+    [Fact]
+    public void ReadTrophySet_UsesArchiveParentDirectoryAsSetId()
+    {
+        using var directory = new TempDirectory();
+        byte[] trophyArchive = TrophyArchiveTests.BuildArchive(("TROPCONF.SFM", Encoding.UTF8.GetBytes("""
+            <trophyconf>
+              <title-name>Package Trophies</title-name>
+              <trophy id="0" hidden="no" ttype="B"><name>Started</name><detail>Begin.</detail></trophy>
+            </trophyconf>
+            """)));
+        string packagePath = directory.Write("trophies.pkg", new SyntheticPkgBuilder()
+            .AddFile("TROPDIR/NPWR54321_00/TROPHY.TRP", trophyArchive)
+            .Build());
+
+        using var service = PackageOperationService.Open(packagePath, new InMemoryKeyProvider());
+        PkgEntry entry = Assert.Single(service.Info.Entries, candidate => candidate.IsFile);
+        TrophySet set = service.ReadTrophySet(entry);
+
+        Assert.Equal("NPWR54321_00", set.Id);
+        Assert.Equal("Package Trophies", set.Name);
+        Assert.Equal("Started", Assert.Single(set.Trophies).Name);
     }
 
     private static byte[] BuildPbp(params (int Slot, byte[] Data)[] sections)

@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Headless.XUnit;
+using PkgLens.Core.Ps3.Trophy;
 using PkgLens.Core.Shared;
 using PkgLens.Gui.Services;
 using PkgLens.Gui.ViewModels;
@@ -84,5 +85,45 @@ public sealed class DialogHeadlessTests
             batch.FindControl<TextBlock>("TargetProfileDescription")!.Text));
         firmware.Close();
         batch.Close();
+    }
+
+    [AvaloniaFact]
+    public void TrophyExplorer_ShowsSetCountsArtworkAndSelectedTrophyDetails()
+    {
+        byte[] png = Convert.FromBase64String(
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=");
+        var set = new TrophySet
+        {
+            Id = "NPWR12345_00",
+            Name = "Example Game",
+            Description = "A trophy set",
+            MetadataFileName = "TROP_01.SFM",
+            ArchiveVersion = 2,
+            ChecksumVerified = true,
+            Artwork = png,
+            Trophies =
+            [
+                new TrophyItem(0, "Platinum", "Earn everything.", TrophyGrade.Platinum, false, png),
+                new TrophyItem(1, "Hidden Gold", "Find the secret.", TrophyGrade.Gold, true, png),
+            ],
+        };
+
+        var dialog = new TrophyExplorerDialog(set);
+        dialog.Show();
+
+        Assert.Equal("Example Game", dialog.FindControl<TextBlock>("SetNameText")!.Text);
+        Assert.Equal("NPWR12345_00", dialog.FindControl<TextBlock>("SetIdText")!.Text);
+        Assert.Contains("1 platinum", dialog.FindControl<TextBlock>("CountsText")!.Text);
+        Assert.Contains("1 gold", dialog.FindControl<TextBlock>("CountsText")!.Text);
+        Assert.NotNull(dialog.FindControl<Image>("GameArtwork")!.Source);
+
+        DataGrid grid = dialog.FindControl<DataGrid>("TrophyGrid")!;
+        Assert.Equal(2, grid.ItemsSource!.Cast<object>().Count());
+        grid.SelectedIndex = 1;
+        Assert.Equal("Hidden Gold", dialog.FindControl<TextBlock>("SelectedTrophyName")!.Text);
+        Assert.Equal("Find the secret.", dialog.FindControl<TextBlock>("SelectedTrophyDescription")!.Text);
+        Assert.Equal("Hidden trophy", dialog.FindControl<TextBlock>("SelectedTrophyHidden")!.Text);
+        Assert.NotNull(dialog.FindControl<Image>("SelectedTrophyIcon")!.Source);
+        dialog.Close();
     }
 }

@@ -103,7 +103,9 @@
                 <MenuItem Header="View" Click="OnViewClick" />
                 <MenuItem Header="Extract…" Click="OnExtractClick" />
                 <MenuItem Header="Replace…" Click="OnReplaceClick" />
-                <Separator IsVisible="{Binding HasSelectedPspTool}" />
+                <Separator IsVisible="{Binding HasSelectedSpecialTool}" />
+                <MenuItem Header="Explore trophy set…" Click="OnExploreTrophies"
+                          IsVisible="{Binding SelectedIsTrophyTrp}" />
                 <MenuItem Header="Decrypt manual (DOCUMENT.DAT)…" Click="OnDecryptManual"
                           IsVisible="{Binding SelectedIsDocument}" />
                 <MenuItem Header="Unpack PBP…" Click="OnUnpackPbp"

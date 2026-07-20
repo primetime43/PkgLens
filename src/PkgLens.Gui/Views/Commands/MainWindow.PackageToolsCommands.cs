@@ -50,6 +50,25 @@ public partial class MainWindow
 
     internal void OnDecryptManual(object? sender, RoutedEventArgs e) => ShowManual();
 
+    internal void OnExploreTrophies(object? sender, RoutedEventArgs e) => ShowTrophies();
+
+    /// <summary>Parses the selected TROPHY.TRP and opens its metadata and artwork browser.</summary>
+    private async void ShowTrophies()
+    {
+        if (Vm.Package is not { SelectedIsTrophyTrp: true } package)
+        {
+            Vm.Status = "Select a TROPHY.TRP file first.";
+            return;
+        }
+
+        await RunOperationAsync("Reading trophy set…", "Trophy archive could not be opened", async (token, _) =>
+        {
+            var set = await Task.Run(() => package.Operations.ReadTrophySet(package.SelectedItem!.Entry!), token);
+            Vm.Status = $"{set.Name}: {set.Trophies.Count} trophies.";
+            await new TrophyExplorerDialog(set).ShowDialog(this);
+        });
+    }
+
     /// <summary>Decrypts the selected DOCUMENT.DAT and opens its manual pages in a viewer.</summary>
     private async void ShowManual()
     {
