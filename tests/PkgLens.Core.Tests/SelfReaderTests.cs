@@ -93,6 +93,15 @@ public class SelfReaderTests
         Assert.Contains(info.ControlBlocks, b => b.RawType == 2);
     }
 
+    [Theory]
+    [InlineData(0u, "plaintext")]
+    [InlineData(1u, "encrypted")]
+    [InlineData(2u, "plaintext")]
+    public void SegmentEncryptionFlag_UsesSectionInfoSemantics(uint raw, string expected)
+    {
+        Assert.Equal(expected, new SelfSegment { RawEncrypted = raw }.EncryptedText);
+    }
+
     [Fact]
     public void Parse_NotASelf_Throws()
     {

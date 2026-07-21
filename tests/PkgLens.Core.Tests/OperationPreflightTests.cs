@@ -80,6 +80,19 @@ public sealed class OperationPreflightTests
         Assert.Contains(missing.Checks, check => check.Name == "License / RAP" &&
             check.Status == PreflightCheckStatus.Error);
 
+        OperationPreflightReport rawKlicensee = OperationPreflight.SelfDecrypt(input, output,
+            null, raps.Path, thenFakeSign: false,
+            klicenseeHex: "00112233445566778899AABBCCDDEEFF");
+        Assert.True(rawKlicensee.CanProceed);
+        Assert.Contains(rawKlicensee.Checks, check => check.Name == "Klicensee override" &&
+            check.Status == PreflightCheckStatus.Pass);
+
+        OperationPreflightReport invalidKlicensee = OperationPreflight.SelfDecrypt(input, output,
+            null, raps.Path, thenFakeSign: false, klicenseeHex: "not-a-key");
+        Assert.False(invalidKlicensee.CanProceed);
+        Assert.Contains(invalidKlicensee.Checks, check => check.Name == "Klicensee override" &&
+            check.Status == PreflightCheckStatus.Error);
+
         RapStore.Install(ContentId, new byte[16], raps.Path);
         OperationPreflightReport available = OperationPreflight.SelfDecrypt(input, output,
             null, raps.Path, thenFakeSign: false);

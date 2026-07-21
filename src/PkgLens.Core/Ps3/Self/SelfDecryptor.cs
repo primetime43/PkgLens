@@ -146,9 +146,15 @@ public static class SelfDecryptor
 
         // If padding didn't clear, the key/klic/RAP was wrong.
         if (metaInfo[0x10] != 0x00 || metaInfo[0x30] != 0x00)
+        {
+            string licenseHint = npd?.RawLicense == 3 && klicensee is null
+                ? "This free-license SELF may require a title-specific raw klicensee override."
+                : klicensee is not null
+                    ? "The supplied raw klicensee may be incorrect for this SELF."
+                    : "A licensed NPDRM SELF may need its RAP or raw klicensee.";
             throw new PkgFormatException(
-                "Failed to decrypt SELF metadata — wrong key revision, or (for a licensed NPDRM SELF) " +
-                "a missing/incorrect RAP. Free-license and debug SELFs need no RAP.");
+                $"Failed to decrypt SELF metadata — wrong key revision or license key. {licenseHint}");
+        }
 
         byte[] metaKey = metaInfo[0x00..0x10];
         byte[] metaIv = metaInfo[0x20..0x30];
@@ -191,15 +197,19 @@ public static class SelfDecryptor
         var dataBuf = new MemoryStream();
         foreach (var s in sections)
         {
-            if (s.Encrypted != 3) continue;
-            if (!(s.KeyIdx <= keyCount - 1 && s.IvIdx <= keyCount)) continue;
-
-            // DataOffset/DataSize come from decrypted section headers — validate before slicing.
-            RequireWithin(s.DataOffset, s.DataSize, self.Length, "encrypted section data");
+            // RPCS3's DecryptData buffer contains every metadata section in table order. Plaintext
+            // and auxiliary sections must remain in the buffer too, otherwise every later PHDR
+            // section is read from the wrong position while rebuilding the ELF.
+            RequireWithin(s.DataOffset, s.DataSize, self.Length, "section data");
             var buf = self.AsSpan((int)s.DataOffset, (int)s.DataSize).ToArray();
-            byte[] dataKey = metaHeaders[(dataKeysOffset + s.KeyIdx * 0x10)..(dataKeysOffset + s.KeyIdx * 0x10 + 0x10)];
-            byte[] dataIv = metaHeaders[(dataKeysOffset + s.IvIdx * 0x10)..(dataKeysOffset + s.IvIdx * 0x10 + 0x10)];
-            AesCtr(dataKey, dataIv, buf, 0, buf.Length);
+            if (s.Encrypted == 3)
+            {
+                if ((uint)s.KeyIdx >= (uint)keyCount || (uint)s.IvIdx >= (uint)keyCount)
+                    throw new PkgFormatException("SELF encrypted section references a metadata key outside the key table.");
+                byte[] dataKey = metaHeaders[(dataKeysOffset + s.KeyIdx * 0x10)..(dataKeysOffset + s.KeyIdx * 0x10 + 0x10)];
+                byte[] dataIv = metaHeaders[(dataKeysOffset + s.IvIdx * 0x10)..(dataKeysOffset + s.IvIdx * 0x10 + 0x10)];
+                AesCtr(dataKey, dataIv, buf, 0, buf.Length);
+            }
             dataBuf.Write(buf, 0, buf.Length);
         }
         byte[] data = dataBuf.ToArray();
@@ -207,6 +217,10 @@ public static class SelfDecryptor
         // ---- MakeElf: rebuild the plaintext ELF ----
         byte[] elf = WriteElf(self, (int)ehdrOffset, (int)phdrOffset, (int)shdrOffset,
             ePhnum, eShnum, (long)eShoff, sections, data);
+        if (elf.Length < 4 || BinaryPrimitives.ReadUInt32BigEndian(elf) != 0x7F454C46)
+            throw new PkgFormatException(
+                "SELF data decrypted, but the reconstructed output does not have a valid ELF header. " +
+                "The klicensee may be incorrect or the section layout may be unsupported.");
 
         return new SelfDecryptResult
         {
@@ -221,7 +235,7 @@ public static class SelfDecryptor
     private static bool HasCompressedSegments(byte[] self, ulong sectionInfoOffset, int segmentCount)
     {
         const int SectionInfoLen = 0x20;
-        if (sectionInfoOffset > int.MaxValue || segmentCount <= 0)
+        if (sectionInfoOffset == 0 || sectionInfoOffset > int.MaxValue || segmentCount <= 0)
             return false;
         long tableLength = (long)segmentCount * SectionInfoLen;
         if ((long)sectionInfoOffset + tableLength > self.LongLength)
@@ -489,7 +503,13 @@ public static class SelfDecryptor
         int dataOff = 0;
         foreach (var s in sections)
         {
-            if (s.Type != 2) continue;
+            RequireWithin(dataOff, s.DataSize, data.Length, "decrypted section data");
+            int sectionSize = (int)s.DataSize;
+            if (s.Type != 2)
+            {
+                dataOff += sectionSize;
+                continue;
+            }
             if (s.ProgramIdx < 0 || s.ProgramIdx >= phnum)
                 throw new PkgFormatException($"SELF section references program header {s.ProgramIdx} (only {phnum} present).");
             int p = phdrOffset + s.ProgramIdx * PhdrLen;
@@ -498,12 +518,11 @@ public static class SelfDecryptor
 
             // pOffset/pFilesz land the segment in the output ELF; bound both against the size cap.
             RequireWithin(pOffset, pFilesz, MaxElfSize, "ELF segment placement");
-            RequireWithin(dataOff, s.DataSize, data.Length, "decrypted section data");
 
             e.Position = pOffset;
             if (s.Compressed == 2)
             {
-                using var zin = new MemoryStream(data, dataOff, (int)s.DataSize, writable: false);
+                using var zin = new MemoryStream(data, dataOff, sectionSize, writable: false);
                 using var z = new ZLibStream(zin, CompressionMode.Decompress);
                 byte[] outBuf = new byte[pFilesz];
                 int read = 0;
@@ -517,9 +536,9 @@ public static class SelfDecryptor
             }
             else
             {
-                e.Write(data, dataOff, (int)s.DataSize);
+                e.Write(data, dataOff, sectionSize);
             }
-            dataOff += (int)s.DataSize;
+            dataOff += sectionSize;
         }
 
         // Section headers, verbatim, at e_shoff.

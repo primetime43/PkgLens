@@ -61,14 +61,14 @@ public sealed class SelfSegment
     /// <summary>Raw compression flag (1 = plain, 2 = zlib-compressed).</summary>
     public uint RawCompressed { get; init; }
 
-    /// <summary>Raw encryption flag (1 = plaintext, 3 = encrypted; other values are format-specific).</summary>
+    /// <summary>Raw section-info encryption flag (1 = encrypted; 0/2 = plaintext).</summary>
     public uint RawEncrypted { get; init; }
 
     public bool? Compressed => RawCompressed switch { 2 => true, 1 => false, _ => null };
 
     public string CompressedText => RawCompressed switch { 2 => "compressed", 1 => "plain", _ => $"0x{RawCompressed:X}" };
 
-    public string EncryptedText => RawEncrypted switch { 3 => "encrypted", 1 or 2 => "plaintext", _ => $"0x{RawEncrypted:X}" };
+    public string EncryptedText => RawEncrypted switch { 1 => "encrypted", 0 or 2 => "plaintext", _ => $"0x{RawEncrypted:X}" };
 }
 
 /// <summary>A control-info block header ("type + size") found while walking the control-info chain.</summary>

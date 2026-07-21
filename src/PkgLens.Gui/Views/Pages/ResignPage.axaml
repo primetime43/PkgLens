@@ -179,9 +179,9 @@
         <StackPanel x:Name="ResignOpDecrypt" IsVisible="False" Spacing="10">
           <TextBlock Text="Decrypt SELF → ELF" FontWeight="SemiBold" FontSize="14" />
           <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.75"
-                     Text="Decrypt an encrypted EBOOT.BIN / .self back to a plaintext ELF. Licensed SELFs resolve RAPs automatically from the library." />
+                     Text="Decrypt an encrypted EBOOT.BIN / .self back to a plaintext ELF. Licensed SELFs resolve RAPs automatically; unusual free-license SELFs can use a raw title klicensee." />
           <StackPanel Orientation="Horizontal" Spacing="8">
-            <Button Content="Decrypt EBOOT.BIN → ELF…" Click="OnUnself" />
+            <Button Content="Decrypt SELF / EBOOT → ELF…" Click="OnUnself" />
             <CheckBox x:Name="UnselfThenResignCheck" Content="then fake-sign to fSELF" VerticalAlignment="Center" />
           </StackPanel>
           <StackPanel Orientation="Horizontal" Spacing="8">
@@ -189,6 +189,9 @@
             <TextBlock x:Name="UnselfRapText" VerticalAlignment="Center" FontSize="12" Opacity="0.8"
                        TextTrimming="CharacterEllipsis" Text="(auto from RAP library)" />
           </StackPanel>
+          <TextBox x:Name="UnselfKlicBox" MaxLength="32" FontFamily="Consolas,monospace"
+                   Watermark="Raw klicensee override (32 hex characters, optional)"
+                   ToolTip.Tip="Overrides RAP and built-in free-license resolution. Use only when the SELF requires a known title-specific klicensee." />
           <Border x:Name="UnselfBanner" Classes="resultbanner" IsVisible="False">
             <Grid ColumnDefinitions="Auto,10,*,Auto">
               <TextBlock Grid.Column="0" x:Name="UnselfBannerIcon" Classes="bannericon" Text="✓" />

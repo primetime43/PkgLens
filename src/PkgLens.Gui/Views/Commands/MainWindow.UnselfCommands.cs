@@ -59,6 +59,9 @@ public partial class MainWindow
 
         bool chain = FindPageControl<CheckBox>("UnselfThenResignCheck")!.IsChecked == true;
         string? rap = _unselfRapPath;
+        string? klicenseeHex = FindPageControl<TextBox>("UnselfKlicBox")!.Text?.Trim();
+        if (string.IsNullOrEmpty(klicenseeHex))
+            klicenseeHex = null;
 
         string baseName = Path.GetFileNameWithoutExtension(input);
         var save = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
@@ -75,7 +78,7 @@ public partial class MainWindow
             await OfferNearbyRapsForPathAsync(input);
         if (!await ConfirmPreflightAsync("Checking SELF decrypt readiness…", () =>
                 PkgLens.Core.Shared.OperationPreflight.SelfDecrypt(input, dest, rap,
-                    rapDirectory, chain)))
+                    rapDirectory, chain, klicenseeHex)))
             return;
 
         await RunOperationAsync("Decrypting SELF…", "SELF decrypt failed", async (token, _) =>
@@ -84,7 +87,8 @@ public partial class MainWindow
             {
                 token.ThrowIfCancellationRequested();
                 byte[] self = File.ReadAllBytes(input);
-                RapLicenseResolution resolution = RapLicenseService.ResolveSelf(self, rap, rapDirectory);
+                RapLicenseResolution resolution = RapLicenseService.ResolveSelf(self, rap, rapDirectory,
+                    klicenseeHex);
                 var result = PkgLens.Core.Ps3.Self.SelfDecryptor.Decrypt(self, resolution.Klicensee);
                 string lic = result.WasNpdrm ? (result.License?.ToString() ?? "NPDRM") : "non-NPDRM";
                 string source = resolution.Source is null ? string.Empty : $", {resolution.Source}";

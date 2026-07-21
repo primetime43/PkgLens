@@ -250,12 +250,21 @@ public static class OperationPreflight
     }
 
     public static OperationPreflightReport SelfDecrypt(string inputPath, string outputPath,
-        string? rapOverridePath, string? rapDirectory, bool thenFakeSign)
+        string? rapOverridePath, string? rapDirectory, bool thenFakeSign,
+        string? klicenseeHex = null)
     {
         using var input = File.OpenRead(inputPath);
         SelfInfo info = SelfReader.ParseInfo(input);
         bool supported = info.IsLikelyFakeSigned || SelfKeyset.Find(info.RawProgramType, info.KeyRevision) is not null;
-        bool needsRap = info.Npdrm is { LicenseType: NpdrmLicenseType.Local or NpdrmLicenseType.Network };
+        bool hasKlicensee = !string.IsNullOrWhiteSpace(klicenseeHex);
+        bool validKlicensee = false;
+        if (hasKlicensee)
+        {
+            try { validKlicensee = Convert.FromHexString(klicenseeHex!.Trim()).Length == 16; }
+            catch (FormatException) { }
+        }
+        bool needsRap = !validKlicensee &&
+            info.Npdrm is { LicenseType: NpdrmLicenseType.Local or NpdrmLicenseType.Network };
         long expected = info.DataLength <= long.MaxValue ? (long)info.DataLength : input.Length;
         var checks = new List<PreflightCheck>
         {
@@ -266,9 +275,13 @@ public static class OperationPreflight
                     : $"No SELF keyset is available for {info.ProgramTypeText} revision 0x{info.KeyRevision:X4}."),
             Check("Encryption support", supported,
                 supported ? "This SELF encryption profile is supported." : "This SELF encryption profile is unsupported."),
-            LicenseCheck(info.Npdrm?.ContentId, needsRap, rapOverridePath, rapDirectory),
-            Pass("Expected output", $"Expected {(thenFakeSign ? "ELF plus fSELF" : "ELF")} payload: approximately {FormatBytes(expected)}."),
         };
+        if (hasKlicensee)
+            checks.Add(Check("Klicensee override", validKlicensee,
+                validKlicensee ? "A 16-byte raw klicensee will override RAP/free-license resolution."
+                    : "The raw klicensee must contain exactly 32 hexadecimal characters."));
+        checks.Add(LicenseCheck(info.Npdrm?.ContentId, needsRap, rapOverridePath, rapDirectory));
+        checks.Add(Pass("Expected output", $"Expected {(thenFakeSign ? "ELF plus fSELF" : "ELF")} payload: approximately {FormatBytes(expected)}."));
         long totalExpected = thenFakeSign && expected <= long.MaxValue / 2 ? expected * 2 : expected;
         return Complete(thenFakeSign ? "Decrypt and fake-sign SELF" : "Decrypt SELF", inputPath,
             outputPath, totalExpected, outputIsDirectory: false, checks);

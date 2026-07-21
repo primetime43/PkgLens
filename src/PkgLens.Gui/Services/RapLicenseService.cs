@@ -10,9 +10,22 @@ internal sealed record RapLicenseResolution(byte[]? Klicensee, string? Source, s
 
 internal static class RapLicenseService
 {
-    public static RapLicenseResolution ResolveSelf(byte[] self, string? explicitRapPath, string? libraryDirectory)
+    public static RapLicenseResolution ResolveSelf(byte[] self, string? explicitRapPath,
+        string? libraryDirectory, string? explicitKlicenseeHex = null)
     {
         SelfInfo info = SelfReader.ParseInfo(new MemoryStream(self));
+        if (!string.IsNullOrWhiteSpace(explicitKlicenseeHex))
+        {
+            byte[] klicensee;
+            try { klicensee = Convert.FromHexString(explicitKlicenseeHex.Trim()); }
+            catch (FormatException ex)
+            {
+                throw new PkgFormatException("A raw klicensee must contain exactly 32 hexadecimal characters.", ex);
+            }
+            if (klicensee.Length != 16)
+                throw new PkgFormatException("A raw klicensee must contain exactly 32 hexadecimal characters.");
+            return new RapLicenseResolution(klicensee, "raw klicensee", info.Npdrm?.ContentId);
+        }
         if (info.Npdrm is null || info.Npdrm.LicenseType == NpdrmLicenseType.Free)
             return new RapLicenseResolution(null, null, info.Npdrm?.ContentId);
         return ResolveContentId(info.Npdrm.ContentId, explicitRapPath, libraryDirectory);

@@ -40,6 +40,21 @@ public class SelfDecryptorTests
     }
 
     [Fact]
+    public void Decrypt_DebugSelf_PreservesPlaintextSectionBufferAlignment()
+    {
+        byte[] elf = BuildElf(shdrCount: 1, segments: new[]
+        {
+            (type: 1u, data: RandomBytes(0x91)),
+            (type: 1u, data: RandomBytes(0x57)),
+        });
+        byte[] self = EncodeDebugSelf(elf, out _, plaintextProgramIndex: 0);
+
+        SelfDecryptResult result = SelfDecryptor.Decrypt(self);
+
+        Assert.Equal(elf, result.Elf);
+    }
+
+    [Fact]
     public void Decrypt_FakeSignedSelf_ExtractsEmbeddedElf()
     {
         // A fSELF (key revision 0x8000 = debug/fake-signed marker) stores the ELF appended in the
@@ -171,7 +186,8 @@ public class SelfDecryptorTests
     // Default key revision 0x8001: the debug bit (0x8000) is set so the keyset layers are skipped, but
     // the low byte is not 0x80/0xC0, so it is not the "ELF appended in the clear" (CheckDebugSelf) form —
     // this fixture genuinely exercises the CTR metadata/section decrypt path.
-    private static byte[] EncodeDebugSelf(byte[] elf, out int hSize, ushort keyRevision = 0x8001, uint programType = 4)
+    private static byte[] EncodeDebugSelf(byte[] elf, out int hSize, ushort keyRevision = 0x8001,
+        uint programType = 4, int plaintextProgramIndex = -1)
     {
         int phnum = BinaryPrimitives.ReadUInt16BigEndian(elf.AsSpan(0x38));
         int shnum = BinaryPrimitives.ReadUInt16BigEndian(elf.AsSpan(0x3C));
@@ -257,7 +273,8 @@ public class SelfDecryptorTests
             BinaryPrimitives.WriteUInt64BigEndian(s[0x08..], (ulong)pFilesz[i]);        // data_size
             BinaryPrimitives.WriteUInt32BigEndian(s[0x10..], 2);                        // type: PHDR
             BinaryPrimitives.WriteUInt32BigEndian(s[0x14..], (uint)i);                  // program_idx
-            BinaryPrimitives.WriteUInt32BigEndian(s[0x20..], 3);                        // encrypted
+            BinaryPrimitives.WriteUInt32BigEndian(s[0x20..],
+                i == plaintextProgramIndex ? 1u : 3u);                                 // plain / encrypted
             BinaryPrimitives.WriteUInt32BigEndian(s[0x24..], (uint)(i * 2));            // key_idx
             BinaryPrimitives.WriteUInt32BigEndian(s[0x28..], (uint)(i * 2 + 1));        // iv_idx
             BinaryPrimitives.WriteUInt32BigEndian(s[0x2C..], 1);                        // compressed: no
@@ -271,7 +288,8 @@ public class SelfDecryptorTests
         for (int i = 0; i < phnum; i++)
         {
             byte[] seg = elf.AsSpan(pOffset[i], pFilesz[i]).ToArray();
-            AesCtr(dataKeys[i * 2], dataKeys[i * 2 + 1], seg, 0, seg.Length);
+            if (i != plaintextProgramIndex)
+                AesCtr(dataKeys[i * 2], dataKeys[i * 2 + 1], seg, 0, seg.Length);
             seg.CopyTo(b, segFileOffset[i]);
         }
 
