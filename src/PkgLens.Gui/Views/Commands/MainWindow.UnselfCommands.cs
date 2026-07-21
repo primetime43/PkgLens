@@ -88,10 +88,9 @@ public partial class MainWindow
                 token.ThrowIfCancellationRequested();
                 byte[] self = File.ReadAllBytes(input);
                 RapLicenseResolution resolution = RapLicenseService.ResolveSelf(self, rap, rapDirectory,
-                    klicenseeHex);
+                    klicenseeHex, Path.GetFileName(input));
                 var result = PkgLens.Core.Ps3.Self.SelfDecryptor.Decrypt(self, resolution.Klicensee);
                 string lic = result.WasNpdrm ? (result.License?.ToString() ?? "NPDRM") : "non-NPDRM";
-                string source = resolution.Source is null ? string.Empty : $", {resolution.Source}";
 
                 if (chain)
                 {
@@ -103,14 +102,40 @@ public partial class MainWindow
                     string elfBeside = Path.Combine(Path.GetDirectoryName(dest) ?? "", baseName + ".ELF");
                     AtomicOutput.EnsureDifferentPath(input, elfBeside);
                     AtomicOutput.WriteAllBytes(elfBeside, result.Elf);
-                    return $"Decrypted ({lic}{source}) → verified fake-signed fSELF {Path.GetFileName(dest)} ({fself.Length:n0} bytes); ELF beside it.";
+                }
+                else
+                {
+                    AtomicOutput.EnsureDifferentPath(input, dest);
+                    AtomicOutput.WriteAllBytes(dest, result.Elf);
                 }
 
-                AtomicOutput.EnsureDifferentPath(input, dest);
-                AtomicOutput.WriteAllBytes(dest, result.Elf);
-                return $"Decrypted {self.Length:n0}-byte SELF ({lic}{source}) → {Path.GetFileName(dest)} ({result.Elf.Length:n0} bytes).";
+                bool savedKlicensee = false;
+                string? saveWarning = null;
+                if (resolution.Source == "raw klicensee" && resolution.Klicensee is not null &&
+                    result.ContentId is { Length: > 0 } contentId)
+                {
+                    try
+                    {
+                        PkgLens.Core.Ps3.Npd.KlicenseeStore.Install(contentId, Path.GetFileName(input),
+                            result.License is { } license ? (uint)license : null, resolution.Klicensee,
+                            "successful GUI decrypt");
+                        savedKlicensee = true;
+                    }
+                    catch (Exception ex) when (ex is IOException or InvalidDataException or
+                                               UnauthorizedAccessException or ArgumentException)
+                    {
+                        saveWarning = ex.Message;
+                    }
+                }
+                string? sourceName = savedKlicensee ? "raw klicensee; saved to local library" : resolution.Source;
+                string source = sourceName is null ? string.Empty : $", {sourceName}";
+                string summary = chain
+                    ? $"Decrypted ({lic}{source}) → verified fake-signed fSELF {Path.GetFileName(dest)}; ELF beside it."
+                    : $"Decrypted {self.Length:n0}-byte SELF ({lic}{source}) → {Path.GetFileName(dest)} ({result.Elf.Length:n0} bytes).";
+                return saveWarning is null ? summary : $"{summary} Key save warning: {saveWarning}";
             }, token);
             Vm.RefreshRapStatus();
+            Vm.RefreshKlicenseeStatus();
             Vm.Status = summary;
             ShowResultBanner("UnselfBanner", ok: true, summary, dest);
         });

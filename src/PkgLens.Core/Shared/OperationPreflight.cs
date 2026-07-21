@@ -251,7 +251,7 @@ public static class OperationPreflight
 
     public static OperationPreflightReport SelfDecrypt(string inputPath, string outputPath,
         string? rapOverridePath, string? rapDirectory, bool thenFakeSign,
-        string? klicenseeHex = null)
+        string? klicenseeHex = null, string? klicenseeDatabasePath = null)
     {
         using var input = File.OpenRead(inputPath);
         SelfInfo info = SelfReader.ParseInfo(input);
@@ -263,7 +263,21 @@ public static class OperationPreflight
             try { validKlicensee = Convert.FromHexString(klicenseeHex!.Trim()).Length == 16; }
             catch (FormatException) { }
         }
-        bool needsRap = !validKlicensee &&
+        KlicenseeResolution? storedKlicensee = null;
+        string? klicenseeStoreError = null;
+        if (!validKlicensee && info.Npdrm is not null)
+        {
+            try
+            {
+                storedKlicensee = KlicenseeStore.Find(info.Npdrm.ContentId, Path.GetFileName(inputPath),
+                    info.Npdrm.RawLicenseType, klicenseeDatabasePath);
+            }
+            catch (Exception ex) when (ex is IOException or InvalidDataException or ArgumentException)
+            {
+                klicenseeStoreError = ex.Message;
+            }
+        }
+        bool needsRap = !validKlicensee && storedKlicensee is null &&
             info.Npdrm is { LicenseType: NpdrmLicenseType.Local or NpdrmLicenseType.Network };
         long expected = info.DataLength <= long.MaxValue ? (long)info.DataLength : input.Length;
         var checks = new List<PreflightCheck>
@@ -280,7 +294,12 @@ public static class OperationPreflight
             checks.Add(Check("Klicensee override", validKlicensee,
                 validKlicensee ? "A 16-byte raw klicensee will override RAP/free-license resolution."
                     : "The raw klicensee must contain exactly 32 hexadecimal characters."));
-        checks.Add(LicenseCheck(info.Npdrm?.ContentId, needsRap, rapOverridePath, rapDirectory));
+        if (storedKlicensee is not null)
+            checks.Add(Pass("License / key", $"A saved klicensee mapping for {info.Npdrm!.ContentId} is available."));
+        else
+            checks.Add(LicenseCheck(info.Npdrm?.ContentId, needsRap, rapOverridePath, rapDirectory));
+        if (klicenseeStoreError is not null)
+            checks.Add(Warning("Klicensee library", $"The local database could not be read: {klicenseeStoreError}"));
         checks.Add(Pass("Expected output", $"Expected {(thenFakeSign ? "ELF plus fSELF" : "ELF")} payload: approximately {FormatBytes(expected)}."));
         long totalExpected = thenFakeSign && expected <= long.MaxValue / 2 ? expected * 2 : expected;
         return Complete(thenFakeSign ? "Decrypt and fake-sign SELF" : "Decrypt SELF", inputPath,

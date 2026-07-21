@@ -1,8 +1,8 @@
 # Keys
 
-PkgLens bundles the public PS3 decryption keys it needs, so packages open with no setup. The only
-thing you supply yourself is a **RAP** for licensed EDAT/EBOOT content — that's tied to your
-account, so it can't be bundled.
+PkgLens bundles the public PS3 decryption keys it needs, so packages open with no setup. You still
+supply account/content-specific **RAPs** and any unusual SELF-specific raw klicensees; neither is
+bundled or downloaded from a third-party key database.
 
 ## What's built in
 
@@ -28,6 +28,9 @@ QA digest.
   RAP that came with your purchase. Import it once with `pkglens raps import`; CLI and GUI operations
   then resolve it automatically by content ID. Explicit `--klic` and `--rap` options take precedence.
   PkgLens derives the klicensee itself and never stores RAP material in the repository.
+- **Custom SELF klicensees** — some SELFs marked as free still use a title/file-specific key. Enter
+  the 32-hex-character key once. After the SELF decrypts successfully, PkgLens saves the verified
+  mapping locally and resolves it automatically on later decrypts.
 - **Per-console secrets (IDPS / EID)** are out of scope and never needed by any PkgLens feature. A
   workflow that would require them isn't something PkgLens does.
 
@@ -49,6 +52,28 @@ content IDs and will not replace an installed RAP unless `--force` is supplied.
 In the GUI, open **Tools → RAP library** or use **Keys → Manage RAP library**. The manager provides
 the CLI operations visually, including a selectable persisted library folder. All GUI workflows that
 decrypt licensed content use this same library automatically.
+
+## Klicensee library
+
+The local database is `%USERPROFILE%\.pkglens\klicensees.json` on Windows or
+`~/.pkglens/klicensees.json` elsewhere. Set `PKGLENS_KLICENSEES` to select another JSON file. Raw
+keys are present in that local file, so protect it like other account/content license material; GUI
+listings display only a one-way fingerprint.
+
+For SELF decrypts, resolution order is: an entered raw key, a selected RAP, the narrowest
+unambiguous saved klicensee mapping, the RAP library, then the standard free-license behavior.
+Mappings can include content ID, title ID, SELF filename, and license type. A broad title match with
+competing keys is rejected instead of guessing.
+
+In the GUI, use **Keys → Manage klicensee library** to import or remove mappings. The importer
+supports annotated text lines and legacy `[klicensee]` INI blocks, for example:
+
+```text
+00112233445566778899AABBCCDDEEFF BLUS12345 optional description
+```
+
+Unannotated pools containing only raw keys are skipped because there is no safe way to know which
+title or SELF each key belongs to. PkgLens does not ship or automatically fetch a GitHub key list.
 
 ## Adding a custom PKG key
 

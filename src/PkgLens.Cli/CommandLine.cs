@@ -153,6 +153,7 @@ internal static class CliHelp
               --json       machine-readable success output for every command
               --version    print the release-derived binary version
               --rap-dir DIR  RAP library override (also read from $PKGLENS_RAPS)
+              $PKGLENS_KLICENSEES  local klicensee JSON database override
 
             pack options (Fast Pack infers these from PARAM.SFO; pass any to Custom Pack):
               --out FILE       output .pkg path (default: <content-id>.pkg)
@@ -164,7 +165,7 @@ internal static class CliHelp
                                Default is retail-encrypted (needs the key) — the format a
                                jailbroken/CFW PS3 installs; unsigned, so stock retail won't take it.
               --resign         fake-sign EBOOT.BIN as it is packed (boots on CFW without a license);
-                               licensed content auto-resolves from the RAP library; --rap/--klic override it.
+                               licensed content auto-resolves from local key/RAP libraries; --rap/--klic override it.
 
             Exit codes: 0 ok · 1 usage · 2 parse error · 3 key/decryption error · 4 integrity failure
             """);

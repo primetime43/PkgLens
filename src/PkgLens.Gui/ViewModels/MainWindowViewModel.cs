@@ -60,6 +60,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [ObservableProperty]
     private string _rapStatus = "";
 
+    [ObservableProperty]
+    private string _klicenseeStatus = "";
+
     private IReadOnlyList<string> _rapSearchDirectories = RapSearchFolderSettings.Load();
 
     private CancellationTokenSource? _operationCancellation;
@@ -75,6 +78,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             RecentPackages.Add(new RecentPackageItem(path));
         RefreshKeyStatus();
         RefreshRapStatus();
+        RefreshKlicenseeStatus();
     }
 
     /// <summary>Two-way bridge for the rail ListBox's SelectedIndex.</summary>
@@ -116,6 +120,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public bool HasPackage => Package is not null;
     public bool IsNotBusy => !IsBusy;
     public string RapDirectoryDisplay => RapStore.DirectoryPath(RapDirectory);
+    public string KlicenseeDatabaseDisplay => KlicenseeStore.DatabasePath();
     public IReadOnlyList<string> RapSearchDirectories => _rapSearchDirectories;
     public bool HasRapSearchDirectories => _rapSearchDirectories.Count > 0;
     public string RapSearchDirectoriesDisplay => _rapSearchDirectories.Count == 0
@@ -163,6 +168,19 @@ public sealed partial class MainWindowViewModel : ObservableObject
         catch (Exception ex)
         {
             RapStatus = $"RAP library unavailable: {ex.Message}";
+        }
+    }
+
+    public void RefreshKlicenseeStatus()
+    {
+        try
+        {
+            int count = KlicenseeStore.List().Count;
+            KlicenseeStatus = $"Klicensee library: {count} saved mapping{(count == 1 ? string.Empty : "s")}";
+        }
+        catch (Exception ex)
+        {
+            KlicenseeStatus = $"Klicensee library unavailable: {ex.Message}";
         }
     }
 

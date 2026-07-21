@@ -56,8 +56,9 @@ applicable. The GUI is the recommended interface and exposes nearly every workfl
 ## Keys
 
 Standard PS3, IDU/kiosk, PSP/PSX, and Vita package keys are bundled and selected automatically.
-Licensed EDAT/EBOOT content still requires your RAP; Vita content may require `work.bin`/RIF material.
-The GUI RAP library discovers and matches licenses by content ID. See [`docs/keys.md`](docs/keys.md).
+Licensed EDAT/EBOOT content still requires your RAP or content-specific klicensee; Vita content may
+require `work.bin`/RIF material. The GUI manages RAPs and a local, auto-resolving klicensee database.
+See [`docs/keys.md`](docs/keys.md).
 
 ## Scope
 

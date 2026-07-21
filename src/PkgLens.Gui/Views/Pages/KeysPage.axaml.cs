@@ -14,6 +14,7 @@ public partial class KeysPage : UserControl
     private void OnClearRapSearchFoldersClick(object? sender, RoutedEventArgs e) => Host?.OnClearRapSearchFoldersClick(sender, e);
     private void OnKeysClick(object? sender, RoutedEventArgs e) => Host?.OnKeysClick(sender, e);
     private void OnManageRapsClick(object? sender, RoutedEventArgs e) => Host?.OnManageRapsClick(sender, e);
+    private void OnManageKlicenseesClick(object? sender, RoutedEventArgs e) => Host?.OnManageKlicenseesClick(sender, e);
     private void OnRapSearchFoldersClick(object? sender, RoutedEventArgs e) => Host?.OnRapSearchFoldersClick(sender, e);
     private void OnSetKeyClick(object? sender, RoutedEventArgs e) => Host?.OnSetKeyClick(sender, e);
 }

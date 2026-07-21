@@ -1,4 +1,5 @@
 using PkgLens.Core;
+using PkgLens.Core.Ps3.Npd;
 using PkgLens.Core.Shared;
 using PkgLens.Core.Ps3.Self;
 
@@ -6,9 +7,9 @@ namespace PkgLens.Cli;
 
 /// <summary>
 /// <c>pkglens unself &lt;eboot&gt;</c> — decrypts a retail / NPDRM SELF (EBOOT.BIN, .self, .sprx) back
-/// to its plaintext ELF. Free-license and debug SELFs need no key; a licensed SELF needs its RAP
-/// (<c>--rap</c>) or a raw klicensee (<c>--klic</c>). The output is a plaintext ELF you can inspect
-/// or fake-sign with <c>pkglens resign</c>.
+/// to its plaintext ELF. License material can come from an explicit RAP/raw klicensee or the local
+/// libraries. A successfully used raw klicensee is saved for the same content/file mapping. The
+/// output is a plaintext ELF you can inspect or fake-sign with <c>pkglens resign</c>.
 /// </summary>
 internal static class UnselfCommand
 {
@@ -70,20 +71,43 @@ internal static class UnselfCommand
         {
             byte[] self = File.ReadAllBytes(input);
             var selfInfo = SelfReader.ParseInfo(new MemoryStream(self));
-            string? contentId = selfInfo.Npdrm?.LicenseType == NpdrmLicenseType.Free
-                ? null
-                : selfInfo.Npdrm?.ContentId;
+            string? contentId = selfInfo.Npdrm?.ContentId;
             NpKlic.Resolution resolution;
-            try { resolution = NpKlic.Resolve(klicHex, rap, contentId, rapDirectory); }
+            try
+            {
+                resolution = NpKlic.Resolve(klicHex, rap, contentId, rapDirectory,
+                    Path.GetFileName(input), selfInfo.Npdrm?.RawLicenseType);
+            }
             catch (FormatException ex) { Console.Error.WriteLine($"error: {ex.Message}"); return ExitCode.Usage; }
 
             if (!json && resolution.Source == "rap-store")
                 Console.WriteLine("Using RAP from the local library.");
+            if (!json && resolution.Source == "klicensee-store")
+                Console.WriteLine("Using klicensee from the local library.");
             var result = SelfDecryptor.Decrypt(self, resolution.Klicensee);
 
             outPath ??= DefaultOut(input);
             AtomicOutput.EnsureDifferentPath(input, outPath);
             AtomicOutput.WriteAllBytes(outPath, result.Elf);
+
+            bool savedKlicensee = false;
+            string? klicenseeSaveWarning = null;
+            if (resolution.Source == "klicensee" && resolution.Klicensee is not null &&
+                result.ContentId is { Length: > 0 } savedContentId)
+            {
+                try
+                {
+                    KlicenseeStore.Install(savedContentId, Path.GetFileName(input),
+                        result.License is { } license ? (uint)license : null,
+                        resolution.Klicensee, "successful CLI decrypt");
+                    savedKlicensee = true;
+                }
+                catch (Exception ex) when (ex is IOException or InvalidDataException or
+                                           UnauthorizedAccessException or ArgumentException)
+                {
+                    klicenseeSaveWarning = ex.Message;
+                }
+            }
 
             string lic = result.WasNpdrm ? (result.License?.ToString() ?? "NPDRM") : "non-NPDRM";
             if (json)
@@ -99,6 +123,8 @@ internal static class UnselfCommand
                     result.WasNpdrm,
                     license = lic,
                     licenseSource = resolution.Source,
+                    savedKlicensee,
+                    klicenseeSaveWarning,
                     result.ContentId,
                 });
             }
@@ -107,6 +133,10 @@ internal static class UnselfCommand
                 Console.WriteLine($"Decrypted {self.Length:n0}-byte SELF → {Path.GetFullPath(outPath)} ({result.Elf.Length:n0} bytes)");
                 Console.WriteLine($"  key revision : 0x{result.KeyRevision:X4}   license: {lic}" +
                                   (result.ContentId is { Length: > 0 } ? $"   content id: {result.ContentId}" : ""));
+                if (savedKlicensee)
+                    Console.WriteLine("  saved key    : local klicensee library");
+                if (klicenseeSaveWarning is not null)
+                    Console.Error.WriteLine($"warning: ELF was written, but the klicensee could not be saved: {klicenseeSaveWarning}");
                 Console.WriteLine("  fake-sign it for CFW with:  pkglens resign " + Path.GetFileName(outPath));
             }
             return ExitCode.Ok;

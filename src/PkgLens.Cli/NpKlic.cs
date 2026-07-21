@@ -32,9 +32,10 @@ internal static class NpKlic
 
     /// <summary>
     /// Resolves license material in command-line precedence order: explicit klicensee, explicit RAP,
-    /// then the RAP library by content id.
+    /// the local klicensee database, then the RAP library by content id.
     /// </summary>
-    public static Resolution Resolve(string? klicHex, string? rapPath, string? contentId, string? rapDirectory)
+    public static Resolution Resolve(string? klicHex, string? rapPath, string? contentId, string? rapDirectory,
+        string? fileName = null, uint? licenseType = null, string? klicenseeDatabasePath = null)
     {
         if (klicHex is not null)
             return new Resolution(ParseHex(klicHex), "klicensee", null);
@@ -42,6 +43,17 @@ internal static class NpKlic
             return new Resolution(FromRapFile(rapPath), "rap-file", Path.GetFullPath(rapPath));
         if (!string.IsNullOrWhiteSpace(contentId))
         {
+            KlicenseeResolution? stored = null;
+            try
+            {
+                stored = KlicenseeStore.Find(contentId, fileName, licenseType, klicenseeDatabasePath);
+            }
+            catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException)
+            {
+                // A damaged optional key database must not prevent a valid RAP fallback.
+            }
+            if (stored is not null)
+                return new Resolution(stored.Klicensee, "klicensee-store", stored.DatabasePath);
             byte[]? rap = RapStore.Find(contentId, rapDirectory);
             if (rap is not null)
                 return new Resolution(NpdKeys.RapToKlicensee(rap), "rap-store", RapStore.PathFor(contentId, rapDirectory));

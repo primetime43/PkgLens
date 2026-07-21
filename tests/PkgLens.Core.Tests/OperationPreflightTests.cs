@@ -73,31 +73,57 @@ public sealed class OperationPreflightTests
             NpdrmLicenseType = 2,
         }.Build());
         string output = Path.Combine(directory.Path, "EBOOT.ELF");
+        string klicenseeDatabase = Path.Combine(directory.Path, "klicensees.json");
 
         OperationPreflightReport missing = OperationPreflight.SelfDecrypt(input, output,
-            null, raps.Path, thenFakeSign: false);
+            null, raps.Path, thenFakeSign: false, klicenseeDatabasePath: klicenseeDatabase);
         Assert.False(missing.CanProceed);
         Assert.Contains(missing.Checks, check => check.Name == "License / RAP" &&
             check.Status == PreflightCheckStatus.Error);
 
         OperationPreflightReport rawKlicensee = OperationPreflight.SelfDecrypt(input, output,
             null, raps.Path, thenFakeSign: false,
-            klicenseeHex: "00112233445566778899AABBCCDDEEFF");
+            klicenseeHex: "00112233445566778899AABBCCDDEEFF",
+            klicenseeDatabasePath: klicenseeDatabase);
         Assert.True(rawKlicensee.CanProceed);
         Assert.Contains(rawKlicensee.Checks, check => check.Name == "Klicensee override" &&
             check.Status == PreflightCheckStatus.Pass);
 
         OperationPreflightReport invalidKlicensee = OperationPreflight.SelfDecrypt(input, output,
-            null, raps.Path, thenFakeSign: false, klicenseeHex: "not-a-key");
+            null, raps.Path, thenFakeSign: false, klicenseeHex: "not-a-key",
+            klicenseeDatabasePath: klicenseeDatabase);
         Assert.False(invalidKlicensee.CanProceed);
         Assert.Contains(invalidKlicensee.Checks, check => check.Name == "Klicensee override" &&
             check.Status == PreflightCheckStatus.Error);
 
         RapStore.Install(ContentId, new byte[16], raps.Path);
         OperationPreflightReport available = OperationPreflight.SelfDecrypt(input, output,
-            null, raps.Path, thenFakeSign: false);
+            null, raps.Path, thenFakeSign: false, klicenseeDatabasePath: klicenseeDatabase);
         Assert.True(available.CanProceed);
         Assert.Contains(available.Checks, check => check.Name == "License / RAP" &&
+            check.Status == PreflightCheckStatus.Pass);
+    }
+
+    [Fact]
+    public void LicensedSelf_SavedKlicenseePassesWithoutRap()
+    {
+        using var directory = new TempDirectory();
+        using var raps = new TempDirectory();
+        string input = Write(directory, "module.self", new SyntheticSelfBuilder
+        {
+            KeyRevision = 0x0004,
+            NpdrmContentId = ContentId,
+            NpdrmLicenseType = 2,
+        }.Build());
+        string database = Path.Combine(directory.Path, "klicensees.json");
+        KlicenseeStore.Install(ContentId, "module.self", 2, new byte[16], "test", database);
+
+        OperationPreflightReport report = OperationPreflight.SelfDecrypt(input,
+            Path.Combine(directory.Path, "module.ELF"), null, raps.Path, thenFakeSign: false,
+            klicenseeDatabasePath: database);
+
+        Assert.True(report.CanProceed);
+        Assert.Contains(report.Checks, check => check.Name == "License / key" &&
             check.Status == PreflightCheckStatus.Pass);
     }
 

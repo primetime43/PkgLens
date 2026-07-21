@@ -30,6 +30,19 @@
           </StackPanel>
         </StackPanel>
       </Border>
+
+      <Border Classes="panel">
+        <StackPanel Spacing="12">
+          <TextBlock Classes="sectionhead" Text="KLICENSEE LIBRARY" />
+          <TextBlock Text="{Binding KlicenseeStatus}" FontSize="12" Opacity="0.85" />
+          <TextBlock Text="{Binding KlicenseeDatabaseDisplay}"
+                     FontSize="12" Opacity="0.6" TextTrimming="CharacterEllipsis" />
+          <TextBlock Text="Successful raw-key SELF decrypts are saved automatically. You can also import annotated klics.txt or legacy klicensee.ini lists; unlabelled key pools are skipped."
+                     FontSize="12" Opacity="0.7" TextWrapping="Wrap" />
+          <Button Content="Manage klicensee library…" Click="OnManageKlicenseesClick"
+                  HorizontalAlignment="Left" />
+        </StackPanel>
+      </Border>
   
       <Border Classes="panel">
         <StackPanel Spacing="12">

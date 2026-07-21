@@ -66,6 +66,18 @@ public sealed class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
+    public void KlicenseeManager_LoadsWithNonSecretGrid()
+    {
+        var dialog = new KlicenseeManagerDialog();
+
+        Assert.NotNull(dialog.FindControl<DataGrid>("Grid"));
+        Assert.NotNull(dialog.FindControl<TextBlock>("PathText"));
+        Assert.NotNull(dialog.FindControl<Button>("RemoveButton"));
+
+        dialog.Close();
+    }
+
+    [AvaloniaFact]
     public void Navigation_StaysSynchronizedWithVisiblePage()
     {
         var viewModel = new MainWindowViewModel();

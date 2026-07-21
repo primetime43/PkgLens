@@ -91,6 +91,12 @@ public partial class MainWindow
         Vm.RefreshRapStatus();
     }
 
+    internal async void OnManageKlicenseesClick(object? sender, RoutedEventArgs e)
+    {
+        await new KlicenseeManagerDialog().ShowDialog(this);
+        Vm.RefreshKlicenseeStatus();
+    }
+
     internal async void OnRapSearchFoldersClick(object? sender, RoutedEventArgs e)
     {
         var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions

@@ -72,11 +72,15 @@ public sealed class RapStoreTests
         byte[] explicitKlicensee = Enumerable.Repeat((byte)0x33, 16).ToArray();
         RapStore.Install(ContentId, storedRap, directory.Path);
         string rapPath = Path.Combine(directory.Path, "explicit.rap");
+        string klicenseeDatabase = Path.Combine(directory.Path, "klicensees.json");
         File.WriteAllBytes(rapPath, explicitRap);
 
-        NpKlic.Resolution klic = NpKlic.Resolve(Convert.ToHexString(explicitKlicensee), rapPath, ContentId, directory.Path);
-        NpKlic.Resolution file = NpKlic.Resolve(null, rapPath, ContentId, directory.Path);
-        NpKlic.Resolution store = NpKlic.Resolve(null, null, ContentId, directory.Path);
+        NpKlic.Resolution klic = NpKlic.Resolve(Convert.ToHexString(explicitKlicensee), rapPath,
+            ContentId, directory.Path, klicenseeDatabasePath: klicenseeDatabase);
+        NpKlic.Resolution file = NpKlic.Resolve(null, rapPath, ContentId, directory.Path,
+            klicenseeDatabasePath: klicenseeDatabase);
+        NpKlic.Resolution store = NpKlic.Resolve(null, null, ContentId, directory.Path,
+            klicenseeDatabasePath: klicenseeDatabase);
 
         Assert.Equal(explicitKlicensee, klic.Klicensee);
         Assert.Equal("klicensee", klic.Source);
@@ -84,6 +88,40 @@ public sealed class RapStoreTests
         Assert.Equal("rap-file", file.Source);
         Assert.Equal(NpdKeys.RapToKlicensee(storedRap), store.Klicensee);
         Assert.Equal("rap-store", store.Source);
+    }
+
+    [Fact]
+    public void Resolve_UsesKlicenseeLibraryBeforeRapLibrary()
+    {
+        using var directory = new TempDirectory();
+        byte[] storedRap = Enumerable.Repeat((byte)0x11, 16).ToArray();
+        byte[] storedKlicensee = Enumerable.Repeat((byte)0x44, 16).ToArray();
+        string database = Path.Combine(directory.Path, "klicensees.json");
+        RapStore.Install(ContentId, storedRap, directory.Path);
+        KlicenseeStore.Install(ContentId, "module.self", 2, storedKlicensee, "test", database);
+
+        NpKlic.Resolution resolution = NpKlic.Resolve(null, null, ContentId, directory.Path,
+            "module.self", 2, database);
+
+        Assert.Equal(storedKlicensee, resolution.Klicensee);
+        Assert.Equal("klicensee-store", resolution.Source);
+        Assert.Equal(database, resolution.RapPath);
+    }
+
+    [Fact]
+    public void Resolve_CorruptKlicenseeDatabaseStillFallsBackToRapLibrary()
+    {
+        using var directory = new TempDirectory();
+        byte[] storedRap = Enumerable.Repeat((byte)0x55, 16).ToArray();
+        string database = Path.Combine(directory.Path, "klicensees.json");
+        File.WriteAllText(database, "{broken");
+        RapStore.Install(ContentId, storedRap, directory.Path);
+
+        NpKlic.Resolution resolution = NpKlic.Resolve(null, null, ContentId, directory.Path,
+            "module.self", 2, database);
+
+        Assert.Equal(NpdKeys.RapToKlicensee(storedRap), resolution.Klicensee);
+        Assert.Equal("rap-store", resolution.Source);
     }
 
     [Fact]
