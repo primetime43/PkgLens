@@ -35,15 +35,16 @@
 
     <DataGrid x:Name="Grid" IsReadOnly="True" GridLinesVisibility="Horizontal"
               HeadersVisibility="Column" SelectionMode="Single" SelectionChanged="OnSelectionChanged"
-              CanUserSortColumns="True" CanUserResizeColumns="True">
+              CanUserSortColumns="True" CanUserResizeColumns="True"
+              ScrollViewer.HorizontalScrollBarVisibility="Auto">
       <DataGrid.Columns>
-        <DataGridTextColumn Header="Content ID" Binding="{Binding ContentId}" Width="270" x:DataType="vm:KlicenseeStoreRow" />
-        <DataGridTextColumn Header="Title ID" Binding="{Binding TitleId}" Width="100" x:DataType="vm:KlicenseeStoreRow" />
-        <DataGridTextColumn Header="SELF" Binding="{Binding FileName}" Width="120" x:DataType="vm:KlicenseeStoreRow" />
-        <DataGridTextColumn Header="License" Binding="{Binding License}" Width="65" x:DataType="vm:KlicenseeStoreRow" />
-        <DataGridTextColumn Header="Fingerprint" Binding="{Binding Fingerprint}" Width="110" x:DataType="vm:KlicenseeStoreRow" />
-        <DataGridTextColumn Header="Source" Binding="{Binding Source}" Width="150" x:DataType="vm:KlicenseeStoreRow" />
-        <DataGridTextColumn Header="Added" Binding="{Binding Added}" Width="*" x:DataType="vm:KlicenseeStoreRow" />
+        <DataGridTextColumn Header="Content ID" Binding="{Binding ContentId}" Width="4*" MinWidth="340" x:DataType="vm:KlicenseeStoreRow" />
+        <DataGridTextColumn Header="Title ID" Binding="{Binding TitleId}" Width="*" MinWidth="100" x:DataType="vm:KlicenseeStoreRow" />
+        <DataGridTextColumn Header="SELF" Binding="{Binding FileName}" Width="2*" MinWidth="130" x:DataType="vm:KlicenseeStoreRow" />
+        <DataGridTextColumn Header="License" Binding="{Binding License}" Width="*" MinWidth="80" x:DataType="vm:KlicenseeStoreRow" />
+        <DataGridTextColumn Header="Fingerprint" Binding="{Binding Fingerprint}" Width="2*" MinWidth="120" x:DataType="vm:KlicenseeStoreRow" />
+        <DataGridTextColumn Header="Source" Binding="{Binding Source}" Width="*" MinWidth="100" x:DataType="vm:KlicenseeStoreRow" />
+        <DataGridTextColumn Header="Added" Binding="{Binding Added}" Width="2*" MinWidth="120" x:DataType="vm:KlicenseeStoreRow" />
       </DataGrid.Columns>
     </DataGrid>
   </DockPanel>
