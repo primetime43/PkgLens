@@ -34,7 +34,7 @@ internal static class RapLicenseService
         KlicenseeResolution? stored = TryFindKlicensee(info.Npdrm.ContentId, fileName,
             info.Npdrm.RawLicenseType);
         if (stored is not null)
-            return new RapLicenseResolution(stored.Klicensee, "klicensee library", info.Npdrm.ContentId);
+            return new RapLicenseResolution(stored.Klicensee, SourceName(stored), info.Npdrm.ContentId);
 
         if (info.Npdrm.LicenseType == NpdrmLicenseType.Free)
             return new RapLicenseResolution(null, null, info.Npdrm.ContentId);
@@ -58,7 +58,7 @@ internal static class RapLicenseService
         {
             KlicenseeResolution? stored = TryFindKlicensee(contentId, null, null);
             if (stored is not null)
-                return new RapLicenseResolution(stored.Klicensee, "klicensee library", contentId);
+                return new RapLicenseResolution(stored.Klicensee, SourceName(stored), contentId);
             rap = RapStore.Find(contentId, libraryDirectory);
             source = rap is null ? null : "RAP library";
         }
@@ -70,11 +70,17 @@ internal static class RapLicenseService
     private static KlicenseeResolution? TryFindKlicensee(string contentId, string? fileName,
         uint? licenseType)
     {
-        try { return KlicenseeStore.Find(contentId, fileName, licenseType); }
+        KlicenseeResolution? local = null;
+        try { local = KlicenseeStore.Find(contentId, fileName, licenseType); }
         catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException)
         {
             // The Keys page reports database damage; operations can still use RAP/default paths.
-            return null;
         }
+        return local ?? KnownKlicenseeStore.Find(contentId, fileName, licenseType);
     }
+
+    private static string SourceName(KlicenseeResolution resolution) =>
+        resolution.DatabasePath == KnownKlicenseeStore.DatabaseId
+            ? "bundled klicensee catalog"
+            : "klicensee library";
 }

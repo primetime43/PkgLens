@@ -41,9 +41,11 @@ public sealed class KlicenseeStoreRow
     public string TitleId => Entry.TitleId;
     public string FileName => Entry.FileName ?? "Any";
     public string License => Entry.LicenseType?.ToString() ?? "Any";
-    public string Source => Entry.Source;
+    public bool IsBundled => Entry.Source == "bundled catalog";
+    public bool CanRemove => !IsBundled;
+    public string Source => IsBundled ? "Bundled" : Entry.Source;
     public string Fingerprint => Entry.Fingerprint;
-    public string Added => Entry.AddedUtc.ToLocalTime().ToString("g");
+    public string Added => IsBundled ? "Built in" : Entry.AddedUtc.ToLocalTime().ToString("g");
 
     internal static KlicenseeStoreRow From(KlicenseeStoreEntry entry) => new(entry);
 }

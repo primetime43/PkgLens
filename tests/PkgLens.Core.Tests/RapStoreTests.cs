@@ -109,6 +109,23 @@ public sealed class RapStoreTests
     }
 
     [Fact]
+    public void Resolve_LocalKlicenseeOverridesBundledCatalog()
+    {
+        using var directory = new TempDirectory();
+        const string worldAtWar = "UP0002-BLUS30192_00-CODWAWMAPPACK105";
+        byte[] local = Enumerable.Repeat((byte)0x44, 16).ToArray();
+        string database = Path.Combine(directory.Path, "klicensees.json");
+        KlicenseeStore.Install(worldAtWar, "sp.self", 3, local, "test", database);
+
+        NpKlic.Resolution resolution = NpKlic.Resolve(null, null, worldAtWar,
+            directory.Path, "sp.self", 3, database);
+
+        Assert.Equal(local, resolution.Klicensee);
+        Assert.Equal("klicensee-store", resolution.Source);
+        Assert.Equal(database, resolution.RapPath);
+    }
+
+    [Fact]
     public void Resolve_CorruptKlicenseeDatabaseStillFallsBackToRapLibrary()
     {
         using var directory = new TempDirectory();

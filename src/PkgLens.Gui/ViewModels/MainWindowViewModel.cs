@@ -176,7 +176,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
         try
         {
             int count = KlicenseeStore.List().Count;
-            KlicenseeStatus = $"Klicensee library: {count} saved mapping{(count == 1 ? string.Empty : "s")}";
+            KlicenseeStatus = $"Klicensees: {count} saved mapping{(count == 1 ? string.Empty : "s")}, " +
+                               $"{KnownKlicenseeStore.Count} bundled identifier mappings";
         }
         catch (Exception ex)
         {

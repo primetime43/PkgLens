@@ -276,6 +276,8 @@ public static class OperationPreflight
             {
                 klicenseeStoreError = ex.Message;
             }
+            storedKlicensee ??= KnownKlicenseeStore.Find(info.Npdrm.ContentId,
+                Path.GetFileName(inputPath), info.Npdrm.RawLicenseType);
         }
         bool needsRap = !validKlicensee && storedKlicensee is null &&
             info.Npdrm is { LicenseType: NpdrmLicenseType.Local or NpdrmLicenseType.Network };
@@ -295,7 +297,10 @@ public static class OperationPreflight
                 validKlicensee ? "A 16-byte raw klicensee will override RAP/free-license resolution."
                     : "The raw klicensee must contain exactly 32 hexadecimal characters."));
         if (storedKlicensee is not null)
-            checks.Add(Pass("License / key", $"A saved klicensee mapping for {info.Npdrm!.ContentId} is available."));
+            checks.Add(Pass("License / key",
+                storedKlicensee.DatabasePath == KnownKlicenseeStore.DatabaseId
+                    ? $"A bundled klicensee mapping for {info.Npdrm!.ContentId} is available."
+                    : $"A saved klicensee mapping for {info.Npdrm!.ContentId} is available."));
         else
             checks.Add(LicenseCheck(info.Npdrm?.ContentId, needsRap, rapOverridePath, rapDirectory));
         if (klicenseeStoreError is not null)

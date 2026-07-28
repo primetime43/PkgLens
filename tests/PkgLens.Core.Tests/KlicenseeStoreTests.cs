@@ -129,6 +129,55 @@ public sealed class KlicenseeStoreTests
         Assert.Contains("valid JSON", error.Message);
     }
 
+    [Fact]
+    public void BundledCatalog_ResolvesWorldAtWarTitleKeyForUnlistedRegionContentId()
+    {
+        KlicenseeResolution? resolution = KnownKlicenseeStore.Find(
+            "UP0002-BLUS30192_00-CODWAWMAPPACK105", "sp.self", 3);
+
+        Assert.NotNull(resolution);
+        Assert.Equal(Convert.FromHexString("C8E0234D149E4549BC1B086FEFD7282A"),
+            resolution.Klicensee);
+        Assert.Equal(KnownKlicenseeStore.DatabaseId, resolution.DatabasePath);
+        Assert.Equal("bundled catalog", resolution.Entry.Source);
+        Assert.True(KnownKlicenseeStore.Count > 500);
+    }
+
+    [Fact]
+    public void BundledCatalog_ListExposesEveryMappingWithoutRawKeys()
+    {
+        IReadOnlyList<KlicenseeStoreEntry> entries = KnownKlicenseeStore.List();
+
+        Assert.Equal(KnownKlicenseeStore.Count, entries.Count);
+        Assert.All(entries, entry =>
+        {
+            Assert.Equal("bundled catalog", entry.Source);
+            Assert.Equal(12, entry.Fingerprint.Length);
+            Assert.Equal(DateTimeOffset.UnixEpoch, entry.AddedUtc);
+        });
+        Assert.Contains(entries, entry => entry.TitleId == "BLUS30192");
+        Assert.DoesNotContain("C8E0234D149E4549BC1B086FEFD7282A",
+            string.Join(Environment.NewLine, entries));
+    }
+
+    [Fact]
+    public void BundledCatalog_RejectsConflictingKeysInsteadOfGuessing()
+    {
+        KlicenseeResolution? resolution = KnownKlicenseeStore.Find(
+            "UP0700-NPUB30932_00-NNKDLFULLGAMEPTA", "EBOOT.BIN", 3);
+
+        Assert.Null(resolution);
+    }
+
+    [Fact]
+    public void BundledCatalog_HonorsFilenameSpecificMappings()
+    {
+        const string contentId = "UP0001-NPUB30737_00-FARCRYPS30000000";
+
+        Assert.NotNull(KnownKlicenseeStore.Find(contentId, "BinkPS3SPU.spu.self", 3));
+        Assert.Null(KnownKlicenseeStore.Find(contentId, "EBOOT.BIN", 3));
+    }
+
     private sealed class TempDirectory : IDisposable
     {
         public string Path { get; } = System.IO.Path.Combine(

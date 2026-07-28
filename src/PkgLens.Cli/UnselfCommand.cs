@@ -84,6 +84,8 @@ internal static class UnselfCommand
                 Console.WriteLine("Using RAP from the local library.");
             if (!json && resolution.Source == "klicensee-store")
                 Console.WriteLine("Using klicensee from the local library.");
+            if (!json && resolution.Source == "klicensee-bundled")
+                Console.WriteLine("Using klicensee from the bundled known-key catalog.");
             var result = SelfDecryptor.Decrypt(self, resolution.Klicensee);
 
             outPath ??= DefaultOut(input);

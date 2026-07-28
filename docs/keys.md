@@ -1,8 +1,9 @@
 # Keys
 
-PkgLens bundles the public PS3 decryption keys it needs, so packages open with no setup. You still
-supply account/content-specific **RAPs** and any unusual SELF-specific raw klicensees; neither is
-bundled or downloaded from a third-party key database.
+PkgLens bundles the public PS3 decryption keys it needs, so packages open with no setup. It also
+ships a read-only catalog of publicly documented title-specific SELF klicensees. You still supply
+account/content-specific **RAPs** and keys not present unambiguously in that catalog. Runtime
+decryption never downloads keys from a third-party service.
 
 ## What's built in
 
@@ -18,6 +19,7 @@ private or signing key.
 | PSVita PKG AES keys 2–4 | Decrypt Vita package revisions selected by `key_type` | `BundledKeys.VitaPkgAesKey2`–`4` |
 | appldr / NPDRM SELF keysets | Decrypt SELF/EBOOT.BIN → ELF | `Self.SelfKeyset` |
 | EDAT/SDAT keys + free klicensee | Decrypt NPDRM data files | `Npd.NpdKeys` |
+| Known title/content klicensees | Resolve unusual free-license SELFs automatically | `Npd.KnownKlicenseeStore` |
 
 Debug (non-finalized) packages need no key at all — their keystream is derived from the header's
 QA digest.
@@ -28,9 +30,9 @@ QA digest.
   RAP that came with your purchase. Import it once with `pkglens raps import`; CLI and GUI operations
   then resolve it automatically by content ID. Explicit `--klic` and `--rap` options take precedence.
   PkgLens derives the klicensee itself and never stores RAP material in the repository.
-- **Custom SELF klicensees** — some SELFs marked as free still use a title/file-specific key. Enter
-  the 32-hex-character key once. After the SELF decrypts successfully, PkgLens saves the verified
-  mapping locally and resolves it automatically on later decrypts.
+- **Uncatalogued SELF klicensees** — some SELFs marked as free still use a title/file-specific key.
+  PkgLens checks the bundled catalog first. If no unambiguous match exists, enter the
+  32-hex-character key once; after successful decryption, PkgLens saves the verified local mapping.
 - **Per-console secrets (IDPS / EID)** are out of scope and never needed by any PkgLens feature. A
   workflow that would require them isn't something PkgLens does.
 
@@ -61,7 +63,8 @@ keys are present in that local file, so protect it like other account/content li
 listings display only a one-way fingerprint.
 
 For SELF decrypts, resolution order is: an entered raw key, a selected RAP, the narrowest
-unambiguous saved klicensee mapping, the RAP library, then the standard free-license behavior.
+unambiguous saved klicensee mapping, an unambiguous bundled-catalog mapping, the RAP library, then
+the standard free-license behavior. Exact content IDs rank ahead of title-wide catalog entries.
 Mappings can include content ID, title ID, SELF filename, and license type. A broad title match with
 competing keys is rejected instead of guessing.
 

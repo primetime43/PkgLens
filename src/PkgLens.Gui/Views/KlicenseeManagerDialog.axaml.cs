@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Controls;
@@ -14,14 +15,19 @@ public partial class KlicenseeManagerDialog : Window
 {
     private TextBlock _path = null!;
     private TextBlock _status = null!;
+    private TextBox _filter = null!;
     private DataGrid _grid = null!;
     private Button _remove = null!;
+    private List<KlicenseeStoreRow> _rows = [];
+    private int _savedCount;
+    private int _bundledCount;
 
     public KlicenseeManagerDialog()
     {
         AvaloniaXamlLoader.Load(this);
         _path = this.FindControl<TextBlock>("PathText")!;
         _status = this.FindControl<TextBlock>("StatusText")!;
+        _filter = this.FindControl<TextBox>("FilterBox")!;
         _grid = this.FindControl<DataGrid>("Grid")!;
         _remove = this.FindControl<Button>("RemoveButton")!;
         RefreshEntries();
@@ -56,7 +62,7 @@ public partial class KlicenseeManagerDialog : Window
 
     private void OnRemove(object? sender, RoutedEventArgs e)
     {
-        if (_grid.SelectedItem is not KlicenseeStoreRow row) return;
+        if (_grid.SelectedItem is not KlicenseeStoreRow { CanRemove: true } row) return;
         try
         {
             bool removed = KlicenseeStore.Remove(row.Entry.Id);
@@ -74,18 +80,32 @@ public partial class KlicenseeManagerDialog : Window
     private void OnRefresh(object? sender, RoutedEventArgs e) => RefreshEntries();
 
     private void OnSelectionChanged(object? sender, SelectionChangedEventArgs e) =>
-        _remove.IsEnabled = _grid.SelectedItem is KlicenseeStoreRow;
+        _remove.IsEnabled = _grid.SelectedItem is KlicenseeStoreRow { CanRemove: true };
+
+    private void OnFilterChanged(object? sender, TextChangedEventArgs e)
+    {
+        if (_filter is null || _grid is null) return;
+        ApplyFilter(updateStatus: true);
+    }
 
     private void RefreshEntries(bool preserveStatus = false)
     {
         try
         {
-            var entries = KlicenseeStore.List();
+            var saved = KlicenseeStore.List();
+            var bundled = KnownKlicenseeStore.List();
+            _savedCount = saved.Count;
+            _bundledCount = bundled.Count;
+            _rows = saved.Concat(bundled)
+                .Select(KlicenseeStoreRow.From)
+                .OrderBy(row => row.IsBundled)
+                .ThenBy(row => row.TitleId, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(row => row.ContentId, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(row => row.FileName, StringComparer.OrdinalIgnoreCase)
+                .ToList();
             _path.Text = KlicenseeStore.DatabasePath();
-            _grid.ItemsSource = entries.Select(KlicenseeStoreRow.From).ToList();
+            ApplyFilter(updateStatus: !preserveStatus);
             _remove.IsEnabled = false;
-            if (!preserveStatus)
-                _status.Text = $"{entries.Count} saved mapping{(entries.Count == 1 ? string.Empty : "s")}.";
         }
         catch (Exception ex)
         {
@@ -93,6 +113,31 @@ public partial class KlicenseeManagerDialog : Window
             _status.Text = $"Could not read the library: {ex.Message}";
         }
     }
+
+    private void ApplyFilter(bool updateStatus)
+    {
+        string query = _filter.Text?.Trim() ?? string.Empty;
+        List<KlicenseeStoreRow> visible = query.Length == 0
+            ? _rows
+            : _rows.Where(row => Matches(row, query)).ToList();
+        _grid.ItemsSource = visible;
+        _remove.IsEnabled = false;
+
+        if (!updateStatus) return;
+        string summary = $"{_savedCount} saved mapping{(_savedCount == 1 ? string.Empty : "s")}; " +
+                         $"{_bundledCount} bundled identifier mappings.";
+        _status.Text = query.Length == 0
+            ? summary
+            : $"Showing {visible.Count} of {_rows.Count} mappings. {summary}";
+    }
+
+    private static bool Matches(KlicenseeStoreRow row, string query) =>
+        row.ContentId.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+        row.TitleId.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+        row.FileName.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+        row.License.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+        row.Fingerprint.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+        row.Source.Contains(query, StringComparison.OrdinalIgnoreCase);
 
     private void OnClose(object? sender, RoutedEventArgs e) => Close();
 }

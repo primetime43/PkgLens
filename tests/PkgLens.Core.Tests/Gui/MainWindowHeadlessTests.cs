@@ -70,8 +70,11 @@ public sealed class MainWindowHeadlessTests
     {
         var dialog = new KlicenseeManagerDialog();
 
-        Assert.NotNull(dialog.FindControl<DataGrid>("Grid"));
+        DataGrid grid = dialog.FindControl<DataGrid>("Grid")!;
+        var rows = Assert.IsAssignableFrom<IEnumerable<KlicenseeStoreRow>>(grid.ItemsSource);
+        Assert.Contains(rows, row => row.IsBundled && !row.CanRemove);
         Assert.NotNull(dialog.FindControl<TextBlock>("PathText"));
+        Assert.NotNull(dialog.FindControl<TextBox>("FilterBox"));
         Assert.NotNull(dialog.FindControl<Button>("RemoveButton"));
 
         dialog.Close();
