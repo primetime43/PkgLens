@@ -133,6 +133,7 @@ jobs:
           name: pkglens-${{ matrix.rid }}
           path: artifacts/*
           if-no-files-found: error
+          retention-days: 1
 
   release:
     name: Publish GitHub Release

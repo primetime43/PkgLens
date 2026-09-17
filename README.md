@@ -74,9 +74,14 @@ dotnet build
 dotnet test
 ```
 
-CI performs tests, vulnerability auditing, and coverage enforcement.
+Run CI manually from **Actions > CI > Run workflow** to perform tests, vulnerability auditing, and
+coverage enforcement. It does not run automatically on pushes or pull requests. Enable
+**Upload test, coverage, and dependency audit reports** when downloadable reports are needed;
+these artifacts are retained for three days.
 
 The release version is stored in `Directory.Build.props`. After updating and committing it, push a
 matching tag such as `v1.0.0` to create a GitHub release with self-contained GUI and CLI archives for
 Windows x64, Linux x64, macOS Intel, and macOS Apple Silicon. Archive and executable names include
 the version, such as `PkgLens-1.0.0.exe`.
+Temporary workflow artifacts are retained for one day; the archives attached to the GitHub release
+remain available.

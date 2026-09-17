@@ -1,10 +1,13 @@
 name: CI
 
 on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      upload_reports:
+        description: Upload test, coverage, and dependency audit reports
+        type: boolean
+        required: false
+        default: false
 
 jobs:
   build-test:
@@ -87,10 +90,10 @@ jobs:
           -SummaryPath $env:GITHUB_STEP_SUMMARY
 
       - name: Publish quality reports
-        if: always()
+        if: ${{ always() && inputs.upload_reports }}
         uses: actions/upload-artifact@v4
         with:
           name: quality-reports
           path: TestResults
           if-no-files-found: warn
-          retention-days: 14
+          retention-days: 3
