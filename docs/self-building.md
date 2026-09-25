@@ -34,6 +34,11 @@ fields are deliberately left zero. These outputs require a compatible loader wit
 checks, and do not establish full TrueAncestor signing parity, DEX/OFW support, or stock retail bootability.
 Hardware boot compatibility has not been tested.
 
+A subsequent [legacy-signing and RPCS3 experiment](self-signing-validation.md) confirmed that a
+real executable rebuilt by PkgLens reaches game boot code in RPCS3. External legacy signing keys
+also produced a mathematically valid signature; the current PkgLens builder still leaves signature
+fields empty. RPCS3 accepted both variants, so boot acceptance does not establish signature validity.
+
 The implementation was checked against the public [scetool source](https://github.com/naehrwert/scetool).
 An independently compiled scetool decrypted eight generated APP/NPDRM cases (FREE, LOCAL, NETWORK;
 compressed and uncompressed) into byte-identical ELFs. Automated tests additionally cover every bundled
