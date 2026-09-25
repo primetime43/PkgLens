@@ -22,6 +22,23 @@ Standalone processing streams file data through temporary files.
 
 ## Keys and settings
 
+Before decrypting or rebuilding, select **Check key and file** in the input key section.
+It uses the same key selection as processing: an entered raw key, a selected RAP, the local
+klicensee database, the bundled catalog, then an installed RAP (or the standard free developer key).
+The result identifies the selected source, mapping or RAP filename, and a short SHA-256 fingerprint
+of the content key. It never displays the raw key or RAP bytes.
+
+A successful check authenticates the header, metadata, and all content blocks without saving
+plaintext. SDAT is checked with its header-derived key. Missing keys, invalid RAPs, unreadable
+sources, and malformed files receive separate explanations. A header mismatch can indicate either
+an incorrect key or damaged header; when the header matches but content verification fails, the
+result explicitly reports that the key matched. Debug files cannot prove a key match because they
+skip authentication. Catalog and filename matches alone are never reported as verified.
+
+The check is cancellable and does not enable Save or Stage. Changing settings clears its result;
+processing rechecks the file independently. Encryption starts from plaintext, so its output key
+is checked through the existing build-and-verify operation rather than against an input EDAT.
+
 - SDAT derives its key from the header and needs no RAP.
 - Free EDAT uses a developer klicensee. The standard key is the fallback; enter a raw key for content that uses a different one.
 - Licensed EDAT needs its content key: select a RAP, enter a 32-character hexadecimal key, or let PkgLens check its key catalogs and configured RAP directory.

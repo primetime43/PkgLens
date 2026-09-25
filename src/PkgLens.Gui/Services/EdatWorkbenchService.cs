@@ -146,27 +146,8 @@ public static class EdatWorkbenchService
     }
 
     private static byte[]? ResolveKey(string contentId, string fileName, bool sdat, int license,
-        EdatKeySelection selection, string? rapDirectory, string? databasePath)
-    {
-        if (sdat) return null;
-        if (ParseKey(selection.RawKey) is { } raw) return raw;
-        if (!string.IsNullOrWhiteSpace(selection.RapPath))
-        {
-            if (license == 3) throw new ArgumentException("Free-license EDAT uses a developer key, not a RAP. Clear the RAP selection or enter its raw developer key.");
-            byte[] rap = File.ReadAllBytes(selection.RapPath);
-            if (rap.Length != 16) throw new PkgKeyException("A RAP file must contain exactly 16 bytes.");
-            return NpdKeys.RapToKlicensee(rap);
-        }
-        if (!string.IsNullOrWhiteSpace(contentId) && KlicenseeStore.ExtractTitleId(contentId) is not null)
-        {
-            var stored = KlicenseeStore.Find(contentId, fileName, (uint)license, databasePath) ??
-                KnownKlicenseeStore.Find(contentId, fileName, (uint)license);
-            if (stored is not null) return stored.Klicensee;
-        }
-        if (license == 3) return null;
-        byte[]? installed = RapStore.Find(contentId, rapDirectory);
-        return installed is null ? throw new PkgKeyException($"No RAP or klicensee is available for {contentId}. Select its RAP or enter the raw content key.") : NpdKeys.RapToKlicensee(installed);
-    }
+        EdatKeySelection selection, string? rapDirectory, string? databasePath) =>
+        EdatKeyValidationService.Resolve(contentId, fileName, sdat, license, selection, rapDirectory, databasePath).Key;
 
     private static void Copy(Stream source, Stream destination, CancellationToken token)
     {

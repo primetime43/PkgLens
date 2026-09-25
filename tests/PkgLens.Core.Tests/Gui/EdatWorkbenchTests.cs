@@ -13,6 +13,32 @@ namespace PkgLens.Core.Tests.Gui;
 public sealed class EdatWorkbenchTests
 {
     [AvaloniaFact]
+    public async Task KeyCheck_ReportsMatchWithoutEnablingSave_AndClearsStaleMatch()
+    {
+        var dialog = new EdatWorkbenchDialog();
+        dialog.Show();
+        try
+        {
+            dialog.LoadPackageEntry("source.edat", Protected("Content to verify"u8.ToArray()), "unused.pkg");
+            Dispatcher.UIThread.RunJobs();
+            await dialog.CheckKeyAsync();
+            Assert.Contains("Key matches", dialog.FindControl<TextBlock>("KeyCheckStatus")!.Text);
+            Assert.Contains("Built-in free", dialog.FindControl<TextBlock>("KeyCheckStatus")!.Text);
+            Assert.False(dialog.FindControl<Button>("SaveButton")!.IsEnabled);
+            Assert.False(dialog.FindControl<Button>("StageButton")!.IsEnabled);
+            dialog.FindControl<TextBox>("InputRawKey")!.Text = new string('0', 32);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Contains("not checked", dialog.FindControl<TextBlock>("KeyCheckStatus")!.Text);
+            await dialog.CheckKeyAsync();
+            Assert.Contains("Key not confirmed", dialog.FindControl<TextBlock>("KeyCheckStatus")!.Text);
+            Assert.True(dialog.FindControl<Button>("CheckKeyButton")!.IsEnabled);
+            dialog.FindControl<ComboBox>("Operation")!.SelectedIndex = 1;
+            Assert.False(dialog.FindControl<StackPanel>("InputKeyPanel")!.IsVisible);
+        }
+        finally { dialog.Close(); }
+    }
+
+    [AvaloniaFact]
     public async Task PackageRebuild_UsesPendingContentAndStagesVerifiedResult()
     {
         string root = Path.Combine(Path.GetTempPath(), "pkglens-workbench-test-" + Guid.NewGuid().ToString("N"));

@@ -102,6 +102,7 @@ public partial class EdatWorkbenchDialog : Window
         C<Button>("PreviewButton").IsEnabled = false;
         C<Button>("SaveButton").IsEnabled = false;
         C<Button>("StageButton").IsEnabled = false;
+        C<TextBlock>("KeyCheckStatus").Text = "Key not checked for the current settings. Check key and file before processing.";
         C<TextBlock>("Status").Text = "Build or decrypt to preview and save the current settings.";
     }
 
@@ -177,6 +178,41 @@ public partial class EdatWorkbenchDialog : Window
     private void OnClearInputRap(object? sender, RoutedEventArgs e) { _inputRap = null; C<TextBlock>("InputRapName").Text = "Automatic key / license lookup"; Invalidate(); }
     private void OnClearOutputRap(object? sender, RoutedEventArgs e) { _outputRap = null; C<TextBlock>("OutputRapName").Text = "Automatic key / license lookup"; Invalidate(); }
 
+    private async void OnCheckKey(object? sender, RoutedEventArgs e) => await CheckKeyAsync();
+    internal async Task CheckKeyAsync()
+    {
+        if (_cancellation is not null || Mode == EdatWorkbenchOperation.Encrypt) return;
+        Invalidate();
+        if (_source is null) { C<TextBlock>("KeyCheckStatus").Text = "Choose an EDAT or SDAT source file first."; return; }
+        using var cancellation = new CancellationTokenSource();
+        _cancellation = cancellation;
+        var source = _source;
+        var selection = new EdatKeySelection(C<TextBox>("InputRawKey").Text, _inputRap);
+        SetBusy(true);
+        C<TextBlock>("KeyCheckStatus").Text = "Checking the key, header, and file content…";
+        C<TextBlock>("Status").Text = "Validating without saving plaintext. Large files may take longer; you can cancel.";
+        try
+        {
+            var check = await Task.Run(() => EdatKeyValidationService.Check(source, selection,
+                _rapDirectory, token: cancellation.Token), cancellation.Token);
+            C<TextBlock>("KeyCheckStatus").Text = check.DisplayText;
+            C<TextBlock>("Status").Text = check.Status == EdatKeyCheckStatus.Verified
+                ? "Key check passed. Choose Decrypt or Build when ready."
+                : "Key check did not pass. See the input key details above.";
+        }
+        catch (OperationCanceledException)
+        {
+            C<TextBlock>("KeyCheckStatus").Text = "Key check cancelled; no verified result is available.";
+            C<TextBlock>("Status").Text = "Cancelled. No files were saved or staged.";
+        }
+        catch (Exception ex)
+        {
+            C<TextBlock>("KeyCheckStatus").Text = "Key check failed: " + ex.Message;
+            C<TextBlock>("Status").Text = "Could not complete key validation.";
+        }
+        finally { _cancellation = null; SetBusy(false); }
+    }
+
     private async void OnBuild(object? sender, RoutedEventArgs e) => await BuildAsync();
     internal async Task BuildAsync()
     {
@@ -216,6 +252,7 @@ public partial class EdatWorkbenchDialog : Window
     {
         C<Control>("Inputs").IsEnabled = !busy;
         C<Button>("BuildButton").IsEnabled = !busy;
+        C<Button>("CheckKeyButton").IsEnabled = !busy;
         C<Button>("CloseButton").IsEnabled = !busy;
         C<Button>("CancelButton").IsVisible = busy;
         C<ProgressBar>("WorkProgress").IsVisible = busy;

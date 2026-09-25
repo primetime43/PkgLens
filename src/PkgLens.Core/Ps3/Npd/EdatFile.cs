@@ -116,6 +116,37 @@ public static class EdatFile
     }
 
     /// <summary>
+    /// Checks only the authenticated header with the supplied content key. A mismatch can mean
+    /// a wrong key OR damaged header. Null means debug data without authentication; it cannot
+    /// prove a key match. Payload integrity still requires Decrypt.
+    /// </summary>
+    public static bool? AuthenticateHeader(Stream source, byte[]? klicensee = null)
+    {
+        var npd = ParseHeader(source);
+        if ((npd.Flags & DebugDataFlag) != 0) return null;
+        byte[] key = ContentKey(npd, klicensee);
+        using var aes = Aes.Create();
+        aes.Padding = PaddingMode.None;
+        byte[] hashKey = ResolveHashKey(aes, key, npd.Version == 4 ? NpdKeys.EdatKey1 : NpdKeys.EdatKey0,
+            (npd.Flags & EncryptedKeyFlag) != 0);
+        return HeaderHashMatches(source, hashKey);
+    }
+
+    private static byte[] ContentKey(NpdInfo npd, byte[]? klicensee)
+    {
+        if (npd.IsSdat)
+        {
+            byte[] key = new byte[16];
+            for (int i = 0; i < 16; i++) key[i] = (byte)(npd.DevHash[i] ^ NpdKeys.SdatKey[i]);
+            return key;
+        }
+        byte[] contentKey = klicensee ?? (npd.IsFree ? NpdKeys.KlicFree : throw new PkgKeyException(
+            $"'{npd.ContentId}' is a licensed EDAT (DRM {npd.LicenseText}); a RAP/klicensee is required."));
+        if (contentKey.Length != 16) throw new PkgKeyException("Klicensee must be 16 bytes.");
+        return contentKey;
+    }
+
+    /// <summary>
     /// Verifies the authenticated header, metadata, and each encrypted block, then writes plaintext
     /// to <paramref name="destination"/>.
     /// </summary>
@@ -133,25 +164,7 @@ public static class EdatFile
 
         var npd = ParseHeader(source);
 
-        // Select the crypt key.
-        byte[] cryptKey;
-        if (npd.IsSdat)
-        {
-            cryptKey = new byte[16];
-            for (int i = 0; i < 16; i++) cryptKey[i] = (byte)(npd.DevHash[i] ^ NpdKeys.SdatKey[i]);
-        }
-        else if (npd.IsFree)
-        {
-            // Free-license EDATs can use a title-specific developer klicensee.
-            cryptKey = klicensee ?? NpdKeys.KlicFree;
-        }
-        else
-        {
-            cryptKey = klicensee ?? throw new PkgKeyException(
-                $"'{npd.ContentId}' is a licensed EDAT (DRM {npd.LicenseText}); a RAP/klicensee is required.");
-            if (cryptKey.Length != 16)
-                throw new PkgKeyException("Klicensee must be 16 bytes.");
-        }
+        byte[] cryptKey = ContentKey(npd, klicensee);
 
         byte[] edatKey = npd.Version == 4 ? NpdKeys.EdatKey1 : NpdKeys.EdatKey0;
         bool encryptedKey = (npd.Flags & EncryptedKeyFlag) != 0;
@@ -259,17 +272,18 @@ public static class EdatFile
 
     private static void VerifyHeaderHash(Stream source, NpdInfo npd, byte[] hashKey)
     {
-        byte[] header = ReadAt(source, 0, 0xA0);
-        byte[] expected = ReadAt(source, 0xA0, 0x10);
-        byte[] actual = AesCmac.Compute(hashKey, header);
-        if (CryptographicOperations.FixedTimeEquals(actual, expected)) return;
+        if (HeaderHashMatches(source, hashKey)) return;
 
         if (npd.NeedsKlicensee)
             throw new PkgKeyException(
-                $"EDAT header integrity check failed for '{npd.ContentId}'; the RAP/klicensee is wrong.");
+                $"EDAT header integrity check failed for '{npd.ContentId}'; the RAP/klicensee is wrong or the header is damaged.");
 
-        throw new PkgFormatException("EDAT header integrity check failed; the file header is corrupted.");
+        throw new PkgFormatException(npd.IsSdat ? "SDAT header integrity check failed; the header is damaged." :
+            "EDAT header integrity check failed; the developer key is wrong or the header is damaged.");
     }
+
+    private static bool HeaderHashMatches(Stream source, byte[] hashKey) =>
+        CryptographicOperations.FixedTimeEquals(AesCmac.Compute(hashKey, ReadAt(source, 0, 0xA0)), ReadAt(source, 0xA0, 0x10));
 
     private static void VerifyMetadataHash(
         Stream source,
