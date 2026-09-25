@@ -119,8 +119,10 @@ public static class EdatFile
     /// Verifies the authenticated header, metadata, and each encrypted block, then writes plaintext
     /// to <paramref name="destination"/>.
     /// </summary>
-    public static void Decrypt(Stream source, Stream destination, byte[]? klicensee = null)
+    public static void Decrypt(Stream source, Stream destination, byte[]? klicensee = null,
+        CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         // PSP EDATs ("\0PSPEDAT") and bare PGDs ("\0PGD") are a different DRM format — route them to the
         // PSP decryptor (fixed-key AMCTRL/PGD, no RAP needed) rather than the PS3 NPDRM path below.
         if (Psp.PspEdatFile.IsPspEncrypted(source))
@@ -172,11 +174,12 @@ public static class EdatFile
         {
             byte[] headerHashKey = ResolveHashKey(aes, cryptKey, edatKey, encryptedKey);
             VerifyHeaderHash(source, npd, headerHashKey);
-            VerifyMetadataHash(source, npd, headerHashKey, numBlocks, metadataEntry, flag0x20);
+            VerifyMetadataHash(source, npd, headerHashKey, numBlocks, metadataEntry, flag0x20, cancellationToken);
         }
 
         for (int i = 0; i < numBlocks; i++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             long dataOffset;
             int readLen;    // bytes of ciphertext to read (16-aligned)
             int payloadLen; // meaningful decrypted bytes before optional decompression
@@ -273,11 +276,13 @@ public static class EdatFile
         byte[] hashKey,
         int numBlocks,
         int metadataEntry,
-        bool flag0x20)
+        bool flag0x20,
+        CancellationToken cancellationToken)
     {
         using var cmac = new AesCmacAccumulator(hashKey);
         for (int i = 0; i < numBlocks; i++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             long offset = flag0x20
                 ? MetadataOffset + (long)i * (metadataEntry + npd.BlockSize)
                 : MetadataOffset + (long)i * metadataEntry;

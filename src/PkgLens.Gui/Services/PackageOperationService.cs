@@ -99,6 +99,11 @@ public sealed class PackageOperationService : IDisposable
         PkgReader.ExtractAll(_stream, Info, directory, _keys,
             cancellationToken: cancellationToken, progress: progress);
 
+    public ContentDecryptReport DecryptContents(string directory, ContentDecryptOptions options,
+        CancellationToken cancellationToken = default, IProgress<ContentDecryptProgress>? progress = null) =>
+        PackageContentDecryptor.Export(_stream, Info, _keys, directory, options, _replacements,
+            cancellationToken, progress);
+
     public void ExtractEntry(PkgEntry entry, string destinationPath,
         CancellationToken cancellationToken = default, IProgress<long>? progress = null)
     {

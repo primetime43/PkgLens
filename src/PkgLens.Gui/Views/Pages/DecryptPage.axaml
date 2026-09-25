@@ -8,19 +8,28 @@
   <ScrollViewer>
     <StackPanel Margin="28,24" Spacing="20" MaxWidth="900" HorizontalAlignment="Stretch">
       <StackPanel Spacing="3">
-        <TextBlock Classes="pagetitle" Text="Decrypt EDAT / SDAT" />
+        <TextBlock Classes="pagetitle" Text="Decrypt content" />
         <TextBlock Classes="pagesubtitle"
-                   Text="{x:Static core:FeatureText.DecryptPageIntro}" />
-        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-          <Border Classes="chip"><TextBlock Text="EDAT" /></Border>
-          <Border Classes="chip"><TextBlock Text="PS3 / PSP" /></Border>
-          <Border Classes="chip"><TextBlock Text="READ-ONLY" /></Border>
-        </StackPanel>
+                   Text="Decrypt files from an open package or a single EDAT / SDAT file." />
       </StackPanel>
   
       <Border Classes="panel">
+        <StackPanel Spacing="10">
+          <TextBlock Classes="sectionhead" Text="PACKAGE CONTENTS" />
+          <TextBlock Text="{Binding Package.Title}" IsVisible="{Binding HasPackage}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+          <TextBlock Text="Extract all files and decrypt supported EBOOT / SELF, EDAT / SDAT, and PSP EDAT / PGD content using your installed keys and licenses."
+                     TextWrapping="Wrap" />
+          <Button x:Name="DecryptPackageButton" Content="Decrypt package contents…" Click="OnDecryptPackageContentsClick"
+                  IsEnabled="{Binding Package.IsDecrypted, FallbackValue=False}" HorizontalAlignment="Left" />
+          <TextBlock Text="Open a package to enable this action." IsVisible="{Binding !HasPackage}" FontSize="12" />
+          <TextBlock Text="Includes pending edits. Locked files are kept and listed in the saved report." FontSize="12"
+                     Opacity="0.7" TextWrapping="Wrap" />
+        </StackPanel>
+      </Border>
+
+      <Border Classes="panel">
         <StackPanel Spacing="12">
-          <TextBlock Classes="sectionhead" Text="INPUT" />
+          <TextBlock Classes="sectionhead" Text="SINGLE DATA FILE" />
           <Grid ColumnDefinitions="110,*" RowDefinitions="Auto,10,Auto">
             <TextBlock Grid.Row="0" Grid.Column="0" Classes="fieldlabel" Text="EDAT file" />
             <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="8">

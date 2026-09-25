@@ -11,6 +11,8 @@ public partial class DecryptPage : UserControl
 
     private MainWindow? Host => TopLevel.GetTopLevel(this) as MainWindow;
 
+    private void OnDecryptPackageContentsClick(object? sender, RoutedEventArgs e) => Host?.OnDecryptPackageContentsClick(sender, e);
+
     private void OnDecryptBrowseFile(object? sender, RoutedEventArgs e) => Host?.OnDecryptBrowseFile(sender, e);
     private void OnDecryptBrowseRap(object? sender, RoutedEventArgs e) => Host?.OnDecryptBrowseRap(sender, e);
     private void OnDecryptRun(object? sender, RoutedEventArgs e) => Host?.OnDecryptRun(sender, e);

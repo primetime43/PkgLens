@@ -22,6 +22,7 @@ The GUI's **Suggested** page automatically shows the actions that match the open
 - Preview unsaved replacement files with updated sizes and modified indicators; SFO details and package artwork refresh immediately, and reverting restores the originals.
 - Browse `TROPHY.TRP` sets with game artwork, trophy icons, names, descriptions, grades, hidden flags, and medal counts.
 - Extract one file, selected files, or the complete package directory tree.
+- Decrypt package contents in one operation, including pending edits: extract the tree, decrypt supported PS3 SELF/EBOOT/SPRX, EDAT/SDAT, and fixed-key PSP EDAT/PGD files, and retain locked or failed files with per-file text/JSON reports.
 - Replace package files and save a separate rebuilt package copy.
 - Review pending file changes with original and replacement sizes, and revert individual files.
 - Prompt to save, discard, or cancel before closing or opening another package with unsaved edits.

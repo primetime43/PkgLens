@@ -41,6 +41,7 @@ public enum OperationId
     KeysFolder,
     RapLibrary,
     ClassifyLibrary,
+    DecryptPackageContents,
 }
 
 public enum OperationMenu
@@ -176,6 +177,10 @@ public static class OperationCatalog
             menu: [Loc(OperationMenu.File, 1, 20, "ExtractRepack")], recommendation: PackageRecommendedAction.ExtractAll,
             batch: BatchOperation.Extract, batchLabel: "Extract every package",
             batchDescription: "Rebuilds each decrypted package directory tree under the output folder. Packages without a usable key are skipped with an actionable reason."),
+        Def(OperationId.DecryptPackageContents, "Decrypt package contents", "Extract files and decrypt supported embedded SELF, EDAT/SDAT, and PSP EDAT/PGD content.",
+            "Use installed keys and licenses, include pending edits, and save a per-file report. Locked files are retained.",
+            "_Decrypt package contents…", menuRule: OperationEligibilityRule.DecryptedPackage,
+            menu: [Loc(OperationMenu.File, 1, 25, "ExtractRepack")]),
         Def(OperationId.SavePackageAs, "Save package as", "Rebuild a separate package copy containing the current edits.",
             "Rebuild a separate package containing replacements or PARAM.SFO edits. The original remains unchanged.",
             "Save package _as…", menuRule: OperationEligibilityRule.DecryptedPackage,
