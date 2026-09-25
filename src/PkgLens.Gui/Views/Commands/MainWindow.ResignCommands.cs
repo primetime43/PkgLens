@@ -108,6 +108,7 @@ public partial class MainWindow
     internal async void OnMakeFself(object? sender, RoutedEventArgs e)
     {
         bool encrypted = FindPageControl<CheckBox>("SelfEncryptCheck")!.IsChecked == true;
+        bool sign = encrypted && FindPageControl<CheckBox>("SelfSignCheck")!.IsChecked == true;
         var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
             Title = "Choose an ELF, EBOOT.BIN, SELF or SPRX to build",
@@ -132,11 +133,21 @@ public partial class MainWindow
         }
         opts.CompressSegments = FindPageControl<CheckBox>("SelfCompressCheck")!.IsChecked == true;
         if (encrypted) opts.NpLicenseType ??= 3;
-        if (!TryHexU64(encrypted ? FindPageControl<TextBox>("SelfRevisionBox")!.Text : null, "Key revision", out var revision, out fieldError) ||
+        if (!TryHexU64(encrypted && !sign ? FindPageControl<TextBox>("SelfRevisionBox")!.Text : null, "Key revision", out var revision, out fieldError) ||
             revision > ushort.MaxValue)
         {
             ShowFselfNotes(fieldError ?? "Key revision must fit in 16 bits.");
             return;
+        }
+        if (sign)
+        {
+            if (FindPageControl<ComboBox>("SelfSigningProfileBox")!.SelectedItem is not PkgLens.Core.Ps3.Self.LegacySelfProfile profile ||
+                profile.ProgramType != (npdrm ? 8u : 4u))
+            {
+                ShowFselfNotes("Select a legacy signing profile for the selected output type.");
+                return;
+            }
+            revision = profile.Revision;
         }
         var inputKey = new EdatKeySelection(FindPageControl<TextBox>("SelfInputKeyBox")!.Text,
             FindPageControl<TextBox>("SelfInputRapBox")!.Text);
@@ -157,10 +168,11 @@ public partial class MainWindow
         await RunOperationAsync(encrypted ? "Encrypting and verifying SELF…" : "Building and verifying fSELF…", "SELF build failed", async (token, _) =>
         {
             long size = await Task.Run(() => SelfBuildService.BuildFile(input, dest, encrypted, opts,
-                (ushort)(revision ?? 0x0A), inputKey, outputKey, rapDirectory, token), token);
+                (ushort)(revision ?? 0x0A), inputKey, outputKey, rapDirectory, token, signHeader: sign), token);
             Vm.Status = $"Built and verified → {Path.GetFileName(dest)} ({size:n0} bytes).";
             ShowFselfNotes($"Saved {(npdrm ? "NPDRM" : "NON-DRM")} {(encrypted ? "encrypted SELF" : "fSELF")} to {dest}. " +
-                "The decrypted output matches the source ELF. Requires patched signature checks." +
+                "The decrypted output matches the source ELF. " +
+                (sign ? $"Legacy header signature verified (key {revision:X2}). Console compatibility is not guaranteed." : "Unsigned output requires patched signature checks.") +
                 (encrypted && npdrm ? " Keep this filename: it is included in the NPDRM hash." : ""));
         });
     }

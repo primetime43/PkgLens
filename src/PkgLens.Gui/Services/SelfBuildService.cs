@@ -12,8 +12,10 @@ internal static class SelfBuildService
 {
     internal static long BuildFile(string input, string destination, bool encrypted,
         SelfBuilder.FakeSelfOptions metadata, ushort revision, EdatKeySelection inputKey,
-        EdatKeySelection outputKey, string? rapDirectory, CancellationToken token = default)
+        EdatKeySelection outputKey, string? rapDirectory, CancellationToken token = default, bool signHeader = false)
     {
+        if (signHeader && !encrypted)
+            throw new PkgFormatException("Legacy signing requires encrypted SELF output.");
         AtomicOutput.EnsureDifferentPath(input, destination);
         token.ThrowIfCancellationRequested();
         byte[] source;
@@ -58,7 +60,7 @@ internal static class SelfBuildService
                 ? ResolveKey(m.ContentId ?? "", Path.GetFileName(destination), m.NpLicenseType ?? 3, outputKey, rapDirectory)
                 : null;
             result = EncryptedSelfBuilder.Build(elf, new()
-            { Metadata = m, KeyRevision = revision, Klicensee = key, FileName = Path.GetFileName(destination) }, token);
+            { Metadata = m, KeyRevision = revision, Klicensee = key, FileName = Path.GetFileName(destination), SignHeader = signHeader }, token);
         }
         else
         {

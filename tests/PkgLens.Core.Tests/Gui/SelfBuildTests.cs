@@ -86,6 +86,39 @@ public class SelfBuildTests
         Assert.True(page.FindControl<CheckBox>("SelfEncryptCheck")!.IsChecked);
         Assert.NotSame(page.FindControl<TextBox>("SelfInputKeyBox"), page.FindControl<TextBox>("SelfOutputKeyBox"));
         Assert.Equal("0A", page.FindControl<TextBox>("SelfRevisionBox")!.Text);
+        var signing = page.FindControl<CheckBox>("SelfSignCheck")!;
+        var profiles = page.FindControl<ComboBox>("SelfSigningProfileBox")!;
+        signing.IsChecked = true;
+        Assert.False(page.FindControl<Grid>("SelfRevisionGrid")!.IsVisible);
+        Assert.Equal(4u, Assert.IsType<LegacySelfProfile>(profiles.SelectedItem).ProgramType);
+        profiles.SelectedItem = profiles.Items.Cast<LegacySelfProfile>().First(p => p.Revision == 0);
+        page.FindControl<CheckBox>("FselfNpdrmCheck")!.IsChecked = true;
+        Assert.Equal(8u, Assert.IsType<LegacySelfProfile>(profiles.SelectedItem).ProgramType);
+        Assert.Equal(10, Assert.IsType<LegacySelfProfile>(profiles.SelectedItem).Revision);
+        Assert.Equal(4, profiles.ItemCount);
+        signing.IsChecked = false;
+        Assert.True(page.FindControl<Grid>("SelfRevisionGrid")!.IsVisible);
+        page.FindControl<CheckBox>("SelfEncryptCheck")!.IsChecked = false;
+        Assert.False(page.FindControl<Grid>("SelfRevisionGrid")!.IsVisible);
         window.Close();
+    }
+
+    [Fact]
+    public void LegacySigningIsVerifiedAndUnsupportedRequestsPreserveDestination()
+    {
+        using var fixture = new DevKlicFixture();
+        byte[] source = File.ReadAllBytes(fixture.Executable);
+        string output = Path.Combine(fixture.Root, "signed.self");
+        SelfBuildService.BuildFile(fixture.Executable, output, true, new(), 0x0A,
+            new(), new(), fixture.Raps, signHeader: true);
+        byte[] signed = File.ReadAllBytes(output);
+        Assert.Equal(SelfSignatureStatus.Valid, SelfSignature.VerifyHeader(signed));
+        Assert.Equal(source, File.ReadAllBytes(fixture.Executable));
+        Assert.Throws<PkgFormatException>(() => SelfBuildService.BuildFile(fixture.Executable, output,
+            true, new(), 0x10, new(), new(), fixture.Raps, signHeader: true));
+        Assert.Equal(signed, File.ReadAllBytes(output));
+        Assert.Throws<PkgFormatException>(() => SelfBuildService.BuildFile(fixture.Executable, output,
+            false, new(), 0x0A, new(), new(), fixture.Raps, signHeader: true));
+        Assert.Equal(signed, File.ReadAllBytes(output));
     }
 }

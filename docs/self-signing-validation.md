@@ -21,7 +21,8 @@ This establishes successful executable loading and execution, not successful gam
 ## Signature verification
 
 The external TrueAncestor key file contains nonzero private keys for several older revisions.
-PkgLens's bundled `SelfKeyset` still contains only encryption root keys and IVs.
+PkgLens's `SelfKeyset` contains only encryption root keys and IVs. At the time of this initial
+experiment, no signing catalog was bundled; the subsequent integration is described below.
 
 For the tested APP revision `0A` key, an independent Python elliptic-curve calculation verified that:
 
@@ -29,20 +30,36 @@ For the tested APP revision `0A` key, an independent Python elliptic-curve calcu
 2. Multiplying the generator by the private scalar yields the supplied public key.
 3. The public key also appears in the installed RPCS3 source's key vault.
 4. The scetool-produced ECDSA signature verifies over the SHA-1 hash of the decrypted SELF header.
-5. The current PkgLens output's zero signature fails that same check.
+5. The original unsigned PkgLens comparison's zero signature fails that same check.
 
 This is a cryptographically valid signature for a legacy SELF key. It does not mean Sony issued
 the rebuilt executable, that all firmware accepts it, or that modern signing keys are available.
 RPCS3 accepted both signed and unsigned encrypted output in this experiment, so emulator acceptance
 alone cannot distinguish a valid Sony-key signature from an unsigned rebuild.
 
-The current PkgLens builder was not changed to sign executables during this experiment. Adding a
-signing mode would require supported legacy signing-key profiles, curve handling, signature generation,
-and independent verification, while retaining explicit limitations for other revisions.
+The PkgLens builder was not changed during that initial experiment.
+
+## Integrated signer follow-up
+
+PkgLens now bundles nine published legacy signing profiles separately in `LegacySelfSigning`:
+APP `00/01/04/07/0A` and NPDRM `01/04/07/0A`. It validates each private/public pair and its curve,
+generates a header signature, and verifies the serialized encrypted output before saving.
+
+All 21 independent reference cases passed: every profile compressed and uncompressed, two additional
+LOCAL/NETWORK NPDRM cases, and the real ELF from the initial experiment. scetool recovered the exact
+source ELF in each case. A separate Python verifier checked every signature using reference key and
+curve data rather than the production signing library. The real PkgLens-signed APP `0A` output
+reached `HDD Boot Game` in RPCS3 and encountered the same missing game-data error as the baseline.
+This remains a boot-code test, not a full gameplay or console-hardware validation.
+
+The GUI exposes **Sign with a verified legacy key** and a profile selector. Unsupported revisions
+are rejected without silently emitting unsigned output. NPDRM footer signing remains unavailable.
 
 ## Local evidence
 
 The ignored `TestResults/rpcs3-signing/` folder contains the test project, signature extraction and
 verification scripts, `signature-verification.json`, original/comparison outputs, `rpc-decrypt.log`,
 and the three `*-boot.log` files. External keys, firmware, game executables, and emulator binaries
-remain local test artifacts and are not distributed with PkgLens.
+remain local test artifacts and are not distributed with PkgLens. Only the selected publicly
+documented legacy key/curve profiles are bundled with the application. Follow-up evidence is in
+`legacy-verification.json`, `verify-legacy.py`, and `pkglens-legacy-real-boot.log` in that folder.

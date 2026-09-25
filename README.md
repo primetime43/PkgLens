@@ -4,8 +4,9 @@ PkgLens is a cross-platform GUI and CLI for inspecting, extracting, decrypting, 
 rebuilding, and verifying PS3, PSP, and PS Vita packages. It also handles protected content,
 executables, disc exports, and PSARC archives.
 
-> **PkgLens never forges Sony signatures.** Rebuilt and fake-signed output targets RPCS3 or patched
-> CFW/HEN loaders, never stock retail. See [Scope](#scope).
+> **Output compatibility depends on the profile.** Rebuilt packages and unsigned/fake-signed SELF
+> output target RPCS3 or patched loaders. Verified legacy SELF header signing is available for a
+> limited set of older keys; stock retail and DEX bootability are not guaranteed. See [Scope](#scope).
 
 See the complete [`PkgLens feature list`](docs/features.md).
 
@@ -22,7 +23,8 @@ See the complete [`PkgLens feature list`](docs/features.md).
 - Encrypt and rebuild EDAT/SDAT, preview verified plaintext, and stage rebuilt files in packages.
   See [EDAT / SDAT tools](docs/edat-tools.md).
 - Build encrypted NON-DRM (APP) or NPDRM SELF/EBOOT/SPRX files, including rebuilding existing
-  executables with independent input/output keys. See [SELF building](docs/self-building.md).
+  executables with independent input/output keys and verified legacy signing profiles.
+  See [SELF building](docs/self-building.md).
 - Export PS1 Classics, PS2 Classics, PSP packages (`EBOOT.PBP`, ISO, or CSO), and structured Vita content.
 - Browse and rebuild zlib or LZMA PSARC archives while preserving their compression.
 - Audit keys/licenses, match base/update/DLC packages, find duplicates, organize libraries, and run
@@ -67,9 +69,11 @@ See [`docs/keys.md`](docs/keys.md).
 
 ## Scope
 
-Use PkgLens only with content you own. It contains public decryption keys, but no Sony private signing
-keys or per-console IDPS/EID secrets. Rebuilt packages and fake-signed executables target RPCS3 or
-patched CFW/HEN loaders; they will not pass stock retail, DEX, or OFW signature checks.
+Use PkgLens only with content you own. It contains publicly documented decryption keys and a limited
+set of published legacy APP/NPDRM signing keys, with no per-console IDPS/EID secrets. Legacy signing
+verifies the SELF header signature; it does not sign PKGs or NPDRM footers, provide modern signing
+keys, or establish stock retail/DEX/OFW compatibility. Rebuilt packages and unsigned or fake-signed
+executables still target RPCS3 or patched loaders.
 
 ## Development
 

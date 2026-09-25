@@ -7,9 +7,8 @@ decryption never downloads keys from a third-party service.
 
 ## What's built in
 
-These are universal, symmetric decryption keys. All are public and have been for over a decade,
-embedded by every PS3 package tool (RPCS3, scetool, make_npdata, and others). None is a
-private or signing key.
+The decryption keys below are publicly documented symmetric keys used by PS3 tools such as RPCS3,
+scetool, and make_npdata. A separate, limited legacy SELF signing catalog is described below.
 
 | Key | Used for | Source in code |
 |---|---|---|
@@ -23,6 +22,21 @@ private or signing key.
 
 Debug (non-finalized) packages need no key at all — their keystream is derived from the header's
 QA digest.
+
+### Legacy SELF signing
+
+`Self.LegacySelfSigning` bundles nine published legacy CEX header signing profiles: APP revisions
+`00`, `01`, `04`, `07`, `0A`, and NPDRM revisions `01`, `04`, `07`, `0A`. Unlike the symmetric keys,
+these include private ECDSA scalars and their public-key points. Key values were cross-checked against
+[RPCS3's key vault](https://github.com/RPCS3/rpcs3/blob/master/rpcs3/Crypto/key_vault.cpp); curve data
+uses the loader-curve format documented by [scetool](https://github.com/naehrwert/scetool).
+The catalog validates curve points, group membership, private/public agreement, and matching
+encryption keys before use. Signing uses Bouncy Castle with RFC 6979 nonces; no external tools or
+downloads are needed at runtime.
+
+These profiles do not supply modern keys, DEX signing, PKG signing, or NPDRM footer signing.
+Each generated SELF header signature is verified after encryption, and the recovered ELF is compared
+with the source before saving. See [SELF building](self-building.md).
 
 ## What you still supply
 

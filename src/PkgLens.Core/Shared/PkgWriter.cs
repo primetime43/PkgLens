@@ -9,7 +9,7 @@ namespace PkgLens.Core.Shared;
 
 /// <summary>
 /// Rebuilds ("repacks") a package to a new stream, optionally replacing the data of individual
-/// entries. The header CMAC and ECDSA signature are <b>not</b> recomputed — PkgLens never forges
+/// entries. The header CMAC and ECDSA signature are <b>not</b> recomputed — this writer does not create
 /// signatures — so a repacked <em>retail</em> package is unsigned and will not pass integrity
 /// checks or install on a stock console.
 ///

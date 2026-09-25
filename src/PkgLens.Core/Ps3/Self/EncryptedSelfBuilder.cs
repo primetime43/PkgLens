@@ -8,7 +8,7 @@ namespace PkgLens.Core.Ps3.Self;
 
 /// <summary>
 /// Writes encrypted PPU APP/NPDRM SELF containers. Encryption and authentication hashes are real;
-/// ECDSA signature fields are deliberately zero. Requires a loader with signature checks patched.
+/// Supports optional verified legacy ECDSA header signing. Unsigned output requires patched checks.
 /// </summary>
 public static class EncryptedSelfBuilder
 {
@@ -17,6 +17,8 @@ public static class EncryptedSelfBuilder
         public SelfBuilder.FakeSelfOptions Metadata { get; init; } = new();
         public ushort KeyRevision { get; init; } = 0x0A;
         public byte[]? Klicensee { get; init; }
+        /// <summary>Require a supported legacy profile and verify the signature before returning.</summary>
+        public bool SignHeader { get; init; }
         /// <summary>Final basename, including case, for the NPDRM filename authentication hash.</summary>
         public string FileName { get; init; } = "EBOOT.BIN";
     }
@@ -37,6 +39,8 @@ public static class EncryptedSelfBuilder
         ArgumentNullException.ThrowIfNull(options);
         var m = options.Metadata ?? throw new ArgumentException("SELF metadata is required.");
         uint programType = m.Npdrm ? 8u : 4u;
+        if (options.SignHeader && !LegacySelfSigning.IsSupported(programType, options.KeyRevision))
+            throw new PkgFormatException($"No legacy signing key for {(m.Npdrm ? "NPDRM" : "APP")} revision {options.KeyRevision:X2}. Choose a supported legacy profile; unsigned fallback is never automatic.");
         if (m.ProgramType is not null && m.ProgramType != programType)
             throw new PkgFormatException("Encrypted output supports only APP and NPDRM profiles.");
         var root = SelfKeyset.Find(programType, options.KeyRevision)
@@ -185,6 +189,9 @@ public static class EncryptedSelfBuilder
         W32(optional, 1); W32(optional + 4, 0x30);
         W64(optional + 32, m.Npdrm ? 0x3Bu : 0x7Bu); W32(optional + 40, 1);
         W32(optional + 44, m.Npdrm ? 0x2000u : 0x20000u);
+        if (options.SignHeader)
+            LegacySelfSigning.SignHash(programType, options.KeyRevision,
+                SHA1.HashData(output.AsSpan(0, signature))).CopyTo(output, signature);
         Ctr(output.AsSpan(metaInfo, 16), output.AsSpan(metaInfo + 32, 16), output.AsSpan(meta, headerLength - meta));
         using var aes = Aes.Create();
         aes.Key = root.Erk;
@@ -196,6 +203,8 @@ public static class EncryptedSelfBuilder
             aes.EncryptCbc(output.AsSpan(metaInfo, 64), new byte[16], PaddingMode.None).CopyTo(output, metaInfo);
         }
         cancellationToken.ThrowIfCancellationRequested();
+        if (options.SignHeader && SelfSignature.VerifyHeader(output, klic) != SelfSignatureStatus.Valid)
+            throw new PkgFormatException("Encrypted SELF header signature failed verification.");
         if (!SelfDecryptor.Decrypt(output, klic).Elf.AsSpan().SequenceEqual(elf))
             throw new PkgFormatException("Encrypted SELF verification failed: recovered ELF differs from the source.");
         return output;
@@ -211,7 +220,7 @@ public static class EncryptedSelfBuilder
     private static ushort U16(byte[] b, int p) => BinaryPrimitives.ReadUInt16BigEndian(b.AsSpan(p));
     private static uint U32(byte[] b, int p) => BinaryPrimitives.ReadUInt32BigEndian(b.AsSpan(p));
     private static ulong U64(byte[] b, int p) => BinaryPrimitives.ReadUInt64BigEndian(b.AsSpan(p));
-    private static void Ctr(ReadOnlySpan<byte> key, ReadOnlySpan<byte> iv, Span<byte> data)
+    internal static void Ctr(ReadOnlySpan<byte> key, ReadOnlySpan<byte> iv, Span<byte> data)
     {
         using var aes = Aes.Create(); aes.Key = key.ToArray();
         Span<byte> counter = stackalloc byte[16]; iv.CopyTo(counter);

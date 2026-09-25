@@ -41,7 +41,8 @@ The GUI's **Suggested** page automatically shows the actions that match the open
 - Fake-sign ELF files as compressed CFW-ready SELF files.
 - [Build and rebuild encrypted APP / NPDRM SELF files](self-building.md) with bundled key revisions,
   optional segment compression, FREE/LOCAL/NETWORK licensing, separate source/output keys, and
-  exact ELF round-trip verification before saving. ECDSA signatures remain unset; patched loaders only.
+  exact ELF round-trip verification before saving. Optional legacy CEX profiles add verified ECDSA
+  header signatures for APP keys 00/01/04/07/0A and NPDRM keys 01/04/07/0A.
 - Analyze every executable in a package or folder for its highest firmware requirement.
 - Lower verified firmware requirements when the executable supports safe patching.
 - Apply explicit hex find/replace and offset-based byte patches.

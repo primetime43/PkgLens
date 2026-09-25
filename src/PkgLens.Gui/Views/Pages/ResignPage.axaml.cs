@@ -2,12 +2,38 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
+using Avalonia.Controls.Primitives;
+using System.Linq;
+using PkgLens.Core.Ps3.Self;
 
 namespace PkgLens.Gui.Views.Pages;
 
 public partial class ResignPage : UserControl
 {
-    public ResignPage() => AvaloniaXamlLoader.Load(this);
+    public ResignPage()
+    {
+        AvaloniaXamlLoader.Load(this);
+        UpdateSigningProfiles();
+        foreach (string name in new[] { "FselfNpdrmCheck", "SelfEncryptCheck", "SelfSignCheck" })
+            this.FindControl<CheckBox>(name)!.PropertyChanged += (_, e) =>
+            {
+                if (e.Property == ToggleButton.IsCheckedProperty) UpdateSigningProfiles();
+            };
+    }
+
+    private void UpdateSigningProfiles()
+    {
+        bool npdrm = this.FindControl<CheckBox>("FselfNpdrmCheck")!.IsChecked == true;
+        bool encrypted = this.FindControl<CheckBox>("SelfEncryptCheck")!.IsChecked == true;
+        bool sign = this.FindControl<CheckBox>("SelfSignCheck")!.IsChecked == true;
+        var box = this.FindControl<ComboBox>("SelfSigningProfileBox")!;
+        ushort revision = (box.SelectedItem as LegacySelfProfile)?.Revision ?? 0x0A;
+        var profiles = LegacySelfSigning.Profiles(npdrm);
+        box.ItemsSource = profiles;
+        box.SelectedItem = profiles.FirstOrDefault(p => p.Revision == revision)
+            ?? profiles.First(p => p.Revision == 0x0A);
+        this.FindControl<Grid>("SelfRevisionGrid")!.IsVisible = encrypted && !sign;
+    }
 
     private MainWindow? Host => TopLevel.GetTopLevel(this) as MainWindow;
 

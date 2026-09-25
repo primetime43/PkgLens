@@ -14,7 +14,7 @@
                Text="A modern, cross-platform, testable rewrite of the classic PS3 .pkg inspector. It parses and inspects package structure and extracts content you own, and can pack, repack, decrypt EDAT/SDAT, inspect and fake-sign SELF/EBOOT files, and magic-patch executables for jailbroken (CFW) consoles." />
 
     <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.7"
-               Text="Ships only public decryption keys — it never forges Sony signatures, so repacked or fake-signed output runs on CFW consoles only, never on stock retail. Not affiliated with Sony." />
+               Text="Includes publicly documented decryption keys and selected legacy SELF signing profiles. Legacy header signatures are verified; stock retail and DEX compatibility are not guaranteed. Repacked packages and unsigned executables require compatible patched loaders. Not affiliated with Sony." />
 
     <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,4,0,0">
       <TextBlock Text="Repository:" FontSize="12" Opacity="0.7" VerticalAlignment="Center" />

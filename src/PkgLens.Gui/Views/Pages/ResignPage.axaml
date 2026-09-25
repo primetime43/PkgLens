@@ -54,7 +54,7 @@
                 <materialIcons:MaterialIcon Grid.Column="0" Kind="DrawPen" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="1,0,0,0" />
                 <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
                   <TextBlock Classes="rowtitle" Text="Build / rebuild SELF" />
-                  <TextBlock Classes="carddesc" TextWrapping="Wrap" Text="Create encrypted NON-DRM / NPDRM output, or a fake-signed SELF." />
+                  <TextBlock Classes="carddesc" TextWrapping="Wrap" Text="Build encrypted or fake-signed output, with verified legacy signing profiles." />
                 </StackPanel>
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                   <Border Classes="chip"><TextBlock Text="EBOOT" /></Border>
@@ -126,7 +126,7 @@
         <StackPanel x:Name="ResignOpFakeSign" IsVisible="False" Spacing="10">
           <TextBlock Text="Build / rebuild SELF" FontWeight="SemiBold" FontSize="14" />
           <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.75"
-                     Text="Start from an ELF or an existing SELF, EBOOT.BIN, or SPRX. Save a separate copy, verified by decrypting it back to the original ELF. Both output modes require patched signature checks; they do not create Sony-signed files." />
+                     Text="Start from an ELF or an existing SELF, EBOOT.BIN, or SPRX. Save a separate copy, verified by decrypting it back to the original ELF. Optional legacy signing adds a verified header signature." />
           <WrapPanel Orientation="Horizontal">
             <CheckBox x:Name="SelfEncryptCheck" Content="Encrypt output" IsChecked="True" Margin="0,0,20,0" />
             <CheckBox x:Name="SelfCompressCheck" Content="Compress segments" IsChecked="True" Margin="0,0,20,0" />
@@ -134,6 +134,14 @@
           </WrapPanel>
           <TextBlock Classes="carddesc" TextWrapping="Wrap"
                      Text="Leave NPDRM off for NON-DRM (APP). Turn encryption off for a debug fSELF. For an existing SELF, blank advanced fields retain its authentication, vendor, version, and control values." />
+          <StackPanel Spacing="8" IsVisible="{Binding #SelfEncryptCheck.IsChecked}">
+            <CheckBox x:Name="SelfSignCheck" Content="Sign with a verified legacy key" />
+            <StackPanel Spacing="6" IsVisible="{Binding #SelfSignCheck.IsChecked}">
+              <ComboBox x:Name="SelfSigningProfileBox" HorizontalAlignment="Stretch" />
+              <TextBlock Classes="carddesc" TextWrapping="Wrap"
+                         Text="This profile selects the header signing key and encryption revision. Signatures are verified before saving. Legacy signing does not guarantee stock firmware or DEX support; NPDRM footer signing is not included." />
+            </StackPanel>
+          </StackPanel>
           <StackPanel Spacing="8" IsVisible="{Binding #FselfNpdrmCheck.IsChecked}">
             <TextBlock Text="NPDRM content" FontWeight="SemiBold" />
             <TextBox x:Name="FselfContentIdBox" Watermark="Content ID (blank = keep the input SELF content ID)" />
@@ -147,7 +155,7 @@
           </StackPanel>
           <Expander Header="Keys and encryption settings">
             <StackPanel Spacing="8" Margin="0,6">
-              <Grid ColumnDefinitions="110,12,*" IsVisible="{Binding #SelfEncryptCheck.IsChecked}">
+              <Grid x:Name="SelfRevisionGrid" ColumnDefinitions="110,12,*">
                 <TextBlock Text="Key revision" VerticalAlignment="Center" />
                 <TextBox Grid.Column="2" x:Name="SelfRevisionBox" Text="0A" Watermark="Hex, e.g. 0A"
                          ToolTip.Tip="Select a bundled APP or NPDRM encryption key revision. Unknown revisions are rejected before saving." />

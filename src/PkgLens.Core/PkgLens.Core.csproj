@@ -12,9 +12,14 @@
 
   <ItemGroup>
     <PackageReference Include="SharpCompress" Version="0.50.0" />
+    <PackageReference Include="BouncyCastle.Cryptography" Version="2.6.2" />
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="Ps3\Self\legacy-signing-profiles.json"
+                      LogicalName="PkgLens.Core.legacy-signing-profiles.json" />
+    <None Update="licenses\BouncyCastle-LICENSE.md" CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
     <EmbeddedResource Include="Ps3\Npd\known-klicensees.txt"
                       LogicalName="PkgLens.Core.known-klicensees.txt" />
   </ItemGroup>
