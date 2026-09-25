@@ -1,0 +1,78 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="PkgLens.Gui.Views.SelfFolderDialog" x:CompileBindings="False"
+        Title="Process a folder of executables" Width="1120" Height="740"
+        MinWidth="860" MinHeight="650" WindowStartupLocation="CenterOwner">
+  <DockPanel Margin="20">
+    <ScrollViewer DockPanel.Dock="Top" MaxHeight="360" Margin="0,0,0,12"
+                  HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+    <StackPanel Spacing="10">
+      <TextBlock Text="Process a folder of executables" FontSize="23" FontWeight="SemiBold" />
+      <TextBlock Text="SELF, EBOOT.BIN, SPRX and ELF files · separate outputs, same folder structure"
+                 Opacity="0.7" TextWrapping="Wrap" />
+      <StackPanel x:Name="SetupPanel" Spacing="10">
+        <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="10" RowSpacing="8">
+          <Button Content="Source folder…" Click="OnChooseSource" />
+          <TextBox x:Name="SourceBox" Grid.Column="1" Watermark="Folder containing executables" TextChanged="OnSettingsChanged" />
+          <Button Grid.Row="1" Content="Output folder…" Click="OnChooseOutput" />
+          <TextBox x:Name="OutputBox" Grid.Row="1" Grid.Column="1" Watermark="Choose a separate folder" TextChanged="OnSettingsChanged" />
+        </Grid>
+        <WrapPanel>
+          <StackPanel Spacing="4" Margin="0,0,18,0">
+            <TextBlock Text="Operation" FontSize="12" />
+            <ComboBox x:Name="OperationBox" Width="225" SelectionChanged="OnOperationChanged" />
+          </StackPanel>
+          <StackPanel x:Name="RevisionPanel" Spacing="4" Margin="0,0,18,0">
+            <TextBlock Text="Key revision (hex)" FontSize="12" />
+            <TextBox x:Name="RevisionBox" Text="0A" Width="115" TextChanged="OnSettingsChanged"
+                     ToolTip.Tip="Legacy signing: 01, 04, 07 or 0A for APP and NPDRM; 00 for APP only." />
+          </StackPanel>
+          <CheckBox x:Name="CompressCheck" Content="Compress" IsChecked="True" Margin="0,18,18,0" />
+          <CheckBox x:Name="RecursiveCheck" Content="Include subfolders" IsChecked="True" Margin="0,18,0,0" />
+        </WrapPanel>
+        <TextBlock x:Name="OperationDescription" TextWrapping="Wrap" FontSize="12" Opacity="0.8" />
+      </StackPanel>
+      <Expander x:Name="KeysPanel" Header="Keys and licenses" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+        <StackPanel Spacing="8">
+          <TextBlock Text="Matching saved keys and RAPs are resolved for each file automatically. Free NPDRM uses its standard key."
+                     TextWrapping="Wrap" FontSize="12" />
+          <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+            <Button Content="RAP folder…" Click="OnChooseRaps" />
+            <TextBox x:Name="RapBox" Grid.Column="1" Watermark="Configured RAP library (optional override)" />
+          </Grid>
+          <TextBox x:Name="KeyBox" Watermark="Optional klicensee override: 32 hex characters, applies to every file"
+                   MaxLength="32" />
+        </StackPanel>
+      </Expander>
+      <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+        <Button x:Name="ScanButton" Content="Scan folder" Click="OnScan" />
+        <TextBlock Grid.Column="1" Text="Originals and existing outputs are kept. Linked folders are excluded."
+                   VerticalAlignment="Center" FontSize="12" Opacity="0.65" TextWrapping="Wrap" />
+      </Grid>
+    </StackPanel>
+    </ScrollViewer>
+    <StackPanel DockPanel.Dock="Bottom" Spacing="8" Margin="0,10,0,0">
+      <TextBox x:Name="DetailText" IsReadOnly="True" TextWrapping="Wrap" MinHeight="50" MaxHeight="80"
+               Watermark="Select a file to see its full result and output path." />
+      <TextBlock x:Name="StatusText" Text="Choose folders and scan to preview the files and output names." TextWrapping="Wrap" />
+      <ProgressBar x:Name="Progress" Minimum="0" Maximum="100" Height="4" IsVisible="False" />
+      <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+        <Button x:Name="RetryButton" Content="Retry failed" IsEnabled="False" Click="OnRetry" />
+        <Button x:Name="RunButton" Content="Start / resume" Classes="primary" IsEnabled="False" Click="OnRun" />
+        <Button x:Name="CancelButton" Content="Cancel" IsVisible="False" Click="OnCancel" />
+        <Button x:Name="OpenOutputButton" Content="Open output folder" IsEnabled="False" Click="OnOpenOutput" />
+        <Button Content="Close" Click="OnClose" />
+      </StackPanel>
+    </StackPanel>
+    <DataGrid x:Name="JobsGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserResizeColumns="True"
+              GridLinesVisibility="Horizontal" SelectionChanged="OnSelectionChanged">
+      <DataGrid.Columns>
+        <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="90" />
+        <DataGridTextColumn Header="File" Binding="{Binding RelativePath}" Width="2*" />
+        <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="115" />
+        <DataGridTextColumn Header="Result" Binding="{Binding Message}" Width="3*" />
+        <DataGridTextColumn Header="Output" Binding="{Binding OutputName}" Width="2*" />
+      </DataGrid.Columns>
+    </DataGrid>
+  </DockPanel>
+</Window>

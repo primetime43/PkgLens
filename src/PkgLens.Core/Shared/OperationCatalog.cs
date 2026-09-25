@@ -45,6 +45,7 @@ public enum OperationId
     EdatTools,
     DiscoverDevKlic,
     PackageKeyCoverage,
+    SelfFolderTools,
 }
 
 public enum OperationMenu
@@ -187,6 +188,9 @@ public static class OperationCatalog
         Def(OperationId.EdatTools, "EDAT / SDAT tools", "Decrypt, encrypt, quick rebuild, or custom rebuild PS3 EDAT/SDAT files.",
             "Build verified EDAT/SDAT copies from plaintext or rebuild protected files with optional replacement content.",
             "_EDAT / SDAT tools…", menu: [Loc(OperationMenu.Tools, 0, 15)]),
+        Def(OperationId.SelfFolderTools, "Process executables in a folder", "Decrypt, rebuild, fake-sign or legacy-sign a folder of PS3 executables.",
+            "Resolve keys per file, verify outputs and keep originals in a separate folder.",
+            "Process _executables in a folder…", menu: [Loc(OperationMenu.Tools, 1, 25, "LibraryBatch")]),
         Def(OperationId.DiscoverDevKlic, "Find key in executable", "Find and verify an EDAT klicensee in a PS3 executable.",
             "Search decrypted executable data and save only keys verified against the selected EDAT.",
             "Find _key in executable…", menu: [Loc(OperationMenu.Tools, 0, 16)]),

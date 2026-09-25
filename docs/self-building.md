@@ -34,6 +34,32 @@ Unsupported key revisions, missing licenses, malformed ELF layouts, and layouts 
 would lose data fail without replacing the destination. Input files are limited to 128 MiB, with a
 256 MiB limit on combined segment payloads. Only 64-bit big-endian PPU APP and NPDRM output is supported.
 
+## Folder processing
+
+Open **SELF / EBOOT → Process a folder of executables**, or **Tools → Library and batch →
+Process executables in a folder**. Choose source and output folders, choose an operation, then
+**Scan folder** to preview individual files and output names before starting.
+
+- Scan includes `EBOOT.BIN`, `.self`, `.sprx`, and `.elf`, with optional subfolder traversal.
+  Source and output folders must be separate, with neither inside the other. Linked files and
+  subfolders are excluded; linked source/output roots are rejected.
+- **Decrypt to ELF** appends `.elf` to the original filename to avoid collisions between SELF and
+  SPRX names. Existing plaintext ELFs are skipped. Recovered ELFs undergo structural/round-trip
+  validation; this does not authenticate the original SELF's signature or every input section hash.
+- **Rebuild encrypted SELF**, **Build fake-signed SELF**, and **Legacy CEX signing** preserve the
+  source's APP/NPDRM type, content ID, license type and executable metadata. Plain ELF inputs become
+  APP outputs named `<original>.elf.self`. SELF filenames and relative subfolders are retained.
+  Compression and the output key revision are selectable. Each rebuilt output is decrypted back to
+  the original ELF for an exact comparison; legacy signing additionally verifies the header signature.
+- Saved keys and RAPs are resolved independently for each file. **Keys and licenses** allows a RAP
+  folder override or a raw klicensee override that applies to every file. No RAP is installed implicitly.
+- Originals and existing output files are never replaced. Outputs are published atomically only
+  after verification. Naming collisions, missing keys, malformed files and unsupported profiles appear
+  as individual errors; other eligible files can still complete. Select a row for the full result.
+- **Cancel** stops at the next cancellation checkpoint, preserving completed outputs. **Start / resume**
+  processes unfinished files. After supplying missing keys, **Retry failed** retries failed files only.
+  The job list lasts for the current dialog; scanning again refreshes it and skips existing outputs.
+
 ## Compatibility and verification
 
 Encryption, authentication hashes, and selected legacy ECDSA header signatures are implemented.

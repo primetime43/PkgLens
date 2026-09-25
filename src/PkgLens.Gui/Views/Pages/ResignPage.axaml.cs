@@ -40,6 +40,7 @@ public partial class ResignPage : UserControl
     private void OnBytePatch(object? sender, RoutedEventArgs e) => Host?.OnBytePatch(sender, e);
     private void OnMagicPatch(object? sender, RoutedEventArgs e) => Host?.OnMagicPatch(sender, e);
     private void OnMakeFself(object? sender, RoutedEventArgs e) => Host?.OnMakeFself(sender, e);
+    private void OnSelfFolderClick(object? sender, RoutedEventArgs e) => Host?.OnSelfFolderClick(sender, e);
     private void OnBuildSelfPickRap(object? sender, RoutedEventArgs e) => Host?.OnBuildSelfPickRap(sender, e);
     private void OnPickRap(object? sender, RoutedEventArgs e) => Host?.OnPickRap(sender, e);
     private void OnResignBack(object? sender, RoutedEventArgs e) => Host?.OnResignBack(sender, e);

@@ -91,6 +91,7 @@ public partial class MainWindow
             case OperationId.ExtractAll: OnExtractAllClick(sender, e); break;
             case OperationId.DecryptPackageContents: OnDecryptPackageContentsClick(sender, e); break;
             case OperationId.EdatTools: OnEdatToolsClick(sender, e); break;
+            case OperationId.SelfFolderTools: OnSelfFolderClick(sender, e); break;
             case OperationId.DiscoverDevKlic: OnDiscoverDevKlic(sender, e); break;
             case OperationId.PackageKeyCoverage: OnPackageKeyCoverage(sender, e); break;
             case OperationId.SavePackageAs: OnSaveAsClick(sender, e); break;

@@ -12,7 +12,8 @@ internal static class SelfBuildService
 {
     internal static long BuildFile(string input, string destination, bool encrypted,
         SelfBuilder.FakeSelfOptions metadata, ushort revision, EdatKeySelection inputKey,
-        EdatKeySelection outputKey, string? rapDirectory, CancellationToken token = default, bool signHeader = false)
+        EdatKeySelection outputKey, string? rapDirectory, CancellationToken token = default, bool signHeader = false,
+        bool overwrite = true)
     {
         if (signHeader && !encrypted)
             throw new PkgFormatException("Legacy signing requires encrypted SELF output.");
@@ -69,8 +70,31 @@ internal static class SelfBuildService
                 throw new PkgFormatException("fSELF verification failed: recovered ELF differs from the source.");
         }
         token.ThrowIfCancellationRequested();
-        AtomicOutput.Write(destination, stream => { stream.Write(result); token.ThrowIfCancellationRequested(); });
+        AtomicOutput.Write(destination, stream => { stream.Write(result); token.ThrowIfCancellationRequested(); }, overwrite);
         return result.LongLength;
+    }
+
+    internal static long DecryptFile(string input, string destination, EdatKeySelection selection,
+        string? rapDirectory, CancellationToken token = default, bool overwrite = true)
+    {
+        AtomicOutput.EnsureDifferentPath(input, destination);
+        token.ThrowIfCancellationRequested();
+        using var file = File.OpenRead(input);
+        if (file.Length > 128 * 1024 * 1024)
+            throw new PkgFormatException("SELF decryption supports inputs up to 128 MiB.");
+        byte[] source = new byte[(int)file.Length];
+        file.ReadExactly(source);
+        SelfInfo info = SelfReader.ParseInfo(new MemoryStream(source));
+        byte[]? key = info.KeyRevision is not 0x8000 and not 0xC000 && info.Npdrm is { } np
+            ? ResolveKey(np.ContentId, Path.GetFileName(input), np.RawLicenseType, selection, rapDirectory) : null;
+        byte[] elf = SelfDecryptor.Decrypt(source, key).Elf;
+        // Validate the recovered ELF with the existing builder/parser before publishing it.
+        byte[] check = SelfBuilder.MakeFakeSelf(elf, npdrm: false);
+        if (!SelfDecryptor.Decrypt(check).Elf.AsSpan().SequenceEqual(elf))
+            throw new PkgFormatException("Recovered ELF validation failed.");
+        token.ThrowIfCancellationRequested();
+        AtomicOutput.Write(destination, stream => { stream.Write(elf); token.ThrowIfCancellationRequested(); }, overwrite);
+        return elf.LongLength;
     }
 
     private static byte[]? ResolveKey(string contentId, string fileName, uint license,
