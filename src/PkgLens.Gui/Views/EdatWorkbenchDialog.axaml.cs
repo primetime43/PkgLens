@@ -178,6 +178,23 @@ public partial class EdatWorkbenchDialog : Window
     private void OnClearInputRap(object? sender, RoutedEventArgs e) { _inputRap = null; C<TextBlock>("InputRapName").Text = "Automatic key / license lookup"; Invalidate(); }
     private void OnClearOutputRap(object? sender, RoutedEventArgs e) { _outputRap = null; C<TextBlock>("OutputRapName").Text = "Automatic key / license lookup"; Invalidate(); }
 
+    private async void OnDiscoverKey(object? sender, RoutedEventArgs e)
+    {
+        if (_cancellation is not null) return;
+        if (_source is null) { C<TextBlock>("KeyCheckStatus").Text = "Choose the target EDAT first."; return; }
+        var dialog = new DevKlicDiscoveryDialog(_rapDirectory);
+        dialog.SetTarget(_source, locked: true);
+        if (await dialog.ShowDialog<bool>(this))
+        {
+            _inputRap = null;
+            C<TextBox>("InputRawKey").Text = "";
+            C<TextBlock>("InputRapName").Text = "Using saved key from local database";
+            // Let queued text-change invalidation finish before the new verification result.
+            await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => { }, Avalonia.Threading.DispatcherPriority.Background);
+            await CheckKeyAsync();
+        }
+    }
+
     private async void OnCheckKey(object? sender, RoutedEventArgs e) => await CheckKeyAsync();
     internal async Task CheckKeyAsync()
     {

@@ -7,8 +7,17 @@ namespace PkgLens.Gui.Views;
 
 public partial class MainWindow
 {
-    internal async void OnEdatToolsClick(object? sender, RoutedEventArgs e) =>
+    internal async void OnDiscoverDevKlic(object? sender, RoutedEventArgs e)
+    {
+        if (await new DevKlicDiscoveryDialog(Vm.RapDirectory).ShowDialog<bool>(this))
+        { Vm.RefreshKlicenseeStatus(); Vm.Status = "Saved confirmed EDAT key to the local klicensee database."; }
+    }
+
+    internal async void OnEdatToolsClick(object? sender, RoutedEventArgs e)
+    {
         await new EdatWorkbenchDialog(Vm.RapDirectory).ShowDialog(this);
+        Vm.RefreshKlicenseeStatus();
+    }
 
     internal async void OnRebuildSelectedEdat(object? sender, RoutedEventArgs e)
     {

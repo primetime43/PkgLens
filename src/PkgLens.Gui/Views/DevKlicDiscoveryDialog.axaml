@@ -1,0 +1,55 @@
+<Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="PkgLens.Gui.Views.DevKlicDiscoveryDialog" Title="Find key in executable"
+        Width="720" Height="630" MinWidth="540" MinHeight="460" WindowStartupLocation="CenterOwner">
+  <Grid Margin="20" RowDefinitions="Auto,*,Auto,Auto">
+    <StackPanel Spacing="6" Margin="0,0,0,16">
+      <TextBlock Text="Find key in executable" FontSize="22" FontWeight="SemiBold" />
+      <TextBlock Text="Search a PS3 EBOOT, SELF, SPRX, or decrypted ELF for a key that opens your EDAT."
+                 TextWrapping="Wrap" />
+    </StackPanel>
+    <ScrollViewer Grid.Row="1">
+      <StackPanel Spacing="16" Margin="0,0,8,0">
+        <StackPanel x:Name="Inputs" Spacing="12">
+          <TextBlock Text="1. EDAT to unlock" FontWeight="SemiBold" />
+          <Grid ColumnDefinitions="Auto,*">
+            <Button x:Name="ChooseTarget" Content="Choose EDAT…" Click="OnChooseTarget" />
+            <TextBlock x:Name="TargetName" Grid.Column="1" Text="No EDAT selected" Margin="12,0,0,0" TextWrapping="Wrap" VerticalAlignment="Center" />
+          </Grid>
+          <TextBlock Text="2. Executable from the same game" FontWeight="SemiBold" />
+          <Grid ColumnDefinitions="Auto,*">
+            <Button Content="Choose executable…" Click="OnChooseExecutable" />
+            <TextBlock x:Name="ExecutableName" Grid.Column="1" Text="No executable selected" Margin="12,0,0,0" TextWrapping="Wrap" VerticalAlignment="Center" />
+          </Grid>
+          <Expander Header="Executable decryption key (if needed)">
+            <StackPanel Spacing="8">
+              <TextBlock Text="Available keys and installed RAPs are checked automatically. If this executable needs a separate key, provide it here. This is the key for the executable, not the EDAT being searched."
+                         TextWrapping="Wrap" />
+              <TextBox x:Name="ExecutableKey" PasswordChar="●" Watermark="Optional raw klicensee (32 hexadecimal characters)" TextChanged="OnSettingsChanged" />
+              <Grid ColumnDefinitions="Auto,*,Auto">
+                <Button Content="Select RAP…" Click="OnChooseRap" />
+                <TextBlock x:Name="RapName" Text="Automatic lookup" Grid.Column="1" Margin="12,0" TextWrapping="Wrap" VerticalAlignment="Center" />
+                <Button Content="Clear" Grid.Column="2" Click="OnClearRap" />
+              </Grid>
+            </StackPanel>
+          </Expander>
+          <TextBlock Text="Searches raw 16-byte values at every offset and 32-character hex strings. Keys assembled at runtime may not be found. Executables up to 64 MiB are supported; large searches can take several minutes."
+                     TextWrapping="Wrap" Opacity="0.75" />
+        </StackPanel>
+        <Border BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="1" CornerRadius="6" Padding="12">
+          <TextBlock x:Name="ResultText" Text="Choose both files, then start the search. A key must pass full EDAT verification before it can be saved."
+                     TextWrapping="Wrap" />
+        </Border>
+      </StackPanel>
+    </ScrollViewer>
+    <StackPanel Grid.Row="2" Spacing="8" Margin="0,12">
+      <ProgressBar x:Name="SearchProgress" IsVisible="False" Height="4" />
+      <TextBlock x:Name="Status" Text="No files or keys have been changed." TextWrapping="Wrap" />
+    </StackPanel>
+    <WrapPanel Grid.Row="3">
+      <Button x:Name="SearchButton" Content="Find and verify key" Classes="primary" Click="OnSearch" Margin="0,0,8,8" />
+      <Button x:Name="SaveKeyButton" Content="Save confirmed key" IsEnabled="False" Click="OnSave" Margin="0,0,8,8" />
+      <Button x:Name="CancelButton" Content="Cancel" IsVisible="False" Click="OnCancel" Margin="0,0,8,8" />
+      <Button x:Name="CloseButton" Content="Close" Click="OnClose" Margin="0,0,8,8" />
+    </WrapPanel>
+  </Grid>
+</Window>

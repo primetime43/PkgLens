@@ -38,7 +38,10 @@
             <TextBlock Grid.Column="1" x:Name="InputRapName" Text="Automatic key / license lookup" Margin="10,0" TextWrapping="Wrap" VerticalAlignment="Center" />
             <Button Grid.Column="2" Content="Clear" Click="OnClearInputRap" />
           </Grid>
-          <Button x:Name="CheckKeyButton" Content="Check key and file" Click="OnCheckKey" />
+          <WrapPanel>
+            <Button x:Name="CheckKeyButton" Content="Check key and file" Click="OnCheckKey" Margin="0,0,8,0" />
+            <Button Content="Find key in executable…" Click="OnDiscoverKey" />
+          </WrapPanel>
           <TextBlock x:Name="KeyCheckStatus" Text="Check which key works before decrypting or rebuilding. No plaintext is saved."
                      TextWrapping="Wrap" />
         </StackPanel>

@@ -43,6 +43,7 @@ public enum OperationId
     ClassifyLibrary,
     DecryptPackageContents,
     EdatTools,
+    DiscoverDevKlic,
 }
 
 public enum OperationMenu
@@ -185,6 +186,9 @@ public static class OperationCatalog
         Def(OperationId.EdatTools, "EDAT / SDAT tools", "Decrypt, encrypt, quick rebuild, or custom rebuild PS3 EDAT/SDAT files.",
             "Build verified EDAT/SDAT copies from plaintext or rebuild protected files with optional replacement content.",
             "_EDAT / SDAT tools…", menu: [Loc(OperationMenu.Tools, 0, 15)]),
+        Def(OperationId.DiscoverDevKlic, "Find key in executable", "Find and verify an EDAT klicensee in a PS3 executable.",
+            "Search decrypted executable data and save only keys verified against the selected EDAT.",
+            "Find _key in executable…", menu: [Loc(OperationMenu.Tools, 0, 16)]),
         Def(OperationId.SavePackageAs, "Save package as", "Rebuild a separate package copy containing the current edits.",
             "Rebuild a separate package containing replacements or PARAM.SFO edits. The original remains unchanged.",
             "Save package _as…", menuRule: OperationEligibilityRule.DecryptedPackage,

@@ -57,7 +57,8 @@ All rebuilt output is uncompressed, including when the original used compression
 the NPD identity and validity fields but normalizes the block layout. Sony ECDSA signatures are not generated;
 output is intended for compatible CFW/HEN or emulator workflows.
 
-This pass covers the four main operations. Unlock-EDAT generation and DevKlic search/extraction are not included.
+The tools cover the four main operations and [executable key discovery](devklic-discovery.md).
+Unlock-EDAT generation is not included.
 The tools are implemented in managed .NET and do not require Java or the external reference executable.
 
 Format references: [PS3 EDAT files](https://www.psdevwiki.com/ps3/EDAT_files),
