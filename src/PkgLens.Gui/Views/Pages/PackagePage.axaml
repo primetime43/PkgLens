@@ -134,8 +134,19 @@
               </DataGridTemplateColumn>
               <DataGridTextColumn Header="Path" Binding="{Binding FullPath}"
                                   SortMemberPath="FullPath" Width="2*" MinWidth="120" />
-              <DataGridTextColumn Header="Size" Binding="{Binding SizeDisplay}"
-                                  SortMemberPath="Size" Width="130" MinWidth="80" />
+              <DataGridTemplateColumn Header="Size" SortMemberPath="Size" Width="150" MinWidth="150">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate x:DataType="vm:EntryNode">
+                    <Grid ColumnDefinitions="*,Auto" Margin="6,0">
+                      <TextBlock Text="{Binding SizeDisplay}" VerticalAlignment="Center" />
+                      <Border Grid.Column="1" IsVisible="{Binding IsModified}" Classes="chip" Margin="6,0,0,0"
+                              VerticalAlignment="Center" ToolTip.Tip="Preview includes unsaved changes">
+                        <TextBlock Text="Modified" />
+                      </Border>
+                    </Grid>
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
             </DataGrid.Columns>
           </DataGrid>
   

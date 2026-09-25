@@ -117,11 +117,14 @@
                 IsVisible="{Binding Package.HasPendingChanges, FallbackValue=False}"
                 Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
                 BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="0,0,0,1">
-          <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+          <Grid ColumnDefinitions="*,Auto,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="8">
             <TextBlock Text="{Binding Package.PendingChangesSummary}" FontWeight="SemiBold"
                        TextWrapping="Wrap" VerticalAlignment="Center" />
             <Button Grid.Column="1" Content="Review changes…" Click="OnReviewChanges" />
             <Button Grid.Column="2" Classes="primary" Content="Save copy…" Click="OnSaveAsClick" />
+            <TextBlock Grid.Row="1" Grid.ColumnSpan="3" Margin="0,8,0,0" TextWrapping="Wrap"
+                       Text="{Binding Package.MetadataPreviewError}"
+                       IsVisible="{Binding Package.HasMetadataPreviewError, FallbackValue=False}" />
           </Grid>
         </Border>
 

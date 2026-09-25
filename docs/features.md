@@ -19,6 +19,7 @@ The GUI's **Suggested** page automatically shows the actions that match the open
 - View package headers, metadata, content IDs, regions, title IDs, versions, and file details.
 - Read and edit `PARAM.SFO` values.
 - Preview supported images, text files, and binary data.
+- Preview unsaved replacement files with updated sizes and modified indicators; SFO details and package artwork refresh immediately, and reverting restores the originals.
 - Browse `TROPHY.TRP` sets with game artwork, trophy icons, names, descriptions, grades, hidden flags, and medal counts.
 - Extract one file, selected files, or the complete package directory tree.
 - Replace package files and save a separate rebuilt package copy.

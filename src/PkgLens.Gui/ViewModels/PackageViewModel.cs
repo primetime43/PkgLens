@@ -27,19 +27,19 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
     public PackageOperationService Operations => _operations;
 
     public string FilePath { get; }
-    public string Title { get; }
-    public string TitleId { get; }
-    public string VersionText { get; }
+    public string Title { get; private set; } = string.Empty;
+    public string TitleId { get; private set; } = string.Empty;
+    public string VersionText { get; private set; } = string.Empty;
     public string ContentIdRaw { get; }
     public string PlatformText { get; }
-    public string RoleText { get; }
-    public string RegionText { get; }
-    public string CategoryText { get; }
+    public string RoleText { get; private set; } = string.Empty;
+    public string RegionText { get; private set; } = string.Empty;
+    public string CategoryText { get; private set; } = string.Empty;
     public string ContentTypeText { get; }
     public string FinalizationText { get; }
     public bool IsRetail { get; }
 
-    public Bitmap? Icon { get; }
+    public Bitmap? Icon { get; private set; }
 
     /// <summary>True when an ICON0.PNG was decoded — drives the header-strip thumbnail's visibility.</summary>
     public bool HasIcon => Icon is not null;
@@ -49,14 +49,14 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
     public EntryNode RootFolder { get; }
 
     public IReadOnlyList<MetadataRow> MetadataRows { get; }
-    public IReadOnlyList<MetadataRow> ClassificationRows { get; }
-    public IReadOnlyList<SfoRow> SfoRows { get; }
+    public IReadOnlyList<MetadataRow> ClassificationRows { get; private set; } = Array.Empty<MetadataRow>();
+    public IReadOnlyList<SfoRow> SfoRows { get; private set; } = Array.Empty<SfoRow>();
 
     public bool IsDecrypted => _info.IsDecrypted;
     public bool HasSfo => SfoRows.Count > 0;
     public string? DecryptionNote => _info.DecryptionNote;
     public bool ShowDecryptionWarning => !_info.IsDecrypted;
-    public PackageRecommendationSet RecommendationSet { get; }
+    public PackageRecommendationSet RecommendationSet { get; private set; } = null!;
     public IReadOnlyList<PackageActionRecommendation> Recommendations => RecommendationSet.Actions;
     public string RecommendationHeading => $"Suggested for this {RecommendationSet.Classification.ToLowerInvariant()}";
     public string RecommendationSummary => RecommendationSet.Summary;
@@ -163,6 +163,7 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
             ExpandDirectories(node);
             filteredRoot.Children.Add(node);
         }
+        RefreshEntryPreviews(filteredRoot);
 
         FolderRoots.Add(filteredRoot);
         SelectedFolder = filteredRoot;
@@ -197,6 +198,7 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
     partial void OnSelectedItemChanged(EntryNode? value)
     {
         OnPropertyChanged(nameof(HasSelectedFile));
+        OnPropertyChanged(nameof(CanPreviewSelected));
         OnPropertyChanged(nameof(SelectedFileDetail));
         OnPropertyChanged(nameof(SelectedIsPbp));
         OnPropertyChanged(nameof(SelectedIsDocument));
@@ -231,6 +233,8 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
         {
             if (SelectedItem is not { IsDirectory: false, Entry: { } e })
                 return "";
+            if (_operations.IsReplaced(e))
+                return $"{SelectedItem.Name}   {_operations.GetEntrySize(e):n0} bytes · unsaved replacement · original {e.FileSize:n0} bytes";
             var parts = new List<string>
             {
                 $"{e.FileSize:n0} bytes",
@@ -246,7 +250,7 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
     public const long MaxPreviewBytes = 32L * 1024 * 1024;
 
     public bool CanPreviewSelected =>
-        SelectedItem is { IsDirectory: false, Entry: not null } n && n.Size <= MaxPreviewBytes;
+        SelectedItem is { IsDirectory: false, Entry: { } entry } && _operations.GetEntrySize(entry) <= MaxPreviewBytes;
 
     public bool HasPendingChanges => _operations.HasPendingChanges;
     public int PendingChangeCount => _operations.PendingChangeCount;
@@ -254,16 +258,26 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
     public string PendingChangesSummary => $"{PendingChangeCount} unsaved file change{(PendingChangeCount == 1 ? "" : "s")}";
 
     /// <summary>The parsed PARAM.SFO, if present.</summary>
-    public SfoTable? Sfo => _operations.Sfo;
-    public bool CanEditSfo => _operations.CanEditSfo;
+    public SfoTable? Sfo { get; private set; }
+    public bool CanEditSfo => Sfo is not null && _operations.CanEditSfo;
 
-    private void OnPendingChangesChanged(object? sender, EventArgs e)
+    private void OnPendingChangesChanged(object? sender, PackageEntryChangedEventArgs e)
     {
+        RefreshEntryPreviews(RootFolder);
+        foreach (var root in FolderRoots.Where(root => !ReferenceEquals(root, RootFolder)))
+            RefreshEntryPreviews(root);
+        if (e.Entry.Name.Equals("PARAM.SFO", StringComparison.OrdinalIgnoreCase) ||
+            e.Entry.Name.EndsWith("/PARAM.SFO", StringComparison.OrdinalIgnoreCase))
+            RefreshMetadataPreview();
+        if (e.Entry.Name.Equals("ICON0.PNG", StringComparison.OrdinalIgnoreCase))
+            RefreshIconPreview();
         OnPropertyChanged(nameof(HasPendingChanges));
         OnPropertyChanged(nameof(PendingChangeCount));
         OnPropertyChanged(nameof(PendingChanges));
         OnPropertyChanged(nameof(PendingChangesSummary));
         OnPropertyChanged(nameof(Sfo));
+        OnPropertyChanged(nameof(SelectedFileDetail));
+        OnPropertyChanged(nameof(CanPreviewSelected));
     }
     private PackageViewModel(PackageOperationService operations)
     {
@@ -274,18 +288,11 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
         FilePath = operations.FilePath;
 
         ContentIdRaw = info.ContentId.Raw;
-        Title = info.Sfo?.Title ?? info.ContentId.Name ?? info.ContentId.Raw;
-        TitleId = info.Sfo?.TitleId ?? info.ContentId.TitleId ?? "";
-        VersionText = info.Sfo?.AppVersion ?? info.Sfo?.Version ?? "";
         PlatformText = info.Header.PlatformDisplay;
-        RoleText = PackageLibraryMatcher.Classify(info.Metadata.ContentType, info.Sfo?.Category).ToString();
-        RegionText = PackageLibraryMatcher.ResolveRegion(info.ContentId.Raw, TitleId);
-        CategoryText = info.Sfo?.Category ?? string.Empty;
         ContentTypeText = info.Metadata.ContentType?.ToString() ??
             (info.Metadata.ContentTypeRaw is uint raw ? $"0x{raw:X}" : "Unknown");
         FinalizationText = info.Header.Finalization.ToString();
         IsRetail = info.Header.IsRetail;
-        RecommendationSet = PackageRecommendationEngine.Analyze(info);
 
         // Wrap the parsed tree under a single root node labelled like the classic PkgView's top
         // node (e.g. "NPUB30468") — the package's install directory / title-id, which is the
@@ -300,28 +307,8 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
         FolderRoots = new ObservableCollection<EntryNode> { RootFolder };
 
         MetadataRows = BuildMetadataRows(info.Metadata);
-        ClassificationRows =
-        [
-            new MetadataRow { Label = "Title", Value = Title },
-            new MetadataRow { Label = "Title ID", Value = string.IsNullOrEmpty(TitleId) ? "Unknown" : TitleId },
-            new MetadataRow { Label = "Platform", Value = PlatformText },
-            new MetadataRow { Label = "Role", Value = RoleText },
-            new MetadataRow { Label = "Region", Value = RegionText },
-            new MetadataRow { Label = "Category", Value = string.IsNullOrEmpty(CategoryText) ? "Unknown" : CategoryText },
-            new MetadataRow { Label = "Content type", Value = ContentTypeText },
-            new MetadataRow { Label = "Version", Value = string.IsNullOrEmpty(VersionText) ? "Unknown" : VersionText },
-            new MetadataRow { Label = "Content ID", Value = ContentIdRaw },
-        ];
-        SfoRows = info.Sfo is null
-            ? Array.Empty<SfoRow>()
-            : info.Sfo.Entries.Select(e => new SfoRow
-            {
-                Key = e.Key,
-                Format = e.Format.ToString(),
-                Value = e.Value,
-            }).ToList();
-
-        Icon = info.IsDecrypted ? TryLoadIcon() : null;
+        RefreshMetadataPreview();
+        RefreshIconPreview();
 
         SelectedFolder = RootFolder; // show the root's contents initially
     }
@@ -349,6 +336,10 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
 
     private Bitmap? TryLoadIcon()
     {
+        var entry = _info.Entries.FirstOrDefault(entry => entry.IsFile &&
+            entry.Name.Equals("ICON0.PNG", StringComparison.OrdinalIgnoreCase));
+        if (entry is null || _operations.GetEntrySize(entry) > MaxPreviewBytes)
+            return null;
         byte[]? png = _operations.TryReadEntryBytes("ICON0.PNG");
         if (png is not { Length: > 0 })
             return null;
@@ -391,5 +382,6 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
     {
         _operations.PendingChangesChanged -= OnPendingChangesChanged;
         _operations.Dispose();
+        Icon?.Dispose();
     }
 }

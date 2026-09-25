@@ -1,7 +1,13 @@
+using System;
 using PkgLens.Core.Shared.Models;
 using PkgLens.Gui.ViewModels;
 
 namespace PkgLens.Gui.Services;
+
+public sealed class PackageEntryChangedEventArgs(PkgEntry entry) : EventArgs
+{
+    public PkgEntry Entry { get; } = entry;
+}
 
 public sealed record PendingPackageChange(PkgEntry Entry, ulong ReplacementSize)
 {

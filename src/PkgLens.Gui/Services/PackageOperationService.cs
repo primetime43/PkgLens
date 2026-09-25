@@ -37,9 +37,9 @@ public sealed class PackageOperationService : IDisposable
     public IReadOnlyList<PendingPackageChange> PendingChanges => _replacements
         .OrderBy(pair => pair.Key.Name, StringComparer.Ordinal)
         .Select(pair => new PendingPackageChange(pair.Key, (ulong)pair.Value.LongLength)).ToArray();
-    public bool CanEditSfo => Info.Sfo is not null && FindSfoEntry() is not null;
+    public bool CanEditSfo => FindSfoEntry() is not null;
 
-    public event EventHandler? PendingChangesChanged;
+    public event EventHandler<PackageEntryChangedEventArgs>? PendingChangesChanged;
 
     public static PackageOperationService Open(string path, IKeyProvider keys,
         CancellationToken cancellationToken = default)
@@ -63,9 +63,18 @@ public sealed class PackageOperationService : IDisposable
 
     public PkgVerificationReport Verify() => PkgVerifier.Verify(_stream, _keys);
 
+    public bool IsReplaced(PkgEntry entry) => _replacements.ContainsKey(entry);
+
+    public ulong GetEntrySize(PkgEntry entry) => _replacements.TryGetValue(entry, out var content)
+        ? (ulong)content.LongLength
+        : entry.FileSize;
+
+    /// <summary>Reads the current editing version, including unsaved replacement bytes.</summary>
     public byte[] ReadEntryBytes(PkgEntry entry)
     {
         ArgumentNullException.ThrowIfNull(entry);
+        if (_replacements.TryGetValue(entry, out var content))
+            return content.ToArray();
         return PkgReader.ExtractEntryBytes(_stream, Info.Header, entry, _keys);
     }
 
@@ -106,7 +115,7 @@ public sealed class PackageOperationService : IDisposable
         PkgEntry entry = FindSfoEntry() ??
             throw new InvalidOperationException("This package has no PARAM.SFO to edit.");
         _replacements[entry] = SfoWriter.Write(edited);
-        PendingChangesChanged?.Invoke(this, EventArgs.Empty);
+        PendingChangesChanged?.Invoke(this, new PackageEntryChangedEventArgs(entry));
     }
 
     public void ReplaceEntry(PkgEntry entry, byte[] content)
@@ -114,13 +123,13 @@ public sealed class PackageOperationService : IDisposable
         ArgumentNullException.ThrowIfNull(entry);
         ArgumentNullException.ThrowIfNull(content);
         _replacements[entry] = content;
-        PendingChangesChanged?.Invoke(this, EventArgs.Empty);
+        PendingChangesChanged?.Invoke(this, new PackageEntryChangedEventArgs(entry));
     }
 
     public void RevertEntry(PkgEntry entry)
     {
         if (_replacements.Remove(entry))
-            PendingChangesChanged?.Invoke(this, EventArgs.Empty);
+            PendingChangesChanged?.Invoke(this, new PackageEntryChangedEventArgs(entry));
     }
 
     public void SaveAs(string destinationPath, CancellationToken cancellationToken = default,

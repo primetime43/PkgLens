@@ -36,7 +36,7 @@ public partial class FileViewerDialog : Window
         Wire();
     }
 
-    public FileViewerDialog(string name, byte[] data)
+    public FileViewerDialog(string name, byte[] data, bool isModified = false)
     {
         InitializeComponent();
         Wire();
@@ -44,8 +44,9 @@ public partial class FileViewerDialog : Window
         _name = name;
         _data = data;
 
-        _header.Text = $"{name}  ·  {data.Length:n0} bytes";
-        Title = $"View — {name}";
+        string editLabel = isModified ? " · Unsaved preview" : "";
+        _header.Text = $"{name}  ·  {data.Length:n0} bytes{editLabel}";
+        Title = $"View — {name}{editLabel}";
 
         if (TryLoadImage(data, out var bmp))
         {

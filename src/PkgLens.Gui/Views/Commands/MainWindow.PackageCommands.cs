@@ -199,9 +199,13 @@ public partial class MainWindow
         if (Vm.Package is not { SelectedItem: { IsDirectory: false, Entry: not null } node } package)
             return;
 
-        if (node.Size > PackageViewModel.MaxPreviewBytes)
+        ulong previewSize = package.Operations.GetEntrySize(node.Entry!);
+        if (previewSize > PackageViewModel.MaxPreviewBytes)
         {
-            Vm.Status = $"{node.Name} is too large to preview ({EntryNode.FormatSize(node.Size)}). Use Extract instead.";
+            Vm.Status = $"{node.Name} is too large to preview ({EntryNode.FormatSize(previewSize)}). " +
+                        (package.Operations.IsReplaced(node.Entry!)
+                            ? "Save a copy to export the pending content."
+                            : "Use Extract instead.");
             return;
         }
 
@@ -218,7 +222,7 @@ public partial class MainWindow
         if (PkgLens.Core.Ps3.Npd.EdatFile.IsEdat(data) || PkgLens.Core.Psp.PspEdatFile.IsPspEncrypted(data))
             (data, title) = await DecryptEdatForView(data, node.Name, package.FilePath);
 
-        await new FileViewerDialog(title, data).ShowDialog(this);
+        await new FileViewerDialog(title, data, package.Operations.IsReplaced(node.Entry!)).ShowDialog(this);
     }
 
     /// <summary>Decrypts an EDAT/SDAT for viewing (SDAT/free automatic; licensed resolves a RAP).</summary>

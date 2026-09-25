@@ -1,17 +1,28 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using CommunityToolkit.Mvvm.ComponentModel;
 using PkgLens.Core.Shared.Models;
 
 namespace PkgLens.Gui.ViewModels;
 
 /// <summary>A node in the file tree, built by splitting entry paths on '/'.</summary>
-public sealed class EntryNode
+public sealed class EntryNode : ObservableObject
 {
     public required string Name { get; init; }
     public required string FullPath { get; init; }
     public bool IsDirectory { get; init; }
-    public ulong Size { get; init; }
+    private ulong _size;
+    public ulong Size { get => _size; init => _size = value; }
+    private bool _isModified;
+    public bool IsModified => _isModified;
+
+    public void UpdatePreviewState(ulong size, bool isModified)
+    {
+        if (SetProperty(ref _size, size, nameof(Size)))
+            OnPropertyChanged(nameof(SizeDisplay));
+        SetProperty(ref _isModified, isModified, nameof(IsModified));
+    }
 
     /// <summary>True when the file's data uses the PSP AES key (embedded Mini / PSP Remaster content).</summary>
     public bool IsPsp { get; init; }

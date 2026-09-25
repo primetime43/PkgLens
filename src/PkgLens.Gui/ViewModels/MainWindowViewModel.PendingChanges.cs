@@ -36,7 +36,8 @@ public sealed partial class MainWindowViewModel
 
     private void OnPackageEditStateChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(PackageViewModel.HasPendingChanges))
+        if (e.PropertyName is nameof(PackageViewModel.HasPendingChanges) or
+            nameof(PackageViewModel.Title) or nameof(PackageViewModel.TitleId))
             UpdateWindowTitle();
     }
 
