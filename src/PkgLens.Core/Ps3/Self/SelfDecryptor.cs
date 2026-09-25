@@ -497,6 +497,9 @@ public static class SelfDecryptor
 
         // ELF header + program headers, verbatim from the SELF (they are stored plaintext).
         e.Write(self, ehdrOffset, EhdrLen);
+        long elfPhdrOffset = (long)BinaryPrimitives.ReadUInt64BigEndian(self.AsSpan(ehdrOffset + 0x20));
+        RequireWithin(elfPhdrOffset, (long)phnum * PhdrLen, MaxElfSize, "program-header placement");
+        e.Position = elfPhdrOffset;
         e.Write(self, phdrOffset, phnum * PhdrLen);
 
         // Section data: place each PHDR-type section at its program header's file offset.

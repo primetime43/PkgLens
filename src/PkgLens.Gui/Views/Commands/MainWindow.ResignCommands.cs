@@ -107,13 +107,14 @@ public partial class MainWindow
 
     internal async void OnMakeFself(object? sender, RoutedEventArgs e)
     {
+        bool encrypted = FindPageControl<CheckBox>("SelfEncryptCheck")!.IsChecked == true;
         var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
-            Title = "Choose a decrypted ELF to fake-sign",
+            Title = "Choose an ELF, EBOOT.BIN, SELF or SPRX to build",
             AllowMultiple = false,
             FileTypeFilter = new[]
             {
-                new FilePickerFileType("ELF") { Patterns = new[] { "*.elf", "*.ELF", "EBOOT.ELF" } },
+                new FilePickerFileType("PS3 executable") { Patterns = new[] { "*.elf", "*.self", "*.sprx", "*.bin" } },
                 FilePickerFileTypes.All,
             },
         });
@@ -129,31 +130,51 @@ public partial class MainWindow
             ShowFselfNotes(fieldError);
             return;
         }
+        opts.CompressSegments = FindPageControl<CheckBox>("SelfCompressCheck")!.IsChecked == true;
+        if (encrypted) opts.NpLicenseType ??= 3;
+        if (!TryHexU64(encrypted ? FindPageControl<TextBox>("SelfRevisionBox")!.Text : null, "Key revision", out var revision, out fieldError) ||
+            revision > ushort.MaxValue)
+        {
+            ShowFselfNotes(fieldError ?? "Key revision must fit in 16 bits.");
+            return;
+        }
+        var inputKey = new EdatKeySelection(FindPageControl<TextBox>("SelfInputKeyBox")!.Text,
+            FindPageControl<TextBox>("SelfInputRapBox")!.Text);
+        var outputKey = new EdatKeySelection(FindPageControl<TextBox>("SelfOutputKeyBox")!.Text,
+            FindPageControl<TextBox>("SelfOutputRapBox")!.Text);
+        string? rapDirectory = Vm.RapDirectory;
 
         var save = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
-            Title = "Save the fake-signed SELF as…",
-            SuggestedFileName = npdrm ? "EBOOT.BIN" : Path.GetFileNameWithoutExtension(input) + ".self",
+            Title = encrypted ? "Save encrypted SELF as…" : "Save fake-signed SELF as…",
+            SuggestedFileName = Path.GetExtension(input).Equals(".sprx", StringComparison.OrdinalIgnoreCase)
+                ? Path.GetFileName(input) : npdrm ? "EBOOT.BIN" : Path.GetFileNameWithoutExtension(input) + ".self",
             DefaultExtension = npdrm ? "BIN" : "self",
         });
         if (save?.TryGetLocalPath() is not { } dest)
             return;
 
-        await RunOperationAsync("Fake-signing SELF…", "Fake-sign failed", async (token, _) =>
+        await RunOperationAsync(encrypted ? "Encrypting and verifying SELF…" : "Building and verifying fSELF…", "SELF build failed", async (token, _) =>
         {
-            long size = await Task.Run(() =>
-            {
-                token.ThrowIfCancellationRequested();
-                byte[] elf = File.ReadAllBytes(input);
-                byte[] fself = PkgLens.Core.Ps3.Self.SelfBuilder.MakeFakeSelf(elf, opts);
-                AtomicOutput.EnsureDifferentPath(input, dest);
-                AtomicOutput.WriteAllBytes(dest, fself);
-                PostOperationVerifier.VerifyFakeSelf(dest, elf);
-                return (long)fself.Length;
-            }, token);
-            Vm.Status = $"Fake-signed and verified → {Path.GetFileName(dest)} ({size:n0} bytes).";
-            ShowFselfNotes($"Wrote a {(npdrm ? "NPDRM" : "NON-DRM")} fSELF (key rev 0x8000). Runs on CFW; not on stock retail.");
+            long size = await Task.Run(() => SelfBuildService.BuildFile(input, dest, encrypted, opts,
+                (ushort)(revision ?? 0x0A), inputKey, outputKey, rapDirectory, token), token);
+            Vm.Status = $"Built and verified → {Path.GetFileName(dest)} ({size:n0} bytes).";
+            ShowFselfNotes($"Saved {(npdrm ? "NPDRM" : "NON-DRM")} {(encrypted ? "encrypted SELF" : "fSELF")} to {dest}. " +
+                "The decrypted output matches the source ELF. Requires patched signature checks." +
+                (encrypted && npdrm ? " Keep this filename: it is included in the NPDRM hash." : ""));
         });
+    }
+
+    internal async void OnBuildSelfPickRap(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Control { Tag: string target }) return;
+        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "Choose a RAP license", AllowMultiple = false,
+            FileTypeFilter = new[] { new FilePickerFileType("RAP") { Patterns = new[] { "*.rap" } } },
+        });
+        if (files.FirstOrDefault()?.TryGetLocalPath() is { } path)
+            FindPageControl<TextBox>(target)!.Text = path;
     }
 
     private void ShowFselfNotes(string? text)

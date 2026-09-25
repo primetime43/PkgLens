@@ -39,6 +39,9 @@ The GUI's **Suggested** page automatically shows the actions that match the open
 - Inspect SELF, EBOOT, and SPRX headers without decrypting the executable.
 - Decrypt supported SELF/EBOOT files to plaintext ELF output.
 - Fake-sign ELF files as compressed CFW-ready SELF files.
+- [Build and rebuild encrypted APP / NPDRM SELF files](self-building.md) with bundled key revisions,
+  optional segment compression, FREE/LOCAL/NETWORK licensing, separate source/output keys, and
+  exact ELF round-trip verification before saving. ECDSA signatures remain unset; patched loaders only.
 - Analyze every executable in a package or folder for its highest firmware requirement.
 - Lower verified firmware requirements when the executable supports safe patching.
 - Apply explicit hex find/replace and offset-based byte patches.

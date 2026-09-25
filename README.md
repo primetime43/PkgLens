@@ -21,6 +21,8 @@ See the complete [`PkgLens feature list`](docs/features.md).
   supported firmware patches.
 - Encrypt and rebuild EDAT/SDAT, preview verified plaintext, and stage rebuilt files in packages.
   See [EDAT / SDAT tools](docs/edat-tools.md).
+- Build encrypted NON-DRM (APP) or NPDRM SELF/EBOOT/SPRX files, including rebuilding existing
+  executables with independent input/output keys. See [SELF building](docs/self-building.md).
 - Export PS1 Classics, PS2 Classics, PSP packages (`EBOOT.PBP`, ISO, or CSO), and structured Vita content.
 - Browse and rebuild zlib or LZMA PSARC archives while preserving their compression.
 - Audit keys/licenses, match base/update/DLC packages, find duplicates, organize libraries, and run

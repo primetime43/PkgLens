@@ -12,7 +12,7 @@
       <!-- Menu: a compact list of the tools on this page -->
       <StackPanel x:Name="ResignMenu" Spacing="10">
         <TextBlock Classes="pagesubtitle"
-                   Text="Inspect or decrypt EBOOT.BIN, SELF, and SPRX executables; fake-sign or patch them for CEX CFW." />
+                   Text="Inspect, decrypt, rebuild, or patch PS3 executables for compatible custom firmware." />
   
         <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,2,0,0">
           <Border Classes="chip cfw"><TextBlock Text="CEX · CFW" /></Border>
@@ -49,12 +49,12 @@
               </Grid>
             </Button>
             <Button Classes="row" Tag="fakesign" Click="OnResignCardClick"
-                    ToolTip.Tip="Wrap a plaintext ELF as a fake-signed SELF that boots on CFW.">
+                    ToolTip.Tip="Build an encrypted or fake-signed SELF from an ELF or existing executable.">
               <Grid ColumnDefinitions="34,*,Auto">
                 <materialIcons:MaterialIcon Grid.Column="0" Kind="DrawPen" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="1,0,0,0" />
                 <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
-                  <TextBlock Classes="rowtitle" Text="Fake-sign ELF → fSELF" />
-                  <TextBlock Classes="carddesc" TextWrapping="Wrap" Text="{x:Static core:FeatureText.FakeSignSelf}" />
+                  <TextBlock Classes="rowtitle" Text="Build / rebuild SELF" />
+                  <TextBlock Classes="carddesc" TextWrapping="Wrap" Text="Create encrypted NON-DRM / NPDRM output, or a fake-signed SELF." />
                 </StackPanel>
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                   <Border Classes="chip"><TextBlock Text="EBOOT" /></Border>
@@ -122,21 +122,58 @@
           </Border>
         </StackPanel>
   
-        <!-- Fake-sign ELF → fSELF -->
+        <!-- Build / rebuild SELF -->
         <StackPanel x:Name="ResignOpFakeSign" IsVisible="False" Spacing="10">
-          <TextBlock Text="Fake-sign ELF → fSELF" FontWeight="SemiBold" FontSize="14" />
+          <TextBlock Text="Build / rebuild SELF" FontWeight="SemiBold" FontSize="14" />
           <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.75"
-                     Text="Pick a decrypted ELF; PkgLens writes a fake-signed NON-DRM SELF (no keys). It runs on CFW — signature checks patched — not on stock retail." />
-          <StackPanel Orientation="Horizontal" Spacing="8">
-            <Button Content="Fake-sign an ELF…" Click="OnMakeFself" />
-            <CheckBox x:Name="FselfNpdrmCheck" Content="NPDRM (app type 8)" VerticalAlignment="Center"
-                      ToolTip.Tip="Tag the fSELF as NPDRM (app type 8) for use inside an NPDRM package, instead of a plain app (type 4)." />
+                     Text="Start from an ELF or an existing SELF, EBOOT.BIN, or SPRX. Save a separate copy, verified by decrypting it back to the original ELF. Both output modes require patched signature checks; they do not create Sony-signed files." />
+          <WrapPanel Orientation="Horizontal">
+            <CheckBox x:Name="SelfEncryptCheck" Content="Encrypt output" IsChecked="True" Margin="0,0,20,0" />
+            <CheckBox x:Name="SelfCompressCheck" Content="Compress segments" IsChecked="True" Margin="0,0,20,0" />
+            <CheckBox x:Name="FselfNpdrmCheck" Content="NPDRM output" />
+          </WrapPanel>
+          <TextBlock Classes="carddesc" TextWrapping="Wrap"
+                     Text="Leave NPDRM off for NON-DRM (APP). Turn encryption off for a debug fSELF. For an existing SELF, blank advanced fields retain its authentication, vendor, version, and control values." />
+          <StackPanel Spacing="8" IsVisible="{Binding #FselfNpdrmCheck.IsChecked}">
+            <TextBlock Text="NPDRM content" FontWeight="SemiBold" />
+            <TextBox x:Name="FselfContentIdBox" Watermark="Content ID (blank = keep the input SELF content ID)" />
+            <Grid ColumnDefinitions="*,12,*">
+              <TextBox x:Name="FselfNpLicenseBox" Watermark="License: FREE / LOCAL / NETWORK"
+                       ToolTip.Tip="Blank = FREE for encrypted output, LOCAL for fake-signed output. Output license is chosen independently of the source." />
+              <TextBox Grid.Column="2" x:Name="FselfNpAppTypeBox" Watermark="App type: EXEC / SPRX / UEXEC / USPRX"
+                       ToolTip.Tip="Blank = preserve the source NPDRM type, or detect EXEC / SPRX from the ELF." />
+            </Grid>
+            <TextBlock Classes="carddesc" TextWrapping="Wrap" Text="Encrypted output defaults to FREE. LOCAL and NETWORK need a matching RAP or klicensee. The saved filename is included in its NPDRM hash." />
           </StackPanel>
-          <Expander x:Name="FselfCustomExpander" Header="Custom sign fields (optional)">
+          <Expander Header="Keys and encryption settings">
+            <StackPanel Spacing="8" Margin="0,6">
+              <Grid ColumnDefinitions="110,12,*" IsVisible="{Binding #SelfEncryptCheck.IsChecked}">
+                <TextBlock Text="Key revision" VerticalAlignment="Center" />
+                <TextBox Grid.Column="2" x:Name="SelfRevisionBox" Text="0A" Watermark="Hex, e.g. 0A"
+                         ToolTip.Tip="Select a bundled APP or NPDRM encryption key revision. Unknown revisions are rejected before saving." />
+              </Grid>
+              <TextBlock Text="Source SELF key (only if needed to decrypt)" FontWeight="SemiBold" />
+              <TextBox x:Name="SelfInputKeyBox" MaxLength="32" Watermark="Raw input klicensee — 32 hex characters" />
+              <Grid ColumnDefinitions="*,8,Auto">
+                <TextBox x:Name="SelfInputRapBox" Watermark="Input RAP override (optional)" />
+                <Button Grid.Column="2" Content="Browse…" Tag="SelfInputRapBox" Click="OnBuildSelfPickRap" />
+              </Grid>
+              <StackPanel Spacing="8" IsVisible="{Binding #SelfEncryptCheck.IsChecked}">
+                <TextBlock Text="Output NPDRM key (independent of the source)" FontWeight="SemiBold" />
+                <TextBox x:Name="SelfOutputKeyBox" MaxLength="32" Watermark="Raw output klicensee — 32 hex characters" />
+                <Grid ColumnDefinitions="*,8,Auto">
+                  <TextBox x:Name="SelfOutputRapBox" Watermark="Output RAP override (optional)" />
+                  <Button Grid.Column="2" Content="Browse…" Tag="SelfOutputRapBox" Click="OnBuildSelfPickRap" />
+                </Grid>
+              </StackPanel>
+              <TextBlock Classes="carddesc" TextWrapping="Wrap" Text="Keys resolve automatically from the klicensee catalog, free SELF key, and RAP library. A raw key overrides the selected RAP. Clear an override to return to automatic resolution." />
+            </StackPanel>
+          </Expander>
+          <Expander x:Name="FselfCustomExpander" Header="Advanced metadata (optional)">
             <StackPanel Spacing="8" Margin="0,4">
               <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.7"
-                         Text="Advanced — leave every field blank to use the standard fSELF defaults, which is what most repacks want. Each field matches a specific SDK / firmware / console profile; fill only the ones you need. Hover a box for what it does." />
-              <Grid ColumnDefinitions="100,10,*" RowDefinitions="Auto,6,Auto,6,Auto,6,Auto,6,Auto,6,Auto,6,Auto,6,Auto">
+                         Text="Blank fields retain the source SELF values, or use standard defaults when starting from an ELF. Firmware metadata does not patch SDK checks inside the executable." />
+              <Grid ColumnDefinitions="100,10,*" RowDefinitions="Auto,6,Auto,6,Auto,6,Auto,6,Auto">
                 <TextBlock Grid.Row="0" Grid.Column="0" Text="Auth ID" VerticalAlignment="Center" />
                 <TextBox   Grid.Row="0" Grid.Column="2" x:Name="FselfAuthIdBox"
                            Watermark="0x1010000001000003" FontFamily="Consolas,monospace"
@@ -157,21 +194,10 @@
                 <TextBox   Grid.Row="8" Grid.Column="2" x:Name="FselfCtrlFlagsBox"
                            Watermark="e.g. 0000…0000 — 64 hex chars (blank = omit)" FontFamily="Consolas,monospace"
                            ToolTip.Tip="The 32-byte SELF control-flags block, as exactly 64 hex characters. Advanced; blank = omit the block entirely (the default)." />
-                <TextBlock Grid.Row="10" Grid.Column="0" Text="Content ID" VerticalAlignment="Center" />
-                <TextBox   Grid.Row="10" Grid.Column="2" x:Name="FselfContentIdBox"
-                           Watermark="UP0001-NPUB30910_00-EXAMPLE000000001" FontFamily="Consolas,monospace"
-                           ToolTip.Tip="NPDRM content id (37 chars). Used only with the NPDRM option; blank = the fake default id." />
-                <TextBlock Grid.Row="12" Grid.Column="0" Text="NP license" VerticalAlignment="Center" />
-                <TextBox   Grid.Row="12" Grid.Column="2" x:Name="FselfNpLicenseBox"
-                           Watermark="FREE | LOCAL | NETWORK (blank = default LOCAL)" FontFamily="Consolas,monospace"
-                           ToolTip.Tip="NPDRM license type written into the control block. NPDRM only; blank = the default (LOCAL)." />
-                <TextBlock Grid.Row="14" Grid.Column="0" Text="NP app type" VerticalAlignment="Center" />
-                <TextBox   Grid.Row="14" Grid.Column="2" x:Name="FselfNpAppTypeBox"
-                           Watermark="SPRX | EXEC | USPRX | UEXEC (blank = default EXEC)" FontFamily="Consolas,monospace"
-                           ToolTip.Tip="NPDRM app type (U* = update). NPDRM only; blank = the default (EXEC)." />
               </Grid>
             </StackPanel>
           </Expander>
+          <Button Content="Choose executable and build…" Click="OnMakeFself" HorizontalAlignment="Left" />
           <TextBlock x:Name="FselfNotes" TextWrapping="Wrap" FontSize="12" Opacity="0.7" IsVisible="False" />
         </StackPanel>
   
