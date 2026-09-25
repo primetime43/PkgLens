@@ -13,7 +13,7 @@ namespace PkgLens.Core.Shared;
 /// key. A <see cref="PkgFinalization.Retail"/> build
 /// is also supported when the runtime NPDRM PKG PS3 AES key is available, but — exactly as with
 /// <see cref="PkgWriter"/> — the ECDSA signature is <b>not</b> forged, so a retail build is
-/// <em>unsigned</em> and will not install on a real console. PkgLens never finalizes or signs.
+/// <em>unsigned</em> and requires compatible custom firmware. This builder does not create PKG ECDSA signatures.
 ///
 /// Output layout: <c>[header 0xC0][metadata][pad→16][data region: item table | names | files]</c>.
 /// The data region is written streamed (files are not buffered whole), keeping memory light for

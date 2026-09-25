@@ -52,6 +52,7 @@ The GUI's **Suggested** page automatically shows the actions that match the open
 ## Package building and conversion
 
 - Build streaming retail-encrypted or debug packages from content folders.
+- [Finalize an existing debug PS3 PKG](finalize-package.md) into a verified retail-encrypted copy for CFW/HEN, preserving file contents, metadata and executable signatures.
 - Fake-sign embedded executables while building a package.
 - Convert PS3 packages for RPCS3, CEX CFW, or HEN using target compatibility profiles.
 - Compare two packages, including file hashes and `PARAM.SFO` changes.

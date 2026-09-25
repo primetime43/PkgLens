@@ -10,7 +10,7 @@ namespace PkgLens.Cli;
 /// <c>pkglens pack &lt;folder&gt;</c> — builds a PS3 .pkg from a content folder. With no options it
 /// is Fast Pack (content id / install dir / content type inferred from PARAM.SFO); the options make
 /// it Custom Pack. Produces a non-finalized (debug) package by default; <c>--retail</c> produces an
-/// unsigned retail-encrypted package (needs the runtime key). PkgLens never finalizes or signs.
+/// unsigned retail-encrypted package (needs the runtime key). This command does not create PKG ECDSA signatures.
 /// </summary>
 internal static class PackCommand
 {

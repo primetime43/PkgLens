@@ -46,6 +46,7 @@ public enum OperationId
     DiscoverDevKlic,
     PackageKeyCoverage,
     SelfFolderTools,
+    FinalizePackage,
 }
 
 public enum OperationMenu
@@ -135,6 +136,9 @@ public static class OperationCatalog
         Def(OperationId.ComparePackages, "Compare packages / create update", "Compare package contents and create a compact update or overlay.",
             "Compare base and target package files and PARAM.SFO values, then create a compact CFW/HEN or RPCS3 overlay package.",
             "_Compare packages / create update…", menu: [Loc(OperationMenu.File, 1, 20, "BuildConvert")]),
+        Def(OperationId.FinalizePackage, "Finalize PKG", "Create a retail-encrypted copy of a non-finalized PS3 package for CFW/HEN.",
+            "Preserve every file and executable signature, regenerate package checksums and verify a separate output copy.",
+            "_Finalize PKG…", menu: [Loc(OperationMenu.File, 1, 40, "BuildConvert")]),
         Def(OperationId.ConvertCfw, "Convert package for CFW", FeatureText.ConvertCfw,
             "Check RPCS3, CEX CFW, DEX, or HEN compatibility before conversion starts.",
             "Convert PS3 package for a _target…", suggestedRule: OperationEligibilityRule.RetailPs3Executable,

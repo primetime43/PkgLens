@@ -18,6 +18,8 @@ See the complete [`PkgLens feature list`](docs/features.md).
   requirements.
 - Extract, replace, compare, build, repack, verify, and target-convert PS3 packages for RPCS3, CEX CFW,
   or HEN.
+- [Finalize existing debug PS3 packages](docs/finalize-package.md) into verified retail-encrypted
+  copies while preserving their files and executable signatures.
 - Decrypt EDAT/SDAT and SELF/EBOOT content, resolve RAPs automatically, fake-sign executables, and apply
   supported firmware patches.
 - Encrypt and rebuild EDAT/SDAT, preview verified plaintext, and stage rebuilt files in packages.

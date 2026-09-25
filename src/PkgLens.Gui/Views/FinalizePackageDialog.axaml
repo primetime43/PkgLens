@@ -1,0 +1,43 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="PkgLens.Gui.Views.FinalizePackageDialog" x:CompileBindings="False"
+        Title="Finalize PKG" Width="780" Height="470" MinWidth="620" MinHeight="440"
+        WindowStartupLocation="CenterOwner">
+  <DockPanel Margin="22">
+    <StackPanel DockPanel.Dock="Bottom" Spacing="10" Margin="0,14,0,0">
+      <TextBlock x:Name="StatusText" Text="Choose a non-finalized PS3 package to begin." TextWrapping="Wrap" />
+      <ProgressBar x:Name="Progress" Minimum="0" Maximum="100" Height="4" IsVisible="False" />
+      <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+        <Button x:Name="OpenOutputButton" Content="Open output folder" Click="OnOpenOutput" IsVisible="False" />
+        <Button x:Name="StopButton" Content="Cancel operation" Click="OnStop" IsVisible="False" />
+        <Button x:Name="FinalizeButton" Content="Finalize copy…" Classes="primary" Click="OnFinalize" IsEnabled="False" />
+        <Button Content="Close" Click="OnClose" />
+      </StackPanel>
+    </StackPanel>
+    <ScrollViewer>
+      <StackPanel Spacing="14">
+        <StackPanel Spacing="5">
+          <TextBlock Text="Finalize PKG" FontSize="24" FontWeight="SemiBold" />
+          <TextBlock Text="Debug package → retail-encrypted copy for CFW / HEN" TextWrapping="Wrap" Opacity="0.75" />
+        </StackPanel>
+        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+          <Button x:Name="BrowseButton" Content="Choose package…" Click="OnBrowse" />
+          <TextBlock x:Name="SourceText" Grid.Column="1" Text="No package selected" TextTrimming="CharacterEllipsis"
+                     VerticalAlignment="Center" />
+        </Grid>
+        <Border Classes="panel" Padding="14">
+          <StackPanel Spacing="7">
+            <TextBlock x:Name="InfoText" Text="The package will be checked before conversion is enabled." TextWrapping="Wrap" />
+            <TextBlock Text="Files, executable signatures, PARAM.SFO and license data stay intact. The finished copy is verified before saving."
+                       TextWrapping="Wrap" FontSize="12" Opacity="0.75" />
+          </StackPanel>
+        </Border>
+        <TextBlock Text="Uses the selected package on disk. Save pending edits first if you want them included."
+                   TextWrapping="Wrap" FontSize="12" Opacity="0.7" />
+        <TextBlock Text="Retail encryption uses the standard PS3 package key. The output is unsigned for stock firmware; executable compatibility and license requirements stay the same."
+                   TextWrapping="Wrap" FontSize="12" Opacity="0.7" />
+        <TextBlock x:Name="OutputText" TextWrapping="Wrap" FontSize="12" IsVisible="False" />
+      </StackPanel>
+    </ScrollViewer>
+  </DockPanel>
+</Window>

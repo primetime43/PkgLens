@@ -11,6 +11,7 @@
       <StackPanel Orientation="Horizontal" Spacing="8" MaxWidth="900">
         <Button Classes="primary" Content="Create package…" Click="OnPackBuild" />
         <Button Content="Show folder info…" Click="OnPackFolderInfo" />
+        <Button Content="Finalize existing PKG…" Click="OnFinalizePackage" />
       </StackPanel>
     </Border>
     <ScrollViewer>
