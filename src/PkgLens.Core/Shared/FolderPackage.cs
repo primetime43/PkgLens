@@ -30,6 +30,9 @@ public sealed class PackOptions
     /// caller use a RAP library without reading every EBOOT before planning the package.
     /// </summary>
     public Func<string, byte[]?>? EbootKlicenseeResolver { get; set; }
+
+    /// <summary>Verified file replacements keyed by exact package-relative path. Sources are not modified.</summary>
+    public IReadOnlyDictionary<string, PkgReplacement>? PreparedFiles { get; set; }
 }
 
 /// <summary>A configured builder plus a record of what was inferred, so the CLI/GUI can report it.</summary>
@@ -61,6 +64,8 @@ public static class FolderPackage
     {
         ArgumentException.ThrowIfNullOrEmpty(folder);
         options ??= new PackOptions();
+        if (options.ResignEboot && options.PreparedFiles is not null)
+            throw new PkgFormatException("Choose either EBOOT-only resigning or prepared executable replacements.");
 
         var root = new DirectoryInfo(folder);
         if (!root.Exists)
@@ -94,10 +99,12 @@ public static class FolderPackage
         };
 
         long totalBytes = 0;
-        int files = 0, dirs = 0;
+        int files = 0, dirs = 0, replacementsUsed = 0;
         string? excludedFullPath = excludedPath is null ? null : Path.GetFullPath(excludedPath);
         Walk(root, string.Empty, builder, options, notes, excludedFullPath,
-            ref totalBytes, ref files, ref dirs);
+            ref totalBytes, ref files, ref dirs, ref replacementsUsed);
+        if (options.PreparedFiles is not null && replacementsUsed != options.PreparedFiles.Count)
+            throw new PkgFormatException("A prepared replacement no longer matches a source file. Check the source folder again.");
         if (files == 0)
             throw new PkgFormatException($"Content folder '{folder}' contains no files to pack.");
 
@@ -106,7 +113,7 @@ public static class FolderPackage
     }
 
     private static void Walk(DirectoryInfo dir, string prefix, PkgBuilder builder, PackOptions options,
-        List<string> notes, string? excludedFullPath, ref long totalBytes, ref int files, ref int dirs)
+        List<string> notes, string? excludedFullPath, ref long totalBytes, ref int files, ref int dirs, ref int replacementsUsed)
     {
         foreach (var info in dir.GetFileSystemInfos().OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase))
         {
@@ -119,11 +126,17 @@ public static class FolderPackage
                 builder.AddDirectory(name);
                 dirs++;
                 Walk(sub, name, builder, options, notes, excludedFullPath,
-                    ref totalBytes, ref files, ref dirs);
+                    ref totalBytes, ref files, ref dirs, ref replacementsUsed);
             }
             else if (info is FileInfo file)
             {
-                if (options.ResignEboot && string.Equals(file.Name, "EBOOT.BIN", StringComparison.OrdinalIgnoreCase))
+                if (options.PreparedFiles?.TryGetValue(name, out var replacement) == true)
+                {
+                    builder.AddFile(name, replacement.Length, replacement.OpenRead, KindFor(file.Name));
+                    totalBytes += replacement.Length;
+                    replacementsUsed++;
+                }
+                else if (options.ResignEboot && string.Equals(file.Name, "EBOOT.BIN", StringComparison.OrdinalIgnoreCase))
                 {
                     byte[] resigned = ResignEboot(file, options, notes);
                     builder.AddFile(name, resigned, PkgEntryType.Npdrm);

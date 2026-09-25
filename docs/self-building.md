@@ -60,6 +60,32 @@ Process executables in a folder**. Choose source and output folders, choose an o
   processes unfinished files. After supplying missing keys, **Retry failed** retries failed files only.
   The job list lasts for the current dialog; scanning again refreshes it and skips existing outputs.
 
+## Rebuilding executables while packing or repacking
+
+On **Create package**, select an **Executables** mode: keep unchanged, encrypted rebuild,
+fake-sign all, or legacy-sign all. The original **Fake-sign EBOOT only (legacy)** option remains
+available separately. **Save package as** for a PS3 package offers the same all-file modes and
+defaults to keeping executables unchanged.
+
+For an all-file mode, select the key revision and compression setting, then **Check and prepare
+executables**. Matching saved keys and RAPs are resolved per executable; the dialog also accepts a
+RAP folder or a raw klicensee override. Every EBOOT.BIN, SELF, SPRX and ELF is rebuilt into temporary
+storage and verified before **Continue to save** becomes available. APP/NPDRM type, content ID,
+license, executable metadata and package filenames are preserved. Plain ELF inputs become APP SELF
+contents at their existing package path.
+
+Missing keys, unsupported profiles and malformed files appear as individual blocking results.
+Fix them and run the check again; the new all-file modes never silently include an unprocessed
+executable. The pre-existing EBOOT-only legacy mode retains its older fallback behavior.
+
+Repacking reads pending executable replacements and includes pending SFO and other file edits.
+Preparation does not alter the editing session or source folder. Executable hashes and the candidate
+list are checked again before packing, so changing an executable requires another check. The
+prepared files are streamed into the PKG, then extracted and hashed to confirm that the embedded
+bytes exactly match the verified outputs. Package verification also runs before atomic publication.
+Cancellation or a failed check leaves an existing destination intact; temporary executable copies
+are cleaned up when the operation ends. Successful repacking opens the saved copy as usual.
+
 ## Compatibility and verification
 
 Encryption, authentication hashes, and selected legacy ECDSA header signatures are implemented.

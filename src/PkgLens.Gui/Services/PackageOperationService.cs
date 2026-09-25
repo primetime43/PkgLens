@@ -158,6 +158,23 @@ public sealed class PackageOperationService : IDisposable
                 cancellationToken, progress));
     }
 
+    internal void SaveAs(string destinationPath, PreparedPackageExecutables executables,
+        CancellationToken cancellationToken = default, IProgress<PkgOperationProgress>? progress = null)
+    {
+        AtomicOutput.EnsureDifferentPath(FilePath, destinationPath);
+        executables.ValidatePackage(this, cancellationToken);
+        var replacements = _replacements.ToDictionary(p => p.Key, p => PkgReplacement.FromBytes(p.Value));
+        foreach (var entry in Info.Entries.Where(e => e.IsFile))
+            if (executables.Files.TryGetValue(entry.Name, out var replacement)) replacements[entry] = replacement;
+        AtomicOutput.Write(destinationPath,
+            destination => PkgWriter.Repack(_stream, Info, replacements, _keys, destination, cancellationToken, progress),
+            validate: temporary =>
+            {
+                PostOperationVerifier.VerifyPackage(temporary, _keys);
+                executables.VerifyEmbedded(temporary, _keys, cancellationToken);
+            });
+    }
+
     public IReadOnlyList<byte[]> DecryptDocument(PkgEntry documentEntry)
     {
         ArgumentNullException.ThrowIfNull(documentEntry);

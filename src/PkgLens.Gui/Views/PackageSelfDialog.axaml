@@ -1,0 +1,56 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="PkgLens.Gui.Views.PackageSelfDialog" x:CompileBindings="False"
+        Title="Executables in this package" Width="960" Height="680" MinWidth="780" MinHeight="600"
+        WindowStartupLocation="CenterOwner">
+  <DockPanel Margin="20">
+    <ScrollViewer DockPanel.Dock="Top" MaxHeight="340" Margin="0,0,0,12" HorizontalScrollBarVisibility="Disabled">
+    <StackPanel Spacing="10">
+      <TextBlock Text="Executables in this package" FontSize="23" FontWeight="SemiBold" />
+      <TextBlock Text="Choose how EBOOT, SELF, SPRX and ELF files are included. Source files stay intact."
+                 TextWrapping="Wrap" Opacity="0.7" />
+      <StackPanel x:Name="SettingsPanel" Spacing="10">
+        <ComboBox x:Name="ModeBox" Width="320" SelectionChanged="OnModeChanged" />
+        <StackPanel x:Name="BuildSettings" Spacing="8">
+          <WrapPanel>
+            <StackPanel x:Name="RevisionPanel" Orientation="Horizontal" Spacing="8" Margin="0,0,20,0">
+              <TextBlock Text="Key revision (hex)" VerticalAlignment="Center" />
+              <TextBox x:Name="RevisionBox" Text="0A" Width="80" TextChanged="OnSettingsChanged" />
+            </StackPanel>
+            <CheckBox x:Name="CompressCheck" Content="Compress segments" IsChecked="True" />
+          </WrapPanel>
+          <TextBlock Text="APP/NPDRM type, content ID, license and filenames are preserved. Saved keys and RAPs are matched per file."
+                     FontSize="12" TextWrapping="Wrap" />
+          <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+            <Button Content="RAP folder…" Click="OnPickRaps" />
+            <TextBox x:Name="RapBox" Grid.Column="1" Watermark="RAP library" TextChanged="OnSettingsChanged" />
+          </Grid>
+          <TextBox x:Name="KeyBox" Watermark="Optional klicensee override (32 hex characters, applies to all executables)"
+                   MaxLength="32" TextChanged="OnSettingsChanged" />
+          <TextBlock x:Name="ProfileHint" FontSize="12" Opacity="0.7" TextWrapping="Wrap" />
+        </StackPanel>
+      </StackPanel>
+      <Button x:Name="CheckButton" Content="Check and prepare executables" Click="OnCheck" />
+    </StackPanel>
+    </ScrollViewer>
+    <StackPanel DockPanel.Dock="Bottom" Spacing="9" Margin="0,10,0,0">
+      <TextBox x:Name="DetailText" IsReadOnly="True" MinHeight="45" MaxHeight="75" TextWrapping="Wrap"
+               Watermark="Select an executable to read the full result." />
+      <TextBlock x:Name="StatusText" TextWrapping="Wrap" />
+      <ProgressBar x:Name="Progress" IsIndeterminate="True" Height="4" IsVisible="False" />
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+        <Button x:Name="CancelWorkButton" Content="Stop check" Click="OnStop" IsVisible="False" />
+        <Button x:Name="ContinueButton" Content="Continue to save…" Classes="primary" Click="OnContinue" />
+        <Button Content="Cancel" Click="OnCancel" />
+      </StackPanel>
+    </StackPanel>
+    <DataGrid x:Name="ChecksGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserResizeColumns="True"
+              GridLinesVisibility="Horizontal" SelectionChanged="OnSelectionChanged">
+      <DataGrid.Columns>
+        <DataGridTextColumn Header="Executable" Binding="{Binding Name}" Width="2*" />
+        <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="85" />
+        <DataGridTextColumn Header="Result / required action" Binding="{Binding Message}" Width="3*" />
+      </DataGrid.Columns>
+    </DataGrid>
+  </DockPanel>
+</Window>

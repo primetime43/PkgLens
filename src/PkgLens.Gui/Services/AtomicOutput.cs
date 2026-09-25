@@ -17,7 +17,7 @@ internal static class AtomicOutput
             throw new IOException("The output path must be different from the input path.");
     }
 
-    public static void Write(string path, Action<Stream> write, bool overwrite = true)
+    public static void Write(string path, Action<Stream> write, bool overwrite = true, Action<string>? validate = null)
     {
         ArgumentNullException.ThrowIfNull(write);
         string fullPath = Path.GetFullPath(path);
@@ -29,6 +29,7 @@ internal static class AtomicOutput
                 write(file);
                 file.Flush(flushToDisk: true);
             }
+            validate?.Invoke(temp);
             File.Move(temp, fullPath, overwrite);
         }
         finally

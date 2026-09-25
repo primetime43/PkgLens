@@ -47,7 +47,9 @@ public sealed partial class MainWindowViewModel
           (string.IsNullOrEmpty(package.TitleId) ? "" : $" ({package.TitleId})") +
           (package.HasPendingChanges ? " • Unsaved changes" : "");
 
-    public async Task<bool> SavePackageAsAsync(string destination)
+    public Task<bool> SavePackageAsAsync(string destination) => SavePackageAsAsync(destination, null);
+
+    internal async Task<bool> SavePackageAsAsync(string destination, PreparedPackageExecutables? executables)
     {
         if (IsBusy || Package is not { } package)
             return false;
@@ -60,7 +62,8 @@ public sealed partial class MainWindowViewModel
             var keys = new FileKeyProvider(KeysDirectory);
             PackageViewModel replacement = await Task.Run(() =>
             {
-                package.Operations.SaveAs(destination, token, packageProgress);
+                if (executables is null) package.Operations.SaveAs(destination, token, packageProgress);
+                else package.Operations.SaveAs(destination, executables, token, packageProgress);
                 progress.Report(new GuiOperationProgress("Verifying rebuilt package…"));
                 PostOperationVerifier.VerifyPackage(destination, keys);
                 return PackageViewModel.Load(destination, keys, token);

@@ -214,6 +214,15 @@ public partial class MainWindow
         if (Vm.IsBusy || Vm.Package is not { } package)
             return false;
 
+        PackageSelfSelection? executableSelection = null;
+        if (package.Operations.Info.Header.Platform == PkgLens.Core.Shared.Models.PkgPlatform.Ps3)
+        {
+            executableSelection = await new PackageSelfDialog(Vm.RapDirectory, 0,
+                (settings, token, progress) => PreparedPackageExecutables.ForPackage(package.Operations, settings, token, progress))
+                .ShowDialog<PackageSelfSelection?>(this);
+            if (executableSelection is null) return false;
+        }
+        using var executables = executableSelection?.Prepared;
         string suggested = System.IO.Path.GetFileNameWithoutExtension(package.FilePath) + "-modified.pkg";
         var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
@@ -227,7 +236,7 @@ public partial class MainWindow
         });
         if (file?.TryGetLocalPath() is not { } dest)
             return false;
-        return await Vm.SavePackageAsAsync(dest);
+        return await Vm.SavePackageAsAsync(dest, executables);
     }
 
     private async void OnCloseClick(object? sender, RoutedEventArgs e) => await Vm.CloseFileAsync();

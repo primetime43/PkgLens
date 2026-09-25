@@ -131,13 +131,25 @@ public partial class MainWindow
 
         string installDir = (FindPageControl<TextBox>("PackInstallDirBox")!.Text ?? string.Empty).Trim();
         bool retail = FindPageControl<RadioButton>("PackRetailRadio")!.IsChecked == true;
-        bool resign = FindPageControl<CheckBox>("PackResignCheck")!.IsChecked == true;
+        int executableMode = FindPageControl<ComboBox>("PackExecutableModeBox")!.SelectedIndex;
+        bool resign = executableMode == 1;
 
         string? rapPath = _packRapPath;
         string? rapDirectory = Vm.RapDirectory;
         string? keysDirectory = Vm.KeysDirectory;
         if (resign && rapPath is null)
             await OfferNearbyRapsForPathAsync(_packFolder);
+
+        string folder = _packFolder;
+        PackageSelfSelection? executableSelection = null;
+        if (executableMode >= 2)
+        {
+            executableSelection = await new PackageSelfDialog(rapDirectory, executableMode - 1,
+                (settings, token, progress) => PreparedPackageExecutables.ForFolder(folder, settings, token, progress))
+                .ShowDialog<PackageSelfSelection?>(this);
+            if (executableSelection is null) return;
+        }
+        using var executables = executableSelection?.Prepared;
 
         var options = new PkgLens.Core.Shared.PackOptions
         {
@@ -147,6 +159,7 @@ public partial class MainWindow
             DrmType = (uint)(FindPageControl<NumericUpDown>("PackDrmBox")!.Value ?? 3),
             Finalization = retail ? PkgFinalization.Retail : PkgFinalization.Debug,
             ResignEboot = resign,
+            PreparedFiles = executables?.Files,
             EbootKlicenseeResolver = resign
                 ? id => RapLicenseService.ResolveContentId(id, rapPath, rapDirectory).Klicensee
                 : null,
@@ -162,18 +175,22 @@ public partial class MainWindow
         if (file?.TryGetLocalPath() is not { } dest)
             return;
 
-        string folder = _packFolder;
         await RunOperationAsync("Packing…", "Pack failed", async (token, progress) =>
         {
             var packageProgress = new Progress<PkgLens.Core.Shared.PkgOperationProgress>(value =>
                 progress.Report(PackagePresentationService.ToGuiProgress(value)));
             var plan = await Task.Run(() =>
             {
+                executables?.ValidateFolder(folder, token);
                 var p = PkgLens.Core.Shared.FolderPackage.Plan(folder, options, dest);
                 IKeyProvider keys = new FileKeyProvider(keysDirectory);
-                AtomicOutput.Write(dest, dst => p.Builder.Build(dst, keys, token, packageProgress));
-                progress.Report(new GuiOperationProgress("Verifying rebuilt package…", null));
-                PostOperationVerifier.VerifyPackage(dest, keys);
+                AtomicOutput.Write(dest, dst => p.Builder.Build(dst, keys, token, packageProgress), validate: temporary =>
+                {
+                    progress.Report(new GuiOperationProgress("Verifying rebuilt package…", null));
+                    PostOperationVerifier.VerifyPackage(temporary, keys);
+                    executables?.VerifyEmbedded(temporary, keys, token);
+                    token.ThrowIfCancellationRequested();
+                });
                 return p;
             }, token);
 

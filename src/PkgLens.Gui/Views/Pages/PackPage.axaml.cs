@@ -7,7 +7,20 @@ namespace PkgLens.Gui.Views.Pages;
 
 public partial class PackPage : UserControl
 {
-    public PackPage() => AvaloniaXamlLoader.Load(this);
+    public PackPage()
+    {
+        AvaloniaXamlLoader.Load(this);
+        var modes = this.FindControl<ComboBox>("PackExecutableModeBox")!;
+        modes.ItemsSource = new[] { "Keep executables unchanged", "Fake-sign EBOOT only (legacy)",
+            "Rebuild all executables (encrypted)", "Fake-sign all executables", "Legacy-sign all executables" };
+        modes.SelectedIndex = 0;
+    }
+
+    private void OnExecutableModeChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (this.FindControl<StackPanel>("PackLegacyRapPanel") is { } panel)
+            panel.IsVisible = this.FindControl<ComboBox>("PackExecutableModeBox")!.SelectedIndex == 1;
+    }
 
     private MainWindow? Host => TopLevel.GetTopLevel(this) as MainWindow;
 
