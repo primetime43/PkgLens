@@ -24,6 +24,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\PkgLens.Core\PkgLens.Core.csproj" />
+    <InternalsVisibleTo Include="PkgLens.Core.Tests" />
   </ItemGroup>
 
 </Project>

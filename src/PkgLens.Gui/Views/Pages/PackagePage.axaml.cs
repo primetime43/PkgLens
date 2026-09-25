@@ -11,6 +11,8 @@ public partial class PackagePage : UserControl
 
     private MainWindow? Host => TopLevel.GetTopLevel(this) as MainWindow;
 
+    private void OnRebuildSelectedEdat(object? sender, RoutedEventArgs e) => Host?.OnRebuildSelectedEdat(sender, e);
+
     private void OnOpenPackageClick(object? sender, RoutedEventArgs e) => Host?.OnHomeOpenPkg(sender, e);
 
     private void OnClearFileFilter(object? sender, RoutedEventArgs e) => Host?.OnClearFileFilter(sender, e);

@@ -105,6 +105,7 @@
                 <MenuItem Header="View" Click="OnViewClick" />
                 <MenuItem Header="Extract…" Click="OnExtractClick" />
                 <MenuItem Header="Replace…" Click="OnReplaceClick" />
+                <MenuItem Header="Rebuild EDAT / SDAT…" Click="OnRebuildSelectedEdat" IsEnabled="{Binding HasSelectedFile}" />
                 <Separator IsVisible="{Binding HasSelectedSpecialTool}" />
                 <MenuItem Header="Explore trophy set…" Click="OnExploreTrophies"
                           IsVisible="{Binding SelectedIsTrophyTrp}" />

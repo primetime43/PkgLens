@@ -32,6 +32,7 @@ The GUI's **Suggested** page automatically shows the actions that match the open
 ## Decryption, executables, and firmware
 
 - Decrypt and integrity-check EDAT/SDAT files, including compressed EDAT content.
+- [Encrypt, quick rebuild, or custom rebuild EDAT/SDAT](edat-tools.md), with automatic key lookup, plaintext replacement and preview, verified output, and staging into package edits. Rebuilds produce uncompressed output.
 - Inspect SELF, EBOOT, and SPRX headers without decrypting the executable.
 - Decrypt supported SELF/EBOOT files to plaintext ELF output.
 - Fake-sign ELF files as compressed CFW-ready SELF files.

@@ -142,7 +142,8 @@ public static class EdatFile
         }
         else if (npd.IsFree)
         {
-            cryptKey = NpdKeys.KlicFree;
+            // Free-license EDATs can use a title-specific developer klicensee.
+            cryptKey = klicensee ?? NpdKeys.KlicFree;
         }
         else
         {

@@ -19,6 +19,8 @@ See the complete [`PkgLens feature list`](docs/features.md).
   or HEN.
 - Decrypt EDAT/SDAT and SELF/EBOOT content, resolve RAPs automatically, fake-sign executables, and apply
   supported firmware patches.
+- Encrypt and rebuild EDAT/SDAT, preview verified plaintext, and stage rebuilt files in packages.
+  See [EDAT / SDAT tools](docs/edat-tools.md).
 - Export PS1 Classics, PS2 Classics, PSP packages (`EBOOT.PBP`, ISO, or CSO), and structured Vita content.
 - Browse and rebuild zlib or LZMA PSARC archives while preserving their compression.
 - Audit keys/licenses, match base/update/DLC packages, find duplicates, organize libraries, and run

@@ -90,6 +90,7 @@ public partial class MainWindow
             case OperationId.BrowsePsarc: OnBrowsePsarcClick(sender, e); break;
             case OperationId.ExtractAll: OnExtractAllClick(sender, e); break;
             case OperationId.DecryptPackageContents: OnDecryptPackageContentsClick(sender, e); break;
+            case OperationId.EdatTools: OnEdatToolsClick(sender, e); break;
             case OperationId.SavePackageAs: OnSaveAsClick(sender, e); break;
             case OperationId.Exit: OnExitClick(sender, e); break;
             case OperationId.EditSfo: OnEditSfoClick(sender, e); break;

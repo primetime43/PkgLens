@@ -42,6 +42,7 @@ public enum OperationId
     RapLibrary,
     ClassifyLibrary,
     DecryptPackageContents,
+    EdatTools,
 }
 
 public enum OperationMenu
@@ -181,6 +182,9 @@ public static class OperationCatalog
             "Use installed keys and licenses, include pending edits, and save a per-file report. Locked files are retained.",
             "_Decrypt package contents…", menuRule: OperationEligibilityRule.DecryptedPackage,
             menu: [Loc(OperationMenu.File, 1, 25, "ExtractRepack")]),
+        Def(OperationId.EdatTools, "EDAT / SDAT tools", "Decrypt, encrypt, quick rebuild, or custom rebuild PS3 EDAT/SDAT files.",
+            "Build verified EDAT/SDAT copies from plaintext or rebuild protected files with optional replacement content.",
+            "_EDAT / SDAT tools…", menu: [Loc(OperationMenu.Tools, 0, 15)]),
         Def(OperationId.SavePackageAs, "Save package as", "Rebuild a separate package copy containing the current edits.",
             "Rebuild a separate package containing replacements or PARAM.SFO edits. The original remains unchanged.",
             "Save package _as…", menuRule: OperationEligibilityRule.DecryptedPackage,

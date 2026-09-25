@@ -30,6 +30,8 @@
       <Border Classes="panel">
         <StackPanel Spacing="12">
           <TextBlock Classes="sectionhead" Text="SINGLE DATA FILE" />
+          <Button Content="EDAT / SDAT tools…" Click="OnEdatToolsClick" HorizontalAlignment="Left"
+                  ToolTip.Tip="Decrypt, encrypt, quick rebuild, or custom rebuild an EDAT/SDAT file." />
           <Grid ColumnDefinitions="110,*" RowDefinitions="Auto,10,Auto">
             <TextBlock Grid.Row="0" Grid.Column="0" Classes="fieldlabel" Text="EDAT file" />
             <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="8">
