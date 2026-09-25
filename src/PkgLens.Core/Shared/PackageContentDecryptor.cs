@@ -184,7 +184,7 @@ public static class PackageContentDecryptor
                     contentId = npd.ContentId;
                     if (npd.Version is < 0 or > 4)
                         return Result(ContentDecryptStatus.Unsupported, $"Unsupported NPD version {npd.Version}; original retained.");
-                    byte[]? klic = npd.NeedsKlicensee ? ResolveKey(npd.ContentId, name, (uint)npd.License, options) : null;
+                    byte[]? klic = npd.IsSdat ? null : ResolveKey(npd.ContentId, name, (uint)npd.License, options);
                     if (npd.NeedsKlicensee && klic is null)
                         return Result(ContentDecryptStatus.MissingKey, "Import the matching RAP or klicensee, then export again. Original retained.");
                     using var output = File.Create(scratch);
@@ -244,9 +244,12 @@ public static class PackageContentDecryptor
     private static byte[]? ResolveKey(string contentId, string fileName, uint license, ContentDecryptOptions options)
     {
         if (string.IsNullOrWhiteSpace(contentId)) return null;
-        var local = KlicenseeStore.Find(contentId, fileName, license, options.KlicenseeDatabasePath);
-        var known = local ?? KnownKlicenseeStore.Find(contentId, fileName, license);
+        bool hasTitleId = KlicenseeStore.ExtractTitleId(contentId) is not null;
+        var local = !hasTitleId ? null :
+            KlicenseeStore.Find(contentId, fileName, license, options.KlicenseeDatabasePath);
+        var known = local ?? (hasTitleId ? KnownKlicenseeStore.Find(contentId, fileName, license) : null);
         if (known is not null) return known.Klicensee;
+        if (license == 3) return null; // Free content falls back to the developer key, not a RAP.
         byte[]? rap = RapStore.Find(contentId, options.RapDirectory);
         return rap is null ? null : NpdKeys.RapToKlicensee(rap);
     }

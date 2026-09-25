@@ -21,6 +21,8 @@
                      TextWrapping="Wrap" />
           <Button x:Name="DecryptPackageButton" Content="Decrypt package contents…" Click="OnDecryptPackageContentsClick"
                   IsEnabled="{Binding Package.IsDecrypted, FallbackValue=False}" HorizontalAlignment="Left" />
+          <Button x:Name="PackageKeyCoverageButton" Content="Check key coverage…" Click="OnPackageKeyCoverage"
+                  IsEnabled="{Binding Package.IsDecrypted, FallbackValue=False}" HorizontalAlignment="Left" />
           <TextBlock Text="Open a package to enable this action." IsVisible="{Binding !HasPackage}" FontSize="12" />
           <TextBlock Text="Includes pending edits. Locked files are kept and listed in the saved report." FontSize="12"
                      Opacity="0.7" TextWrapping="Wrap" />

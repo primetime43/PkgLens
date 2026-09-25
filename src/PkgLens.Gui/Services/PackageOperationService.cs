@@ -69,13 +69,25 @@ public sealed class PackageOperationService : IDisposable
         ? (ulong)content.LongLength
         : entry.FileSize;
 
-    /// <summary>Reads the current editing version, including unsaved replacement bytes.</summary>
-    public byte[] ReadEntryBytes(PkgEntry entry)
+    public byte[] ReadEntryPrefix(PkgEntry entry, int maxBytes)
     {
         ArgumentNullException.ThrowIfNull(entry);
+        if (maxBytes <= 0) throw new ArgumentOutOfRangeException(nameof(maxBytes));
+        return _replacements.TryGetValue(entry, out var content)
+            ? content.AsSpan(0, Math.Min(maxBytes, content.Length)).ToArray()
+            : PkgReader.ExtractEntryPrefix(_stream, Info.Header, entry, _keys, maxBytes);
+    }
+
+    /// <summary>Reads the current editing version, including unsaved replacement bytes.</summary>
+    public byte[] ReadEntryBytes(PkgEntry entry, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(entry);
+        cancellationToken.ThrowIfCancellationRequested();
         if (_replacements.TryGetValue(entry, out var content))
             return content.ToArray();
-        return PkgReader.ExtractEntryBytes(_stream, Info.Header, entry, _keys);
+        using var output = new MemoryStream();
+        PkgReader.ExtractEntry(_stream, Info.Header, entry, output, _keys, cancellationToken);
+        return output.ToArray();
     }
 
     public byte[]? TryReadEntryBytes(string path)

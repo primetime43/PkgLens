@@ -12,6 +12,7 @@ public partial class DecryptPage : UserControl
     private MainWindow? Host => TopLevel.GetTopLevel(this) as MainWindow;
 
     private void OnEdatToolsClick(object? sender, RoutedEventArgs e) => Host?.OnEdatToolsClick(sender, e);
+    private void OnPackageKeyCoverage(object? sender, RoutedEventArgs e) => Host?.OnPackageKeyCoverage(sender, e);
 
     private void OnDecryptPackageContentsClick(object? sender, RoutedEventArgs e) => Host?.OnDecryptPackageContentsClick(sender, e);
 

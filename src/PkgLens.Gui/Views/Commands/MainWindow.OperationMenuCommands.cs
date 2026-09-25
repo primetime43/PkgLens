@@ -92,6 +92,7 @@ public partial class MainWindow
             case OperationId.DecryptPackageContents: OnDecryptPackageContentsClick(sender, e); break;
             case OperationId.EdatTools: OnEdatToolsClick(sender, e); break;
             case OperationId.DiscoverDevKlic: OnDiscoverDevKlic(sender, e); break;
+            case OperationId.PackageKeyCoverage: OnPackageKeyCoverage(sender, e); break;
             case OperationId.SavePackageAs: OnSaveAsClick(sender, e); break;
             case OperationId.Exit: OnExitClick(sender, e); break;
             case OperationId.EditSfo: OnEditSfoClick(sender, e); break;

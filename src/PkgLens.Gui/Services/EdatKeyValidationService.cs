@@ -29,6 +29,20 @@ public static class EdatKeyValidationService
         string? rapDirectory = null, string? databasePath = null, CancellationToken token = default)
     {
         token.ThrowIfCancellationRequested();
+        try
+        {
+            using var source = File.OpenRead(sourcePath);
+            return Check(source, Path.GetFileName(sourcePath), selection, rapDirectory, databasePath, token);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        { return new(EdatKeyCheckStatus.Unavailable, "Could not read the file. " + ex.Message); }
+    }
+
+    /// <summary>Checks an already opened file without owning or closing its stream.</summary>
+    public static EdatKeyCheckResult Check(Stream source, string fileName, EdatKeySelection selection,
+        string? rapDirectory = null, string? databasePath = null, CancellationToken token = default)
+    {
+        token.ThrowIfCancellationRequested();
         ResolvedEdatKey? resolved = null;
         NpdInfo? info = null;
         bool authenticated = false;
@@ -36,14 +50,13 @@ public static class EdatKeyValidationService
             new(status, message, resolved?.Source, resolved?.Fingerprint, info?.ContentId);
         try
         {
-            using var source = File.OpenRead(sourcePath);
             info = EdatFile.ParseHeader(source);
             if (info.Version is < 0 or > 4)
                 return Result(EdatKeyCheckStatus.Unverifiable, "This NPD version is not supported for key validation.");
             // Debug data skips authentication. Never claim that a supplied key matched it.
             if ((info.Flags & 0x80000000) != 0)
                 return Result(EdatKeyCheckStatus.Unverifiable, "Debug file: authentication is disabled, so a key match cannot be verified.");
-            resolved = Resolve(info.ContentId, Path.GetFileName(sourcePath), info.IsSdat, info.License,
+            resolved = Resolve(info.ContentId, fileName, info.IsSdat, info.License,
                 selection, rapDirectory, databasePath);
             token.ThrowIfCancellationRequested();
             if (EdatFile.AuthenticateHeader(source, resolved.Key) != true)

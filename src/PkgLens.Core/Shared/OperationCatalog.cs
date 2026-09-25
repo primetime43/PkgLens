@@ -44,6 +44,7 @@ public enum OperationId
     DecryptPackageContents,
     EdatTools,
     DiscoverDevKlic,
+    PackageKeyCoverage,
 }
 
 public enum OperationMenu
@@ -189,6 +190,10 @@ public static class OperationCatalog
         Def(OperationId.DiscoverDevKlic, "Find key in executable", "Find and verify an EDAT klicensee in a PS3 executable.",
             "Search decrypted executable data and save only keys verified against the selected EDAT.",
             "Find _key in executable…", menu: [Loc(OperationMenu.Tools, 0, 16)]),
+        Def(OperationId.PackageKeyCoverage, "Package key coverage", "Check which protected package files your keys can open.",
+            "Test available keys against current package contents and report missing keys, unconfirmed matches, and unsupported files.",
+            "Package key _coverage…", menuRule: OperationEligibilityRule.DecryptedPackage,
+            menu: [Loc(OperationMenu.Tools, 0, 17)]),
         Def(OperationId.SavePackageAs, "Save package as", "Rebuild a separate package copy containing the current edits.",
             "Rebuild a separate package containing replacements or PARAM.SFO edits. The original remains unchanged.",
             "Save package _as…", menuRule: OperationEligibilityRule.DecryptedPackage,
