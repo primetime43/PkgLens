@@ -250,6 +250,8 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
 
     public bool HasPendingChanges => _operations.HasPendingChanges;
     public int PendingChangeCount => _operations.PendingChangeCount;
+    public IReadOnlyList<PendingPackageChange> PendingChanges => _operations.PendingChanges;
+    public string PendingChangesSummary => $"{PendingChangeCount} unsaved file change{(PendingChangeCount == 1 ? "" : "s")}";
 
     /// <summary>The parsed PARAM.SFO, if present.</summary>
     public SfoTable? Sfo => _operations.Sfo;
@@ -259,6 +261,9 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
     {
         OnPropertyChanged(nameof(HasPendingChanges));
         OnPropertyChanged(nameof(PendingChangeCount));
+        OnPropertyChanged(nameof(PendingChanges));
+        OnPropertyChanged(nameof(PendingChangesSummary));
+        OnPropertyChanged(nameof(Sfo));
     }
     private PackageViewModel(PackageOperationService operations)
     {

@@ -153,17 +153,15 @@ public partial class MainWindow
 
     private async void EditSfo()
     {
-        if (Vm.Package is not { Sfo: { } sfo } package)
-            return;
-
-        var edited = await new SfoEditorDialog(sfo.Entries).ShowDialog<List<PkgLens.Core.Shared.Sfo.SfoEntry>?>(this);
-        if (edited is null)
-            return;
-
         try
         {
+            if (Vm.Package is not { Sfo: { } sfo } package)
+                return;
+            var edited = await new SfoEditorDialog(sfo.Entries).ShowDialog<List<PkgLens.Core.Shared.Sfo.SfoEntry>?>(this);
+            if (edited is null)
+                return;
             package.Operations.ApplySfoEdits(edited);
-            Vm.Status = $"PARAM.SFO edited — {package.PendingChangeCount} pending change(s). Use File → Save As to write a new .pkg.";
+            Vm.Status = $"PARAM.SFO edited — {package.PendingChangesSummary}. Review changes or save a copy.";
         }
         catch (Exception ex)
         {
@@ -205,14 +203,16 @@ public partial class MainWindow
             package.Operations.ReplaceEntry(node.Entry!, content);
             Vm.Status = $"Replaced {node.Name} ({EntryNode.FormatSize(node.Size)} → " +
                          $"{EntryNode.FormatSize((ulong)content.Length)}). {package.PendingChangeCount} pending change(s) — " +
-                         "use File → Save As to write a new .pkg.";
+                         "review changes or save a copy.";
         });
     }
 
-    private async void OnSaveAsClick(object? sender, RoutedEventArgs e)
+    private async void OnSaveAsClick(object? sender, RoutedEventArgs e) => await SavePackageCopyAsync();
+
+    private async Task<bool> SavePackageCopyAsync()
     {
-        if (Vm.Package is not { } package)
-            return;
+        if (Vm.IsBusy || Vm.Package is not { } package)
+            return false;
 
         string suggested = System.IO.Path.GetFileNameWithoutExtension(package.FilePath) + "-modified.pkg";
         var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
@@ -226,26 +226,11 @@ public partial class MainWindow
             },
         });
         if (file?.TryGetLocalPath() is not { } dest)
-            return;
-
-        await RunOperationAsync("Repacking…", "Save failed", async (token, progress) =>
-        {
-            var packageProgress = new Progress<PkgLens.Core.Shared.PkgOperationProgress>(value =>
-                progress.Report(PackagePresentationService.ToGuiProgress(value)));
-            string? keysDirectory = Vm.KeysDirectory;
-            await Task.Run(() =>
-            {
-                package.Operations.SaveAs(dest, token, packageProgress);
-                progress.Report(new GuiOperationProgress("Verifying rebuilt package…", null));
-                PostOperationVerifier.VerifyPackage(dest, new FileKeyProvider(keysDirectory));
-            }, token);
-            Vm.Status = package.IsRetail
-                ? $"Saved and verified {System.IO.Path.GetFileName(dest)} — UNSIGNED (retail: invalid CMAC/signature; won't install on a real console)."
-                : $"Saved and verified {System.IO.Path.GetFileName(dest)}.";
-        });
+            return false;
+        return await Vm.SavePackageAsAsync(dest);
     }
 
-    private void OnCloseClick(object? sender, RoutedEventArgs e) => Vm.CloseFile();
+    private async void OnCloseClick(object? sender, RoutedEventArgs e) => await Vm.CloseFileAsync();
 
     private void OnExitClick(object? sender, RoutedEventArgs e) => Close();
 }

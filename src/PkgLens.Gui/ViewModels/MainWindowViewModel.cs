@@ -131,12 +131,13 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     partial void OnPackageChanged(PackageViewModel? oldValue, PackageViewModel? newValue)
     {
+        if (oldValue is not null)
+            oldValue.PropertyChanged -= OnPackageEditStateChanged;
         oldValue?.Dispose();
+        if (newValue is not null)
+            newValue.PropertyChanged += OnPackageEditStateChanged;
         OnPropertyChanged(nameof(HasPackage));
-        WindowTitle = newValue is null
-            ? GuiVersion.ProductName
-            : $"{GuiVersion.ProductName} — {newValue.Title}" +
-              (string.IsNullOrEmpty(newValue.TitleId) ? "" : $" ({newValue.TitleId})");
+        UpdateWindowTitle();
     }
 
     partial void OnKeysDirectoryChanged(string? value)
@@ -200,9 +201,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
     }
 
     /// <summary>Closes the current package (disposing it) and returns to the empty state.</summary>
-    public void CloseFile()
+    public async Task CloseFileAsync()
     {
-        if (Package is null)
+        if (!await ConfirmPendingChangesAsync())
             return;
         Package = null; // OnPackageChanged disposes it and resets the window title
         Status = "Open or drag a .pkg file to begin.";
@@ -333,6 +334,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
     /// <summary>Loads a package off the UI thread and swaps it in (disposing any prior one).</summary>
     public async Task LoadAsync(string path)
     {
+        if (!await ConfirmPendingChangesAsync())
+            return;
         string fileName = Path.GetFileName(path);
         await RunOperationAsync($"Opening {fileName}…", "Package open failed", async (token, _) =>
         {

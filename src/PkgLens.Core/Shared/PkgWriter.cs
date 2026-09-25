@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using System.Security.Cryptography;
 using System.Text;
 using PkgLens.Core.Shared.Crypto;
 using PkgLens.Core.Shared.Keys;
@@ -14,7 +15,7 @@ namespace PkgLens.Core.Shared;
 ///
 /// Layout of the rebuilt (encrypted) data region: <c>[item table | entry names | file data]</c>,
 /// with fresh offsets/sizes. Everything before <c>data_offset</c> (header + metadata) is copied
-/// from the source in chunks, with only <c>total_size</c> and <c>data_size</c> patched. Unchanged
+/// from the source in chunks, with <c>total_size</c>, <c>data_size</c>, and the header SHA-1 digest updated. Unchanged
 /// entry data is decrypted from its old offset and re-encrypted at its new offset while streaming,
 /// so package size is not limited by available memory.
 /// </summary>
@@ -144,11 +145,18 @@ public static class PkgWriter
     private static void CopyPatchedPrefix(Stream source, Stream destination, long dataOffset,
         long totalSize, long dataSize, byte[] buffer)
     {
-        var first = new byte[PatchedHeaderLength];
+        var first = new byte[(int)Math.Min(dataOffset, 0xC0)];
         source.Position = 0;
         ReadExact(source, first, first.Length, "header");
         BinaryPrimitives.WriteUInt64BigEndian(first.AsSpan(0x18), (ulong)totalSize);
         BinaryPrimitives.WriteUInt64BigEndian(first.AsSpan(0x28), (ulong)dataSize);
+        if (first.Length >= 0xC0)
+        {
+            // Size changes invalidate this unkeyed checksum. Authentication fields remain untouched.
+            Span<byte> digest = stackalloc byte[20];
+            SHA1.HashData(first.AsSpan(0, 0x80), digest);
+            digest.Slice(12, 8).CopyTo(first.AsSpan(0xB8, 8));
+        }
         destination.Write(first);
 
         CopyExact(source, destination, dataOffset - first.Length, buffer, "header/metadata prefix");

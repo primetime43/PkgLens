@@ -60,6 +60,7 @@ public class PkgWriterTests
 
         // Header size fields consistent with the new file.
         Assert.Equal((ulong)repacked.Length, info2.Header.TotalSize);
+        Assert.Equal(PkgCheckStatus.Pass, PkgVerifier.Verify(src2, keys).Checks.Single(check => check.Name == "Header SHA-1").Status);
     }
 
     [Fact]
@@ -84,6 +85,7 @@ public class PkgWriterTests
         var a2 = info2.Entries.Single(e => e.Name == "A.BIN");
         Assert.Equal(replacement, PkgReader.ExtractEntryBytes(src2, info2.Header, a2, keys));
         Assert.Equal("Repack Test", info2.Sfo?.Title);
+        Assert.Equal(PkgCheckStatus.Pass, PkgVerifier.Verify(src2, keys).Checks.Single(check => check.Name == "Header SHA-1").Status);
     }
 
     [Fact]

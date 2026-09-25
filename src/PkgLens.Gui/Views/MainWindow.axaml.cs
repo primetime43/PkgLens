@@ -88,12 +88,18 @@ public partial class MainWindow : Window
     protected override void OnDataContextChanged(EventArgs e)
     {
         if (_subscribedViewModel is not null)
+        {
             _subscribedViewModel.ErrorRequested -= OnErrorRequested;
+            _subscribedViewModel.ConfirmPackageChanges = null;
+        }
 
         base.OnDataContextChanged(e);
         _subscribedViewModel = DataContext as MainWindowViewModel;
         if (_subscribedViewModel is not null)
+        {
             _subscribedViewModel.ErrorRequested += OnErrorRequested;
+            _subscribedViewModel.ConfirmPackageChanges = ConfirmPackageChangesAsync;
+        }
     }
 
     private async void OnErrorRequested(object? sender, GuiErrorReport error) =>

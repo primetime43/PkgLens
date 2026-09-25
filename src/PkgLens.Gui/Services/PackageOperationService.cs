@@ -29,9 +29,14 @@ public sealed class PackageOperationService : IDisposable
     public string FilePath { get; }
     public PkgInfo Info { get; }
     public PspExportEligibility PspExportEligibility => PspPackageExporter.CheckEligibility(Info);
-    public SfoTable? Sfo => Info.Sfo;
+    public SfoTable? Sfo => FindSfoEntry() is { } entry && _replacements.TryGetValue(entry, out var content)
+        ? SfoParser.Parse(content)
+        : Info.Sfo;
     public bool HasPendingChanges => _replacements.Count > 0;
     public int PendingChangeCount => _replacements.Count;
+    public IReadOnlyList<PendingPackageChange> PendingChanges => _replacements
+        .OrderBy(pair => pair.Key.Name, StringComparer.Ordinal)
+        .Select(pair => new PendingPackageChange(pair.Key, (ulong)pair.Value.LongLength)).ToArray();
     public bool CanEditSfo => Info.Sfo is not null && FindSfoEntry() is not null;
 
     public event EventHandler? PendingChangesChanged;
@@ -110,6 +115,12 @@ public sealed class PackageOperationService : IDisposable
         ArgumentNullException.ThrowIfNull(content);
         _replacements[entry] = content;
         PendingChangesChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    public void RevertEntry(PkgEntry entry)
+    {
+        if (_replacements.Remove(entry))
+            PendingChangesChanged?.Invoke(this, EventArgs.Empty);
     }
 
     public void SaveAs(string destinationPath, CancellationToken cancellationToken = default,

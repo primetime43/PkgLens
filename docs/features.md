@@ -22,6 +22,9 @@ The GUI's **Suggested** page automatically shows the actions that match the open
 - Browse `TROPHY.TRP` sets with game artwork, trophy icons, names, descriptions, grades, hidden flags, and medal counts.
 - Extract one file, selected files, or the complete package directory tree.
 - Replace package files and save a separate rebuilt package copy.
+- Review pending file changes with original and replacement sizes, and revert individual files.
+- Prompt to save, discard, or cancel before closing or opening another package with unsaved edits.
+- Continue editing the verified saved copy after saving; failed or cancelled saves preserve pending edits.
 - Inspect extracted game folders and executable metadata.
 
 ## Decryption, executables, and firmware
