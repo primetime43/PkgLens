@@ -6,7 +6,7 @@
              x:Class="PkgLens.Gui.Views.Pages.DecryptPage"
              x:DataType="vm:MainWindowViewModel">
   <ScrollViewer>
-    <StackPanel Margin="24,20" Spacing="16" MaxWidth="720" HorizontalAlignment="Left">
+    <StackPanel Margin="28,24" Spacing="20" MaxWidth="900" HorizontalAlignment="Stretch">
       <StackPanel Spacing="3">
         <TextBlock Classes="pagetitle" Text="Decrypt EDAT / SDAT" />
         <TextBlock Classes="pagesubtitle"

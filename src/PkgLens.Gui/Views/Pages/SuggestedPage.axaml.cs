@@ -11,6 +11,8 @@ public partial class SuggestedPage : UserControl
 
     private MainWindow? Host => TopLevel.GetTopLevel(this) as MainWindow;
 
+    private void OnOpenPackageClick(object? sender, RoutedEventArgs e) => Host?.OnHomeOpenPkg(sender, e);
+
     private void OnBrowsePackageClick(object? sender, RoutedEventArgs e) => Host?.OnBrowsePackageClick(sender, e);
     private void OnRecommendedActionClick(object? sender, RoutedEventArgs e) => Host?.OnRecommendedActionClick(sender, e);
 }

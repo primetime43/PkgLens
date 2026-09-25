@@ -5,10 +5,18 @@
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="PkgLens.Gui.Views.Pages.PackPage"
              x:DataType="vm:MainWindowViewModel">
-  <ScrollViewer>
-    <StackPanel Margin="24,20" Spacing="16" MaxWidth="720" HorizontalAlignment="Left">
+  <DockPanel>
+    <Border DockPanel.Dock="Bottom" Padding="28,12"
+            BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="0,1,0,0">
+      <StackPanel Orientation="Horizontal" Spacing="8" MaxWidth="900">
+        <Button Classes="primary" Content="Create package…" Click="OnPackBuild" />
+        <Button Content="Show folder info…" Click="OnPackFolderInfo" />
+      </StackPanel>
+    </Border>
+    <ScrollViewer>
+    <StackPanel Margin="28,24" Spacing="20" MaxWidth="900" HorizontalAlignment="Stretch">
       <StackPanel Spacing="3">
-        <TextBlock Classes="pagetitle" Text="Pack folder → .pkg" />
+        <TextBlock Classes="pagetitle" Text="Create package" />
         <TextBlock Classes="pagesubtitle"
                    Text="{x:Static core:FeatureText.PackPageIntro}" />
         <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
@@ -21,7 +29,7 @@
       <!-- Source -->
       <Border Classes="panel">
         <StackPanel Spacing="12">
-          <TextBlock Classes="sectionhead" Text="SOURCE" />
+          <TextBlock Classes="sectionhead" Text="1. Choose a source folder" />
           <Grid ColumnDefinitions="120,*" RowDefinitions="Auto,10,Auto,10,Auto,10,Auto,10,Auto">
             <TextBlock Grid.Row="0" Grid.Column="0" Classes="fieldlabel" Text="Source folder" />
             <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="8">
@@ -53,7 +61,7 @@
       <!-- Output -->
       <Border Classes="panel">
         <StackPanel Spacing="12">
-          <TextBlock Classes="sectionhead" Text="OUTPUT" />
+          <TextBlock Classes="sectionhead" Text="2. Choose the target" />
           <StackPanel Spacing="12">
             <RadioButton x:Name="PackRetailRadio" GroupName="PackFin" IsChecked="True" VerticalContentAlignment="Top">
               <StackPanel Spacing="3" Margin="2,1,0,0">
@@ -91,18 +99,13 @@
         </StackPanel>
       </Border>
   
-      <!-- Actions -->
-      <StackPanel Orientation="Horizontal" Spacing="8">
-        <Button Classes="primary" Content="Pack…" Click="OnPackBuild" />
-        <Button Content="Show folder info…" Click="OnPackFolderInfo" />
-      </StackPanel>
-  
       <TextBlock x:Name="PackNotes" TextWrapping="Wrap" FontSize="12" Opacity="0.7" IsVisible="False" />
   
       <Border x:Name="FolderInfoBox" Classes="panel" IsVisible="False">
         <TextBlock x:Name="FolderInfoText" FontFamily="Consolas,monospace" FontSize="12" TextWrapping="Wrap" />
       </Border>
     </StackPanel>
-  </ScrollViewer>
+    </ScrollViewer>
+  </DockPanel>
   
 </UserControl>

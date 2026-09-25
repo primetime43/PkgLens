@@ -1,5 +1,7 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
+using Avalonia.Threading;
 using PkgLens.Core.Shared;
 using PkgLens.Gui.Services;
 using PkgLens.Gui.ViewModels;
@@ -136,6 +138,47 @@ public sealed class MainWindowHeadlessTests
         Assert.False(window.FindControl<Grid>("OperationProgressPanel")!.IsVisible);
         Assert.True(window.FindControl<Grid>("ToolContentShell")!.IsEnabled);
         window.Close();
+    }
+
+    [AvaloniaTheory]
+    [InlineData(1040, 740)]
+    [InlineData(760, 480)]
+    public void Navigation_RowsStayInPlaceAndVisibleAcrossPages(int width, int height)
+    {
+        var viewModel = new MainWindowViewModel();
+        var window = new MainWindow { DataContext = viewModel, Width = width, Height = height };
+        window.Show();
+        try
+        {
+            ListBox rail = window.FindControl<ListBox>("ToolRail")!;
+            var rows = rail.Items.Cast<ListBoxItem>().ToArray();
+            window.UpdateLayout();
+            Dispatcher.UIThread.RunJobs();
+            var initialPositions = rows.Select(row => row.TranslatePoint(default, window)!.Value).ToArray();
+
+            foreach (ToolPage page in Enum.GetValues<ToolPage>().Reverse().Concat(Enum.GetValues<ToolPage>()))
+            {
+                rail.SelectedIndex = (int)page;
+                window.UpdateLayout();
+                Dispatcher.UIThread.RunJobs();
+
+                Assert.Equal(page, viewModel.ActiveTool);
+                for (int i = 0; i < rows.Length; i++)
+                {
+                    Point position = rows[i].TranslatePoint(default, window)!.Value;
+                    Assert.Equal(initialPositions[i], position);
+                    double top = rows[i].TranslatePoint(default, rail)!.Value.Y;
+                    Assert.InRange(top, 0, rail.Bounds.Height - rows[i].Bounds.Height);
+                    Assert.Equal(rows[0].Bounds.Height, rows[i].Bounds.Height);
+                    if (i > 0)
+                        Assert.Equal(rows[i - 1].Bounds.Bottom, rows[i].Bounds.Top);
+                }
+            }
+        }
+        finally
+        {
+            window.Close();
+        }
     }
 
     private static IEnumerable<MenuItem> Descendants(MenuItem root)

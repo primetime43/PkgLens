@@ -6,9 +6,9 @@
              x:Class="PkgLens.Gui.Views.Pages.KeysPage"
              x:DataType="vm:MainWindowViewModel">
   <ScrollViewer>
-    <StackPanel Margin="24,20" Spacing="16" MaxWidth="720" HorizontalAlignment="Left">
+    <StackPanel Margin="28,24" Spacing="20" MaxWidth="900" HorizontalAlignment="Stretch">
       <StackPanel Spacing="3">
-        <TextBlock Classes="pagetitle" Text="Keys" />
+        <TextBlock Classes="pagetitle" Text="Keys &amp; licenses" />
         <TextBlock Classes="pagesubtitle"
                    Text="Package keys are selected automatically. Manage RAP licenses here so licensed EDATs and EBOOTs decrypt without choosing a RAP for every operation." />
         <StackPanel Orientation="Horizontal" Margin="0,4,0,0">

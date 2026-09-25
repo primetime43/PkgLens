@@ -6,8 +6,8 @@
         xmlns:pages="using:PkgLens.Gui.Views.Pages"
         x:Class="PkgLens.Gui.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
-        Width="860" Height="580"
-        MinWidth="620" MinHeight="380"
+        Width="1040" Height="740"
+        MinWidth="760" MinHeight="480"
         DragDrop.AllowDrop="True"
         Title="{Binding WindowTitle}">
 
@@ -35,33 +35,8 @@
       </MenuItem>
     </Menu>
 
-    <!-- Toolbar (package-page actions) -->
-    <Border DockPanel.Dock="Top" Padding="4,3" IsEnabled="{Binding IsNotBusy}"
-            Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
-            BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="0,0,0,1">
-      <StackPanel Orientation="Horizontal" Spacing="3">
-        <Button Classes="tool" Click="OnOpenClick" ToolTip.Tip="Open a .pkg file">Open</Button>
-        <Border Width="1" Margin="3,2" Background="{DynamicResource SystemControlForegroundBaseLowBrush}"
-                IsVisible="{Binding IsPackageTool}" />
-        <Button Classes="tool" Click="OnExtractClick" ToolTip.Tip="Extract the selected file"
-                IsVisible="{Binding IsPackageTool}"
-                IsEnabled="{Binding Package.HasSelectedFile, FallbackValue=False}">Extract</Button>
-        <Button Classes="tool" Click="OnReplaceClick" ToolTip.Tip="Replace the selected file's contents"
-                IsVisible="{Binding IsPackageTool}"
-                IsEnabled="{Binding Package.HasSelectedFile, FallbackValue=False}">Replace</Button>
-        <Button Classes="tool" Click="OnEditSfoClick" ToolTip.Tip="Edit PARAM.SFO"
-                IsVisible="{Binding IsPackageTool}"
-                IsEnabled="{Binding Package.CanEditSfo, FallbackValue=False}">Edit SFO</Button>
-        <Border Width="1" Margin="3,2" Background="{DynamicResource SystemControlForegroundBaseLowBrush}"
-                IsVisible="{Binding IsPackageTool}" />
-        <Button Classes="tool" Click="OnSaveAsClick" ToolTip.Tip="Save a repacked copy"
-                IsVisible="{Binding IsPackageTool}"
-                IsEnabled="{Binding Package.IsDecrypted, FallbackValue=False}">Save As</Button>
-      </StackPanel>
-    </Border>
-
     <!-- Status bar -->
-    <Border DockPanel.Dock="Bottom" Padding="6,3"
+    <Border DockPanel.Dock="Bottom" Padding="12,7"
             Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
             BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="0,1,0,0">
       <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto">
@@ -81,45 +56,80 @@
     </Border>
 
     <!-- Rail + content -->
-    <Grid x:Name="ToolContentShell" ColumnDefinitions="148,*" IsEnabled="{Binding IsNotBusy}">
+    <Grid x:Name="ToolContentShell" ColumnDefinitions="180,*" IsEnabled="{Binding IsNotBusy}">
 
       <!-- Left tool rail -->
       <DockPanel Grid.Column="0"
                  Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
-        <TextBlock DockPanel.Dock="Top" Text="TOOLS" FontSize="11" FontWeight="SemiBold"
-                   Opacity="0.55" Margin="12,10,0,4" />
-        <ListBox x:Name="ToolRail" Background="Transparent"
+        <StackPanel DockPanel.Dock="Top" Margin="16,20,12,16" Spacing="3">
+          <TextBlock Text="PkgLens" FontSize="18" FontWeight="SemiBold" />
+          <TextBlock Text="Package workspace" Classes="carddesc" />
+        </StackPanel>
+        <Button DockPanel.Dock="Bottom" Content="Open package…" Click="OnOpenClick"
+                HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="12" />
+        <ListBox x:Name="ToolRail" Classes="navigation" Background="Transparent"
                  BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="0,0,1,0"
                  SelectedIndex="{Binding SelectedToolIndex, Mode=TwoWay}">
+          <ListBox.ItemsPanel>
+            <ItemsPanelTemplate>
+              <StackPanel />
+            </ItemsPanelTemplate>
+          </ListBox.ItemsPanel>
           <ListBoxItem Content="Home" />
-          <ListBoxItem Content="Suggested" />
-          <ListBoxItem Content="Package" />
-          <ListBoxItem Content="Pack" />
-          <ListBoxItem x:Name="SelfEbootToolRailItem" Content="SELF / EBOOT" />
-          <ListBoxItem Content="Decrypt" />
-          <ListBoxItem Content="Keys" />
+          <ListBoxItem Content="Package overview" ToolTip.Tip="Package details and suggested next steps" />
+          <ListBoxItem Content="Browse files" ToolTip.Tip="Inspect, extract, and replace files in the open package" />
+          <ListBoxItem Content="Create package" ToolTip.Tip="Build a .pkg from a folder" />
+          <ListBoxItem x:Name="SelfEbootToolRailItem" Content="SELF / EBOOT" ToolTip.Tip="Inspect, decrypt, sign, and patch executables" />
+          <ListBoxItem Content="Decrypt data" ToolTip.Tip="Decrypt EDAT and SDAT files" />
+          <ListBoxItem Content="Keys &amp; licenses" />
         </ListBox>
       </DockPanel>
 
       <!-- Content host: one panel per page -->
-      <Grid Grid.Column="1">
-
-        <!-- Page controls keep the window shell small while inheriting its view model. -->
-        <pages:HomePage x:Name="HomePage" IsVisible="{Binding IsHomeTool}" />
-        <pages:SuggestedPage x:Name="SuggestedPage" IsVisible="{Binding IsSuggestedTool}" />
-        <pages:PackagePage x:Name="PackagePage" IsVisible="{Binding IsPackageTool}" />
-        <pages:PackPage x:Name="PackPage" IsVisible="{Binding IsPackTool}" />
-        <pages:ResignPage x:Name="ResignPage" IsVisible="{Binding IsResignTool}" />
-        <pages:DecryptPage x:Name="DecryptPage" IsVisible="{Binding IsDecryptTool}" />
-        <pages:KeysPage x:Name="KeysPage" IsVisible="{Binding IsKeysTool}" />
-        <!-- Drag-and-drop overlay (global) -->
-        <Border x:Name="DropOverlay" IsVisible="False" IsHitTestVisible="False" Background="#99000000">
-          <Border Margin="24" BorderBrush="White" BorderThickness="2" CornerRadius="4">
-            <TextBlock Text="Drop a .pkg to open it · Drop a folder for batch processing" FontSize="18" Foreground="White"
-                       HorizontalAlignment="Center" VerticalAlignment="Center" />
-          </Border>
+      <Grid Grid.Column="1" RowDefinitions="Auto,*">
+        <!-- Toolbar (package-page actions) -->
+        <Border x:Name="PackageToolbar" Grid.Row="0" Padding="10,6" IsEnabled="{Binding IsNotBusy}"
+                IsVisible="{Binding IsPackageTool}"
+                Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="0,0,0,1">
+          <WrapPanel>
+            <Button Classes="tool" Click="OnOpenClick" ToolTip.Tip="Open a .pkg file">Open package…</Button>
+            <Border Width="1" Margin="3,2" Background="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                    IsVisible="{Binding IsPackageTool}" />
+            <Button Classes="tool" Click="OnExtractClick" ToolTip.Tip="Extract the selected file"
+                    IsVisible="{Binding IsPackageTool}"
+                    IsEnabled="{Binding Package.HasSelectedFile, FallbackValue=False}">Extract file…</Button>
+            <Button Classes="tool" Click="OnReplaceClick" ToolTip.Tip="Replace the selected file's contents"
+                    IsVisible="{Binding IsPackageTool}"
+                    IsEnabled="{Binding Package.HasSelectedFile, FallbackValue=False}">Replace file…</Button>
+            <Button Classes="tool" Click="OnEditSfoClick" ToolTip.Tip="Edit PARAM.SFO"
+                    IsVisible="{Binding IsPackageTool}"
+                    IsEnabled="{Binding Package.CanEditSfo, FallbackValue=False}">Edit SFO…</Button>
+            <Border Width="1" Margin="3,2" Background="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                    IsVisible="{Binding IsPackageTool}" />
+            <Button Classes="tool" Click="OnSaveAsClick" ToolTip.Tip="Save a repacked copy"
+                    IsVisible="{Binding IsPackageTool}"
+                    IsEnabled="{Binding Package.IsDecrypted, FallbackValue=False}">Save copy…</Button>
+          </WrapPanel>
         </Border>
 
+        <Grid Grid.Row="1">
+          <!-- Page controls keep the window shell small while inheriting its view model. -->
+          <pages:HomePage x:Name="HomePage" IsVisible="{Binding IsHomeTool}" />
+          <pages:SuggestedPage x:Name="SuggestedPage" IsVisible="{Binding IsSuggestedTool}" />
+          <pages:PackagePage x:Name="PackagePage" IsVisible="{Binding IsPackageTool}" />
+          <pages:PackPage x:Name="PackPage" IsVisible="{Binding IsPackTool}" />
+          <pages:ResignPage x:Name="ResignPage" IsVisible="{Binding IsResignTool}" />
+          <pages:DecryptPage x:Name="DecryptPage" IsVisible="{Binding IsDecryptTool}" />
+          <pages:KeysPage x:Name="KeysPage" IsVisible="{Binding IsKeysTool}" />
+          <!-- Drag-and-drop overlay (global) -->
+          <Border x:Name="DropOverlay" IsVisible="False" IsHitTestVisible="False" Background="#99000000">
+            <Border Margin="24" BorderBrush="White" BorderThickness="2" CornerRadius="4">
+              <TextBlock Text="Drop a .pkg to open it · Drop a folder for batch processing" FontSize="18" Foreground="White"
+                         HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center" Margin="16" />
+            </Border>
+          </Border>
+        </Grid>
       </Grid>
     </Grid>
   </DockPanel>

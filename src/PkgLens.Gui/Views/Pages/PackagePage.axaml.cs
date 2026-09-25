@@ -11,6 +11,8 @@ public partial class PackagePage : UserControl
 
     private MainWindow? Host => TopLevel.GetTopLevel(this) as MainWindow;
 
+    private void OnOpenPackageClick(object? sender, RoutedEventArgs e) => Host?.OnHomeOpenPkg(sender, e);
+
     private void OnClearFileFilter(object? sender, RoutedEventArgs e) => Host?.OnClearFileFilter(sender, e);
     private void OnDecryptManual(object? sender, RoutedEventArgs e) => Host?.OnDecryptManual(sender, e);
     private void OnExtractClick(object? sender, RoutedEventArgs e) => Host?.OnExtractClick(sender, e);

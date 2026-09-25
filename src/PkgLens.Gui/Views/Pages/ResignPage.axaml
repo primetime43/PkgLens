@@ -26,7 +26,7 @@
                 <materialIcons:MaterialIcon Grid.Column="0" Kind="Magnify" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="1,0,0,0" />
                 <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
                   <TextBlock Classes="rowtitle" Text="Inspect SELF / EBOOT" />
-                  <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{x:Static core:FeatureText.InspectSelf}" />
+                  <TextBlock Classes="carddesc" TextWrapping="Wrap" Text="{x:Static core:FeatureText.InspectSelf}" />
                 </StackPanel>
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                   <Border Classes="chip"><TextBlock Text="EBOOT" /></Border>
@@ -40,7 +40,7 @@
                 <materialIcons:MaterialIcon Grid.Column="0" Kind="LockOpenOutline" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="1,0,0,0" />
                 <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
                   <TextBlock Classes="rowtitle" Text="Decrypt SELF → ELF" />
-                  <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{x:Static core:FeatureText.DecryptSelf}" />
+                  <TextBlock Classes="carddesc" TextWrapping="Wrap" Text="{x:Static core:FeatureText.DecryptSelf}" />
                 </StackPanel>
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                   <Border Classes="chip"><TextBlock Text="EBOOT" /></Border>
@@ -54,7 +54,7 @@
                 <materialIcons:MaterialIcon Grid.Column="0" Kind="DrawPen" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="1,0,0,0" />
                 <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
                   <TextBlock Classes="rowtitle" Text="Fake-sign ELF → fSELF" />
-                  <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{x:Static core:FeatureText.FakeSignSelf}" />
+                  <TextBlock Classes="carddesc" TextWrapping="Wrap" Text="{x:Static core:FeatureText.FakeSignSelf}" />
                 </StackPanel>
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                   <Border Classes="chip"><TextBlock Text="EBOOT" /></Border>
@@ -68,7 +68,7 @@
                 <materialIcons:MaterialIcon Grid.Column="0" Kind="ArrowDownBoldBox" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="1,0,0,0" />
                 <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
                   <TextBlock Classes="rowtitle" Text="Magic-patch firmware" />
-                  <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{x:Static core:FeatureText.PatchFirmware}" />
+                  <TextBlock Classes="carddesc" TextWrapping="Wrap" Text="{x:Static core:FeatureText.PatchFirmware}" />
                 </StackPanel>
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                   <Border Classes="chip"><TextBlock Text="EBOOT" /></Border>
@@ -82,7 +82,7 @@
                 <materialIcons:MaterialIcon Grid.Column="0" Kind="CodeBraces" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="1,0,0,0" />
                 <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" Margin="0,0,12,0">
                   <TextBlock Classes="rowtitle" Text="Byte-patch EBOOT" />
-                  <TextBlock Classes="carddesc" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{x:Static core:FeatureText.BytePatch}" />
+                  <TextBlock Classes="carddesc" TextWrapping="Wrap" Text="{x:Static core:FeatureText.BytePatch}" />
                 </StackPanel>
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                   <Border Classes="chip"><TextBlock Text="EBOOT" /></Border>

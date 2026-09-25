@@ -1,7 +1,18 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-  <!-- A few small utility tweaks. Deliberately plain — this is a desktop utility, not a landing page. -->
+  <!-- Shared spacing and hierarchy for the desktop workspace. -->
+
+  <Style Selector="ListBox.navigation ListBoxItem">
+    <Setter Property="Height" Value="38" />
+    <Setter Property="Padding" Value="14,0" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="FontSize" Value="13" />
+  </Style>
+  <Style Selector="Expander.toolgroup">
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+  </Style>
 
   <Style Selector="TextBlock.mono">
     <Setter Property="FontFamily" Value="Consolas, Menlo, monospace" />
@@ -9,28 +20,28 @@
 
   <!-- Compact toolbar buttons -->
   <Style Selector="Button.tool">
-    <Setter Property="Padding" Value="8,4" />
+    <Setter Property="Padding" Value="10,6" />
     <Setter Property="MinWidth" Value="0" />
   </Style>
 
   <!-- ===== Shared page design language ===== -->
   <!-- Every tool page opens with a title + one-line subtitle, then content. -->
   <Style Selector="TextBlock.pagetitle">
-    <Setter Property="FontSize" Value="18" />
+    <Setter Property="FontSize" Value="24" />
     <Setter Property="FontWeight" Value="SemiBold" />
   </Style>
   <Style Selector="TextBlock.pagesubtitle">
-    <Setter Property="FontSize" Value="12" />
-    <Setter Property="Opacity" Value="0.7" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="Opacity" Value="0.8" />
     <Setter Property="TextWrapping" Value="Wrap" />
     <Setter Property="MaxWidth" Value="760" />
     <Setter Property="HorizontalAlignment" Value="Left" />
   </Style>
-  <!-- Muted uppercase group/section label -->
+  <!-- Secondary group/section label -->
   <Style Selector="TextBlock.sectionhead">
-    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontSize" Value="12" />
     <Setter Property="FontWeight" Value="SemiBold" />
-    <Setter Property="Opacity" Value="0.5" />
+    <Setter Property="Opacity" Value="0.75" />
   </Style>
   <!-- A grouped content panel (forms, status blocks) — matches the card surface -->
   <Style Selector="Border.panel">
@@ -108,7 +119,7 @@
   <Style Selector="Button.row">
     <Setter Property="HorizontalAlignment" Value="Stretch" />
     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-    <Setter Property="Padding" Value="12,9" />
+    <Setter Property="Padding" Value="14,12" />
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="CornerRadius" Value="6" />
@@ -122,6 +133,7 @@
   <Style Selector="Button.row TextBlock.rowtitle">
     <Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="FontSize" Value="13" />
+    <Setter Property="TextWrapping" Value="Wrap" />
   </Style>
 
   <!-- A card's icon glyph — fixed column so titles align regardless of glyph width -->
@@ -137,8 +149,8 @@
     <Setter Property="TextTrimming" Value="CharacterEllipsis" />
   </Style>
   <Style Selector="TextBlock.carddesc">
-    <Setter Property="FontSize" Value="11" />
-    <Setter Property="Opacity" Value="0.65" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="Opacity" Value="0.75" />
     <Setter Property="TextWrapping" Value="Wrap" />
   </Style>
 
