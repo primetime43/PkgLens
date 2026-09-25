@@ -65,8 +65,14 @@
           <Border DockPanel.Dock="Bottom" IsVisible="{Binding HasSelectedFile}" Padding="10,4"
                   Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
                   BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="0,1,0,0">
-            <TextBlock Text="{Binding SelectedFileDetail}" FontSize="12" FontFamily="Consolas,monospace"
-                       Opacity="0.85" TextTrimming="CharacterEllipsis" />
+            <StackPanel Spacing="3">
+              <TextBlock Text="{Binding SelectedFileDetail}" FontSize="12" FontFamily="Consolas,monospace"
+                         Opacity="0.85" TextTrimming="CharacterEllipsis" />
+              <StackPanel IsVisible="{Binding HasSelectedTarget}" Spacing="2">
+                <TextBlock Text="{Binding SelectedTargetLabel}" FontSize="12" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding SelectedTargetDetail}" FontSize="11" Opacity="0.75" TextWrapping="Wrap" />
+              </StackPanel>
+            </StackPanel>
           </Border>
   
           <Grid ColumnDefinitions="160,4,*">

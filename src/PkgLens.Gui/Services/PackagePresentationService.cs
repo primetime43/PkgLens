@@ -53,6 +53,10 @@ internal static class PackagePresentationService
     public static string DescribeSelf(SelfInfo self)
     {
         var text = new StringBuilder();
+        var target = SelfTargetInfo.FromInfo(self);
+        text.AppendLine($"CEX / DEX  : {target.Label}");
+        text.AppendLine(target.Detail);
+        text.AppendLine();
         text.AppendLine($"Program    : {self.ProgramTypeText}" + (self.IsNpdrm ? "  (NPDRM)" : ""));
         text.AppendLine($"Key rev    : 0x{self.KeyRevision:X4}" + (self.IsLikelyFakeSigned ? "  (fake-signed / fSELF)" : ""));
         text.AppendLine($"Auth ID    : 0x{self.AuthId:X16}");

@@ -17,6 +17,7 @@ internal sealed record SelfFolderOptions(SelfFolderOperation Operation, ushort R
 internal sealed record SelfFolderJob(string Source, string Output, string RelativePath)
 {
     public string Type { get; set; } = "Unknown";
+    public SelfTargetInfo Target { get; set; } = SelfTargetInfo.Unknown("File has not been identified.");
     public SelfFolderStatus Status { get; set; }
     public int Attempts { get; set; }
     public string Message { get; set; } = "Ready";
@@ -183,8 +184,12 @@ internal static class SelfFolderService
             throw new PkgFormatException($"No encryption profile for {(programType == 8 ? "NPDRM" : "APP")} key {options.Revision:X2}.");
     }
 
-    private static void SetType(SelfFolderJob job, SelfInfo? info) => job.Type = info is null ? "ELF"
-        : info.Npdrm is null ? "APP" : $"NPDRM ({info.Npdrm.RawLicenseType switch { 1 => "network", 2 => "local", 3 => "free", _ => "unknown" }})";
+    private static void SetType(SelfFolderJob job, SelfInfo? info)
+    {
+        job.Type = info is null ? "ELF"
+            : info.Npdrm is null ? "APP" : $"NPDRM ({info.Npdrm.RawLicenseType switch { 1 => "network", 2 => "local", 3 => "free", _ => "unknown" }})";
+        job.Target = info is null ? SelfTargetInfo.PlainElf : SelfTargetInfo.FromInfo(info);
+    }
 
     private static void SetResult(SelfFolderJob job, SelfFolderStatus status, string message)
     { job.Status = status; job.Message = message; }

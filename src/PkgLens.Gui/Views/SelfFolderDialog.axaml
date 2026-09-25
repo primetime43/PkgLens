@@ -70,6 +70,7 @@
         <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="90" />
         <DataGridTextColumn Header="File" Binding="{Binding RelativePath}" Width="2*" />
         <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="115" />
+        <DataGridTextColumn Header="Source CEX / DEX" Binding="{Binding Target.Label}" Width="180" />
         <DataGridTextColumn Header="Result" Binding="{Binding Message}" Width="3*" />
         <DataGridTextColumn Header="Output" Binding="{Binding OutputName}" Width="2*" />
       </DataGrid.Columns>

@@ -185,7 +185,7 @@ public partial class SelfFolderDialog : Window
     private void OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (C<DataGrid>("JobsGrid").SelectedItem is SelfFolderJob job)
-            C<TextBox>("DetailText").Text = $"{job.RelativePath} · {job.Status} · Attempts: {job.Attempts}\n{job.Message}\n{job.Output}";
+            C<TextBox>("DetailText").Text = $"{job.RelativePath} · {job.Status} · Attempts: {job.Attempts}\nSource CEX / DEX: {job.Target.Label}. {job.Target.Detail}\n{job.Message}\n{job.Output}";
     }
     private void OnCancel(object? sender, RoutedEventArgs e)
     { _cancellation?.Cancel(); C<TextBlock>("StatusText").Text = "Cancelling; waiting for the current operation to stop…"; }

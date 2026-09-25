@@ -7,6 +7,7 @@ using System.Threading;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using PkgLens.Core;
+using PkgLens.Core.Ps3.Self;
 using PkgLens.Core.Shared;
 using PkgLens.Core.Shared.Keys;
 using PkgLens.Core.Shared.Models;
@@ -197,6 +198,7 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
 
     partial void OnSelectedItemChanged(EntryNode? value)
     {
+        RefreshSelectedTarget();
         OnPropertyChanged(nameof(HasSelectedFile));
         OnPropertyChanged(nameof(CanPreviewSelected));
         OnPropertyChanged(nameof(SelectedFileDetail));
@@ -213,6 +215,34 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
     public bool HasSelectedSpecialTool => HasSelectedPspTool || SelectedIsTrophyTrp;
 
     public bool HasSelectedFile => SelectedItem is { IsDirectory: false, Entry: not null };
+
+    private SelfTargetInfo? _selectedTarget;
+    public bool HasSelectedTarget => _selectedTarget is not null;
+    public string SelectedTargetLabel => _selectedTarget is { } target ? $"CEX / DEX: {target.Label}" : "";
+    public string SelectedTargetDetail => _selectedTarget?.Detail ?? "";
+
+    private void RefreshSelectedTarget()
+    {
+        _selectedTarget = null;
+        if (SelectedItem is { IsDirectory: false, Entry: { } entry })
+        {
+            try
+            {
+                _selectedTarget = SelfTargetInfo.ReadHeader(_operations.ReadEntryPrefix(entry, 4096));
+                if (_selectedTarget is null && (SelectedItem.Name.Equals("EBOOT.BIN", StringComparison.OrdinalIgnoreCase)
+                    || Path.GetExtension(SelectedItem.Name).ToLowerInvariant() is ".self" or ".sprx" or ".elf"))
+                    _selectedTarget = SelfTargetInfo.Unknown("No recognizable SELF or ELF header in this file.");
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or PkgFormatException or PkgKeyException
+                or System.Security.Cryptography.CryptographicException or NotSupportedException)
+            {
+                _selectedTarget = SelfTargetInfo.Unknown("Could not read the file header: " + ex.Message);
+            }
+        }
+        OnPropertyChanged(nameof(HasSelectedTarget));
+        OnPropertyChanged(nameof(SelectedTargetLabel));
+        OnPropertyChanged(nameof(SelectedTargetDetail));
+    }
 
     /// <summary>True when the selected file is a PSP PBP container (EBOOT.PBP), unpackable in-app.</summary>
     public bool SelectedIsPbp => SelectedItem is { IsDirectory: false, Entry: not null } n
@@ -263,6 +293,7 @@ public sealed partial class PackageViewModel : ObservableObject, IDisposable
 
     private void OnPendingChangesChanged(object? sender, PackageEntryChangedEventArgs e)
     {
+        if (SelectedItem?.Entry == e.Entry) RefreshSelectedTarget();
         RefreshEntryPreviews(RootFolder);
         foreach (var root in FolderRoots.Where(root => !ReferenceEquals(root, RootFolder)))
             RefreshEntryPreviews(root);

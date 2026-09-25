@@ -118,7 +118,7 @@
         <StackPanel x:Name="ResignOpInspect" IsVisible="False" Spacing="10">
           <TextBlock Text="Inspect SELF / EBOOT" FontWeight="SemiBold" FontSize="14" />
           <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.75"
-                     Text="Read a SELF/EBOOT header — program type, key revision, control blocks and segments. No key needed." />
+                     Text="Read a SELF/EBOOT header — CEX / DEX format, program type, key revision, control blocks and segments. No key needed." />
           <StackPanel Orientation="Horizontal" Spacing="8">
             <Button Content="Browse SELF / EBOOT…" Click="OnSelfBrowse" />
             <TextBlock x:Name="SelfFileText" VerticalAlignment="Center" FontSize="12" Opacity="0.8"
