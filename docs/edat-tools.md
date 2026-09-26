@@ -1,68 +1,40 @@
 # EDAT / SDAT tools
 
-Open **Tools → EDAT / SDAT tools**, or use the button on **Decrypt data**.
+Open **Tools → EDAT / SDAT tools**, or the button on **Decrypt data**.
 
 | Operation | Result |
 | --- | --- |
-| Decrypt only | Plaintext from an existing EDAT or SDAT. |
-| Encrypt plaintext | New EDAT or SDAT with your chosen filename, version, content ID, license, and block size. |
-| Quick rebuild | Re-encrypt the original or replacement plaintext, preserving the original NPD identity, filename, license, version, and block size. |
-| Custom rebuild | Decrypt the source, optionally replace its plaintext, and encrypt with new output settings or format. |
+| Decrypt only | Verified plaintext |
+| Encrypt plaintext | New EDAT/SDAT with selected output settings |
+| Quick rebuild | Original or replacement plaintext, preserving NPD identity and settings |
+| Custom rebuild | Replacement plaintext and/or new format, filename, license, or settings |
 
-Choose a source, configure the operation, and select **Build and verify** (or **Decrypt and verify**).
-You can then **Preview plaintext** or **Save copy**. Changing any setting invalidates the previous result.
-Original files and replacement plaintext are never overwritten. Cancellation removes incomplete scratch output.
+Choose the source and operation, then **Build and verify** or **Decrypt and verify**.
+Use **Preview plaintext** or **Save copy** after success. Originals are preserved;
+changing settings clears the previous result.
 
-For package editing, right-click an EDAT/SDAT in **Browse files** and choose **Rebuild EDAT / SDAT…**.
-The dialog reads the current package contents, including pending replacements. After verification,
-**Stage in package** adds the rebuilt encrypted file to pending changes. Review or undo it before saving
-a separate package copy. Staging requires the same filename and is limited to 128 MiB per file.
-Plaintext previews are limited to 32 MiB; larger files can be decrypted and saved for external inspection.
-Standalone processing streams file data through temporary files.
+To edit a package, right-click an EDAT/SDAT in **Browse files → Rebuild EDAT / SDAT**.
+It reads pending replacements. **Stage in package** adds a verified result to pending edits;
+staging requires the original filename and a file no larger than 128 MiB. Preview limit: 32 MiB.
 
 ## Keys and settings
 
-Before decrypting or rebuilding, select **Check key and file** in the input key section.
-It uses the same key selection as processing: an entered raw key, a selected RAP, the local
-klicensee database, the bundled catalog, then an installed RAP (or the standard free developer key).
-The result identifies the selected source, mapping or RAP filename, and a short SHA-256 fingerprint
-of the content key. It never displays the raw key or RAP bytes.
+- **Check key and file** validates the header, metadata, and content without saving plaintext.
+  It distinguishes missing keys, unconfirmed header matches, and damaged content.
+- Raw key overrides RAP selection and [automatic lookup](keys.md). Overrides are not saved.
+- SDAT derives its key from the header. Free EDAT uses a developer key; licensed EDAT needs
+  the matching content key/RAP. The advanced developer header key is separate from that content key.
+- EDAT supports versions 1–4; SDAT supports 2–4. Block sizes: 1–32 KiB in powers of two.
+- EDAT authenticates its filename. Keep the chosen name when saving, or use custom rebuild to rename.
 
-A successful check authenticates the header, metadata, and all content blocks without saving
-plaintext. SDAT is checked with its header-derived key. Missing keys, invalid RAPs, unreadable
-sources, and malformed files receive separate explanations. A header mismatch can indicate either
-an incorrect key or damaged header; when the header matches but content verification fails, the
-result explicitly reports that the key matched. Debug files cannot prove a key match because they
-skip authentication. Catalog and filename matches alone are never reported as verified.
+## Limits
 
-The check is cancellable and does not enable Save or Stage. Changing settings clears its result;
-processing rechecks the file independently. Encryption starts from plaintext, so its output key
-is checked through the existing build-and-verify operation rather than against an input EDAT.
+Rebuilds validate the source, then decrypt the output and compare plaintext length and SHA-256.
+Output is uncompressed and intended for compatible CFW/HEN or emulators; no ECDSA signatures
+are generated. Debug files cannot prove a key match. Unlock-EDAT generation is not included.
+Cancellation removes incomplete scratch output.
 
-- SDAT derives its key from the header and needs no RAP.
-- Free EDAT uses a developer klicensee. The standard key is the fallback; enter a raw key for content that uses a different one.
-- Licensed EDAT needs its content key: select a RAP, enter a 32-character hexadecimal key, or let PkgLens check its key catalogs and configured RAP directory.
-- For licensed output, the optional advanced developer header key is separate from the RAP-derived content key. Blank uses the built-in developer key.
-- Raw keys take precedence over selected RAPs and automatic lookup. Entering a key here does not add it to the key database.
-- EDAT supports versions 1–4; SDAT supports versions 2–4. Output block sizes are 1, 2, 4, 8, 16, or 32 KiB.
-- The EDAT title hash includes the filename. Keep the chosen filename when saving; use custom rebuild to rename an existing EDAT.
-
-## Verification and limits
-
-Rebuilds verify the original before accepting replacement plaintext. Newly encrypted output is decrypted
-again and its length and SHA-256 are compared with the intended plaintext before saving or staging is enabled.
-This checks content integrity, not whether a particular console or title will accept the result.
-
-All rebuilt output is uncompressed, including when the original used compression. Quick rebuild preserves
-the NPD identity and validity fields but normalizes the block layout. Sony ECDSA signatures are not generated;
-output is intended for compatible CFW/HEN or emulator workflows.
-
-The tools cover the four main operations and [executable key discovery](devklic-discovery.md).
-Unlock-EDAT generation is not included.
-The tools are implemented in managed .NET and do not require Java or the external reference executable.
-
-Format references: [PS3 EDAT files](https://www.psdevwiki.com/ps3/EDAT_files),
-[NPD headers](https://www.psdevwiki.com/ps3/NPD), and
-[Hykem's make_npdata](https://github.com/ErikPshat/make_npdata-hykem/blob/master/Linux/make_npdata.c).
-During development, that independent reference tool decrypted 22 generated samples byte for byte:
-empty and multi-block files across all supported versions, with free EDAT, licensed EDAT, and SDAT.
+See [key discovery](devklic-discovery.md). Format references:
+[EDAT](https://www.psdevwiki.com/ps3/EDAT_files), [NPD](https://www.psdevwiki.com/ps3/NPD),
+[make_npdata](https://github.com/ErikPshat/make_npdata-hykem/blob/master/Linux/make_npdata.c).
+The independent reference tool recovered identical plaintext from 22 generated EDAT/SDAT cases.

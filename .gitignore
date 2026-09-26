@@ -8,14 +8,20 @@ TestResults/
 *.user
 
 # Never commit user-supplied key material (runtime override keys). Anchored to the repo root so it
-# does not swallow the source directory src/PkgLens.Core/Keys/.
+# does not swallow source key-provider directories.
 *.key
 /keys/
 *.gpkg_key
 gpkg_key
+*.rap
 
 # Never commit copyrighted package dumps.
 *.pkg
+
+# Keep local executable samples in ignored TestResults/, not the repository root.
+/*.self
+/*.sprx
+/*.elf
 
 # IDE
 .vs/
