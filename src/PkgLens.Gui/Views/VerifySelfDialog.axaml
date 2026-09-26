@@ -1,0 +1,57 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="PkgLens.Gui.Views.VerifySelfDialog" x:CompileBindings="False"
+        Title="Verify SELF / EBOOT" Width="780" Height="690" MinWidth="600" MinHeight="480"
+        WindowStartupLocation="CenterOwner">
+  <DockPanel Margin="22">
+    <StackPanel DockPanel.Dock="Bottom" Spacing="10" Margin="0,14,0,0">
+      <TextBlock x:Name="StatusText" Text="Choose an EBOOT.BIN, SELF or SPRX file to check." TextWrapping="Wrap" />
+      <ProgressBar x:Name="Progress" Height="4" IsIndeterminate="True" IsVisible="False" />
+      <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+        <Button x:Name="StopButton" Content="Cancel check" Click="OnStop" IsVisible="False" />
+        <Button x:Name="VerifyButton" Content="Verify again" Classes="primary" Click="OnVerify" IsEnabled="False" />
+        <Button Content="Close" Click="OnClose" />
+      </StackPanel>
+    </StackPanel>
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+      <StackPanel Spacing="14">
+        <StackPanel Spacing="5">
+          <TextBlock Text="Verify SELF / EBOOT" FontSize="24" FontWeight="SemiBold" />
+          <TextBlock Text="Check an existing executable without changing it." TextWrapping="Wrap" Opacity="0.75" />
+        </StackPanel>
+        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+          <Button x:Name="BrowseButton" Content="Choose file…" Click="OnBrowse" />
+          <TextBlock x:Name="SourceText" Grid.Column="1" Text="No file selected" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+        </Grid>
+        <Expander x:Name="KeysPanel" Header="Keys and licenses (optional)" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+          <StackPanel Spacing="8">
+            <TextBlock Text="Saved keys, your configured RAP library and the standard free-license key are checked automatically. A raw key overrides a selected RAP."
+                       TextWrapping="Wrap" FontSize="12" />
+            <TextBox x:Name="KeyBox" Watermark="Raw klicensee override (32 hex characters)" MaxLength="32" TextChanged="OnKeyChanged" />
+            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+              <Button Content="Choose RAP…" Click="OnChooseRap" />
+              <TextBox x:Name="RapBox" Grid.Column="1" Watermark="Optional matching RAP file" IsReadOnly="True" TextChanged="OnKeyChanged" />
+              <Button Grid.Column="2" Content="Clear" Click="OnClearRap" />
+            </Grid>
+          </StackPanel>
+        </Expander>
+        <StackPanel x:Name="ResultsPanel" Spacing="12" IsVisible="False">
+          <Border Classes="panel" Padding="14">
+            <StackPanel Spacing="5">
+              <TextBlock x:Name="SignatureText" FontWeight="SemiBold" TextWrapping="Wrap" />
+              <TextBlock x:Name="SignatureDetail" TextWrapping="Wrap" FontSize="12" />
+              <TextBlock x:Name="DecryptionText" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,8,0,0" />
+              <TextBlock x:Name="DecryptionDetail" TextWrapping="Wrap" FontSize="12" />
+            </StackPanel>
+          </Border>
+          <StackPanel Spacing="5">
+            <TextBlock x:Name="TargetText" FontWeight="SemiBold" TextWrapping="Wrap" />
+            <TextBlock x:Name="TargetDetail" FontSize="12" Opacity="0.75" TextWrapping="Wrap" />
+            <TextBlock x:Name="InfoText" FontSize="12" TextWrapping="Wrap" />
+          </StackPanel>
+        </StackPanel>
+        <TextBlock x:Name="ScopeText" FontSize="12" Opacity="0.7" TextWrapping="Wrap" />
+      </StackPanel>
+    </ScrollViewer>
+  </DockPanel>
+</Window>

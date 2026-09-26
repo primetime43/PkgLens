@@ -99,6 +99,11 @@ internal static class SelfBuildService
 
     private static byte[]? ResolveKey(string contentId, string fileName, uint license,
         EdatKeySelection selection, string? rapDirectory)
+        => FindKey(contentId, fileName, license, selection, rapDirectory)
+            ?? throw new PkgFormatException("No matching NPDRM key found. Select the matching RAP or enter a raw klicensee.");
+
+    internal static byte[]? FindKey(string contentId, string fileName, uint license,
+        EdatKeySelection selection, string? rapDirectory)
     {
         if (EdatWorkbenchService.ParseKey(selection.RawKey) is { } raw) return raw;
         if (!string.IsNullOrWhiteSpace(selection.RapPath))
@@ -118,6 +123,6 @@ internal static class SelfBuildService
         if (license == 3) return SelfKeyset.NpKlicFree;
         byte[]? found = RapStore.Find(contentId, rapDirectory);
         if (found is not null) return NpdKeys.RapToKlicensee(found);
-        throw new PkgFormatException("No matching NPDRM key found. Select the matching RAP or enter a raw klicensee.");
+        return null;
     }
 }

@@ -34,6 +34,16 @@
                 </StackPanel>
               </Grid>
             </Button>
+            <Button x:Name="VerifySelfButton" Classes="row" Click="OnVerifySelfClick">
+              <Grid ColumnDefinitions="34,*,Auto">
+                <materialIcons:MaterialIcon Kind="ShieldCheckOutline" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center" />
+                <StackPanel Grid.Column="1" Spacing="1" Margin="0,0,12,0">
+                  <TextBlock Classes="rowtitle" Text="Verify SELF / EBOOT" />
+                  <TextBlock Classes="carddesc" TextWrapping="Wrap" Text="Check header signatures and decryption, with CEX / DEX and license details." />
+                </StackPanel>
+                <Border Grid.Column="2" Classes="chip" VerticalAlignment="Center"><TextBlock Text="READ-ONLY" /></Border>
+              </Grid>
+            </Button>
             <Button Classes="row" Tag="decrypt" Click="OnResignCardClick"
                     ToolTip.Tip="Recover a plaintext ELF from an encrypted EBOOT.BIN / .self.">
               <Grid ColumnDefinitions="34,*,Auto">

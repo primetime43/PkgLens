@@ -37,6 +37,7 @@ The GUI's **Suggested** page automatically shows the actions that match the open
 - [Discover EDAT klicensees in EBOOT/SELF/SPRX or decrypted ELF files](devklic-discovery.md), verify candidates against the target EDAT, and save confirmed filename-specific mappings for automatic lookup.
 - [Encrypt, quick rebuild, or custom rebuild EDAT/SDAT](edat-tools.md), with automatic key lookup, plaintext replacement and preview, verified output, and staging into package edits. Rebuilds produce uncompressed output.
 - Inspect SELF, EBOOT, and SPRX headers without decrypting the executable.
+- [Verify existing SELF / EBOOT / SPRX files](self-verification.md), with separate header-signature and decryption results, CEX/DEX format, license details, and automatic key lookup.
 - Decrypt supported SELF/EBOOT files to plaintext ELF output.
 - Fake-sign ELF files as compressed CFW-ready SELF files.
 - [Build and rebuild encrypted APP / NPDRM SELF files](self-building.md) with bundled key revisions,

@@ -47,6 +47,7 @@ public enum OperationId
     PackageKeyCoverage,
     SelfFolderTools,
     FinalizePackage,
+    VerifySelf,
 }
 
 public enum OperationMenu
@@ -234,6 +235,9 @@ public static class OperationCatalog
         Def(OperationId.BytePatch, "Byte patch SELF / EBOOT", FeatureText.BytePatch,
             "Open the advanced byte-patch tool for a single SELF or EBOOT file.", "Raw _byte patch SELF / EBOOT…",
             menu: [Loc(OperationMenu.Tools, 1, 40, "FirmwareCfw")]),
+        Def(OperationId.VerifySelf, "Verify SELF / EBOOT", "Check an existing executable's header signature and decryption separately.",
+            "Read-only SELF / EBOOT / SPRX checks, with CEX/DEX format and license details.", "Verify _SELF / EBOOT…",
+            menu: [Loc(OperationMenu.Tools, 1, 15, "InspectVerify")]),
         Def(OperationId.VerifyPackage, "Verify package integrity", FeatureText.VerifyPackage,
             "Check package authentication, signatures, decrypted tables, and structural bounds.",
             "_Verify package integrity…", menuRule: OperationEligibilityRule.HasPackage,

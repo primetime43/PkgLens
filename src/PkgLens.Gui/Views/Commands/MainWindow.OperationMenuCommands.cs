@@ -93,6 +93,7 @@ public partial class MainWindow
             case OperationId.EdatTools: OnEdatToolsClick(sender, e); break;
             case OperationId.SelfFolderTools: OnSelfFolderClick(sender, e); break;
             case OperationId.FinalizePackage: OnFinalizePackageClick(sender, e); break;
+            case OperationId.VerifySelf: OnVerifySelfClick(sender, e); break;
             case OperationId.DiscoverDevKlic: OnDiscoverDevKlic(sender, e); break;
             case OperationId.PackageKeyCoverage: OnPackageKeyCoverage(sender, e); break;
             case OperationId.SavePackageAs: OnSaveAsClick(sender, e); break;
