@@ -5,16 +5,8 @@ build, decrypt, convert, and verify. Includes SELF/EBOOT, EDAT/SDAT, PSARC, and 
 
 ![PkgLens desktop app](docs/images/pkglens-home.png)
 
-## Start
-
-```sh
-dotnet run --project src/PkgLens.Gui
-dotnet run --project src/PkgLens.Cli -- info <pkg>
-```
-
-On Windows, `run-gui.cmd` builds and launches the app. `publish-gui.cmd` creates
-`dist/PkgLens.Gui.exe` and a Desktop shortcut; this local build needs the .NET 8 Runtime.
-Release archives are self-contained. Open or drag in a `.pkg` or `.psarc` to begin.
+Download the Windows GUI archive from [Releases](https://github.com/primetime43/PkgLens/releases),
+extract it, and run the `.exe`. Open or drag in a `.pkg` or `.psarc` to begin.
 
 ## Guides
 
