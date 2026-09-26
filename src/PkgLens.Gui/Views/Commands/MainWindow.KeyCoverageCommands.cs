@@ -14,12 +14,14 @@ public partial class MainWindow
         if (Vm.IsBusy || Vm.Package is not { IsDecrypted: true } package) return;
         do
         {
+            // Capture UI-owned settings before entering the worker, including on rescan.
+            var options = new ContentDecryptOptions { RapDirectory = Vm.RapDirectory };
             PackageKeyCoverageReport? report = null;
             await RunOperationAsync("Checking package key coverage…", "Key coverage scan failed", async (token, progress) =>
             {
                 var scanProgress = new Progress<ContentDecryptProgress>(p => progress.Report(new GuiOperationProgress(p.Message, p.Percent)));
                 report = await Task.Run(() => PackageKeyCoverageService.Scan(package.Operations,
-                    new ContentDecryptOptions { RapDirectory = Vm.RapDirectory }, token, scanProgress), token);
+                    options, token, scanProgress), token);
             });
             if (report is null) return;
             Vm.Status = report.Summary;

@@ -25,13 +25,15 @@ public partial class MainWindow
         for (int suffix = 2; Path.Exists(destination); suffix++)
             destination = Path.Combine(parent, $"{stem}-{suffix}");
 
+        // Vm reads the window's DataContext and must only be accessed on the UI thread.
+        var options = new ContentDecryptOptions { RapDirectory = Vm.RapDirectory };
         ContentDecryptReport? report = null;
         await RunOperationAsync("Decrypting package contents…", "Package content export failed", async (token, progress) =>
         {
             var contentProgress = new Progress<ContentDecryptProgress>(value =>
                 progress.Report(new GuiOperationProgress(value.Message, value.Percent)));
             report = await Task.Run(() => package.Operations.DecryptContents(destination,
-                new ContentDecryptOptions { RapDirectory = Vm.RapDirectory }, token, contentProgress), token);
+                options, token, contentProgress), token);
         });
         if (report is null) return;
         Vm.Status = $"{report.Summary} → {destination}";
